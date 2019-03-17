@@ -153,7 +153,7 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h3 id="send方法"><a href="#send方法" class="headerlink" title="send方法"></a>send方法</h3><p>…graph TB<br>A[确保topic对应的metaData是否可得]–&gt;B[序列化key和value]<br>B–&gt;C[如果没有指定partition,使用partitioner分配partition]<br>C–&gt;D[生成对应的TopicPartition:String topic,int partition]<br>D–&gt;E[用key和value生成RecordAppendResult,加入缓存池中]<br>E–&gt;F[如果创新一个新的batch或者batch满了,唤醒发送线程]<br>…</p>
+        <h3 id="send方法"><a href="#send方法" class="headerlink" title="send方法"></a>send方法</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">graph TB</span><br><span class="line">A[确保topic对应的metaData是否可得]--&gt;B[序列化key和value]</span><br><span class="line">B--&gt;C[如果没有指定partition,使用partitioner分配partition]</span><br><span class="line">C--&gt;D[生成对应的TopicPartition:String topic,int partition]</span><br><span class="line">D--&gt;E[用key和value生成RecordAppendResult,加入缓存池中]</span><br><span class="line">E--&gt;F[如果创新一个新的batch或者batch满了,唤醒发送线程]</span><br></pre></td></tr></table></figure>
         
           <a class="article-more-a" href="/2019/03/17/Kafka-porducter-code-analyse/#more">more >></a>
         
