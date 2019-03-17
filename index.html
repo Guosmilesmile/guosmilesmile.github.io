@@ -170,11 +170,63 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h4 id="有序表的搜索"><a href="#有序表的搜索" class="headerlink" title="有序表的搜索"></a>有序表的搜索</h4><p>考虑一个有序表：</p>
+        <a id="more"></a>
+<h4 id="有序表的搜索"><a href="#有序表的搜索" class="headerlink" title="有序表的搜索"></a>有序表的搜索</h4><p>考虑一个有序表：</p>
 <p><img src="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&amp;shareKey=abc7f2419331c6165e71662b7ea0a1bc" alt="image"></p>
-        
-          <a class="article-more-a" href="/2019/03/17/skipTable/#more">more >></a>
-        
+<p>从该有序表中搜索元素 &lt; 23, 43, 59 &gt; ，需要比较的次数分别为 &lt; 2, 4, 6 &gt;，总共比较的次数</p>
+<p>为 2 + 4 + 6 = 12 次。有没有优化的算法吗?  链表是有序的，但不能使用二分查找。类似二叉</p>
+<p>搜索树，我们把一些节点提取出来，作为索引。得到如下结构：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/618190186D5C4B2EA9A91ECEE2400220?method=download&amp;shareKey=d6ec9e06cb7a6194f8aac38a2d7f179d" alt="image"></p>
+<p>这里我们把 &lt; 14, 34, 50, 72 &gt; 提取出来作为一级索引，这样搜索的时候就可以减少比较次数了。</p>
+<p>我们还可以再从一级索引提取一些元素出来，作为二级索引，变成如下结构：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/E598C089E15D4486B8D5A1A7D60CFF54?method=download&amp;shareKey=7b7ecc65125a6906a0872cdcef0f033c" alt="image"></p>
+<p>这里元素不多，体现不出优势，如果元素足够多，这种索引结构就能体现出优势来了。</p>
+<p>这基本上就是跳表的核心思想，其实也是一种通过“空间来换取时间”的一个算法，通过在每个节点中增加了向前的指针，从而提升查找的效率。</p>
+<p>跳表</p>
+<p>下面的结构是就是跳表：</p>
+<p>其中 -1 表示 INT_MIN， 链表的最小值，1 表示 INT_MAX，链表的最大值。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/2E398EC62E7D404492C4287DA9F4C2A4?method=download&amp;shareKey=97b90f7f1d17a120eeb9403f87695899" alt="image"></p>
+<p>跳表具有如下性质：</p>
+<p>(1) 由很多层结构组成</p>
+<p>(2) 每一层都是一个有序的链表</p>
+<p>(3) 最底层(Level 1)的链表包含所有元素</p>
+<p>(4) 如果一个元素出现在 Level i 的链表中，则它在 Level i 之下的链表也都会出现。</p>
+<p>(5) 每个节点包含两个指针，一个指向同一链表中的下一个元素，一个指向下面一层的元素。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/00C00049DED44703B6D025D2A9EBC945?method=download&amp;shareKey=da0c34e02440a6d3a45c237c159c8966" alt="image"></p>
+<p>例子：查找元素 117</p>
+<p>(1) 比较 21， 比 21 大，往后面找</p>
+<p>(2) 比较 37,   比 37大，比链表最大值小，从 37 的下面一层开始找</p>
+<p>(3) 比较 71,  比 71 大，比链表最大值小，从 71 的下面一层开始找</p>
+<p>(4) 比较 85， 比 85 大，从后面找</p>
+<p>(5) 比较 117， 等于 117， 找到了节点。</p>
+<p>具体的搜索算法如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"></span><br><span class="line"> find(x)  </span><br><span class="line"></span><br><span class="line"> &#123; </span><br><span class="line"></span><br><span class="line">     p = top; </span><br><span class="line"></span><br><span class="line"> while (1) &#123; </span><br><span class="line"> while (p-&gt;next-&gt;key &lt; x) </span><br><span class="line"></span><br><span class="line">            p = p-&gt;next; </span><br><span class="line"></span><br><span class="line">if (p-&gt;down == NULL)  </span><br><span class="line"></span><br><span class="line"> return p-&gt;next; </span><br><span class="line"></span><br><span class="line">        p = p-&gt;down; </span><br><span class="line"></span><br><span class="line">     &#125; </span><br><span class="line"></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>跳表的插入</p>
+<p>先确定该元素要占据的层数 K（采用丢硬币的方式，这完全是随机的）</p>
+<p>然后在 Level 1 … Level K 各个层的链表都插入元素。</p>
+<p>例子：插入 119， K = 2</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/AC32E285E1C34D138D746D07C8A90661?method=download&amp;shareKey=fefc4a6256c3221a138f3c718df5b876" alt="image"></p>
+<p>如果 K 大于链表的层数，则要添加新的层。</p>
+<p>例子：插入 119， K = 4</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/ABA5C322CF71468388CF952690A6024A?method=download&amp;shareKey=c0d4c38b4e4f98b91465aef4d7a6b5c6" alt="image"></p>
+<p>丢硬币决定 K</p>
+<p>插入元素的时候，元素所占有的层数完全是随机的，通过一下随机算法产生：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">int random_level() </span><br><span class="line"></span><br><span class="line">&#123; </span><br><span class="line">     K = 1; </span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> while (random(0,1)) </span><br><span class="line"></span><br><span class="line">        K++; </span><br><span class="line"></span><br><span class="line"> return K; </span><br><span class="line"></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>相当与做一次丢硬币的实验，如果遇到正面，继续丢，遇到反面，则停止，</p>
+<p>用实验中丢硬币的次数 K 作为元素占有的层数。显然随机变量 K 满足参数为 p = 1/2 的几何分布，</p>
+<p>K 的期望值 E[K] = 1/p = 2. 就是说，各个元素的层数，期望值是 2 层。</p>
+<p>跳表的高度。</p>
+<p>n 个元素的跳表，每个元素插入的时候都要做一次实验，用来决定元素占据的层数 K，</p>
+<p>跳表的高度等于这 n 次实验中产生的最大 K，待续。。。</p>
+<p>跳表的空间复杂度分析</p>
+<p>根据上面的分析，每个元素的期望高度为 2， 一个大小为 n 的跳表，其节点数目的</p>
+<p>期望值是 2n。</p>
+<p>跳表的删除</p>
+<p>在各个层中找到包含 x 的节点，使用标准的 delete from list 方法删除该节点。</p>
+<p>例子：删除 71</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/6877AA6E2FDC4EDD910FFB4261C9A044?method=download&amp;shareKey=eb7a6d135f4601cf7ba70f8f1a5b3b2f" alt="image"></p>
+<p><a href="https://www.cnblogs.com/a8457013/p/8251967.html" target="_blank" rel="noopener">https://www.cnblogs.com/a8457013/p/8251967.html</a></p>
+
       
 
       

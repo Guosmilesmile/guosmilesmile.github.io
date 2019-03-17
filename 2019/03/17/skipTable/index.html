@@ -8,12 +8,12 @@
   <link rel="dns-prefetch" href="http://yoursite.com">
   <title>skipTable | Pray</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="有序表的搜索考虑一个有序表：">
+  <meta name="description" content="有序表的搜索考虑一个有序表：  从该有序表中搜索元素 &amp;lt; 23, 43, 59 &amp;gt; ，需要比较的次数分别为 &amp;lt; 2, 4, 6 &amp;gt;，总共比较的次数 为 2 + 4 + 6 = 12 次。有没有优化的算法吗?  链表是有序的，但不能使用二分查找。类似二叉 搜索树，我们把一些节点提取出来，作为索引。得到如下结构：  这里我们把 &amp;lt; 14, 34, 50, 72 &amp;gt;">
 <meta property="og:type" content="article">
 <meta property="og:title" content="skipTable">
 <meta property="og:url" content="http://yoursite.com/2019/03/17/skipTable/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="有序表的搜索考虑一个有序表：">
+<meta property="og:description" content="有序表的搜索考虑一个有序表：  从该有序表中搜索元素 &amp;lt; 23, 43, 59 &amp;gt; ，需要比较的次数分别为 &amp;lt; 2, 4, 6 &amp;gt;，总共比较的次数 为 2 + 4 + 6 = 12 次。有没有优化的算法吗?  链表是有序的，但不能使用二分查找。类似二叉 搜索树，我们把一些节点提取出来，作为索引。得到如下结构：  这里我们把 &amp;lt; 14, 34, 50, 72 &amp;gt;">
 <meta property="og:locale" content="zh-Hans">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&shareKey=abc7f2419331c6165e71662b7ea0a1bc">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/618190186D5C4B2EA9A91ECEE2400220?method=download&shareKey=d6ec9e06cb7a6194f8aac38a2d7f179d">
@@ -23,10 +23,10 @@
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AC32E285E1C34D138D746D07C8A90661?method=download&shareKey=fefc4a6256c3221a138f3c718df5b876">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/ABA5C322CF71468388CF952690A6024A?method=download&shareKey=c0d4c38b4e4f98b91465aef4d7a6b5c6">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6877AA6E2FDC4EDD910FFB4261C9A044?method=download&shareKey=eb7a6d135f4601cf7ba70f8f1a5b3b2f">
-<meta property="og:updated_time" content="2019-03-17T04:29:02.925Z">
+<meta property="og:updated_time" content="2019-03-17T04:35:15.590Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="skipTable">
-<meta name="twitter:description" content="有序表的搜索考虑一个有序表：">
+<meta name="twitter:description" content="有序表的搜索考虑一个有序表：  从该有序表中搜索元素 &amp;lt; 23, 43, 59 &amp;gt; ，需要比较的次数分别为 &amp;lt; 2, 4, 6 &amp;gt;，总共比较的次数 为 2 + 4 + 6 = 12 次。有没有优化的算法吗?  链表是有序的，但不能使用二分查找。类似二叉 搜索树，我们把一些节点提取出来，作为索引。得到如下结构：  这里我们把 &amp;lt; 14, 34, 50, 72 &amp;gt;">
 <meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&shareKey=abc7f2419331c6165e71662b7ea0a1bc">
   
     <link rel="alternative" href="/atom.xml" title="Pray" type="application/atom+xml">
@@ -181,9 +181,9 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h4 id="有序表的搜索"><a href="#有序表的搜索" class="headerlink" title="有序表的搜索"></a>有序表的搜索</h4><p>考虑一个有序表：</p>
+        <a id="more"></a>
+<h4 id="有序表的搜索"><a href="#有序表的搜索" class="headerlink" title="有序表的搜索"></a>有序表的搜索</h4><p>考虑一个有序表：</p>
 <p><img src="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&amp;shareKey=abc7f2419331c6165e71662b7ea0a1bc" alt="image"></p>
-<a id="more"></a>
 <p>从该有序表中搜索元素 &lt; 23, 43, 59 &gt; ，需要比较的次数分别为 &lt; 2, 4, 6 &gt;，总共比较的次数</p>
 <p>为 2 + 4 + 6 = 12 次。有没有优化的算法吗?  链表是有序的，但不能使用二分查找。类似二叉</p>
 <p>搜索树，我们把一些节点提取出来，作为索引。得到如下结构：</p>
