@@ -6,15 +6,19 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="dns-prefetch" href="http://yoursite.com">
-  <title>Archives: 2019 | Pray</title>
+  <title>Flink 流处理简单引导 | Pray</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Pray">
-<meta property="og:url" content="http://yoursite.com/archives/2019/index.html">
+  <meta name="description" content="示例程序">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 流处理简单引导">
+<meta property="og:url" content="http://yoursite.com/2019/03/17/FlinkDataStreamGuide/index.html">
 <meta property="og:site_name" content="Pray">
+<meta property="og:description" content="示例程序">
 <meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-17T04:58:05.541Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Pray">
+<meta name="twitter:title" content="Flink 流处理简单引导">
+<meta name="twitter:description" content="示例程序">
   
     <link rel="alternative" href="/atom.xml" title="Pray" type="application/atom+xml">
   
@@ -149,157 +153,202 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
-  
-  
+            <article id="post-FlinkDataStreamGuide" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
     
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2019" class="archive-year">2019</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/Flink-WaterMark/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:58:30.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
+      <header class="article-header">
+        
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/Flink-WaterMark/">Flink WaterMark 水位线</a>
+    <h1 class="article-title" itemprop="name">
+      Flink 流处理简单引导
     </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/FlinkDataStreamGuide/" class="archive-article-date">
+        
+        <a href="/2019/03/17/FlinkDataStreamGuide/" class="archive-article-date">
   	<time datetime="2019-03-17T04:52:10.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
 </a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/FlinkDataStreamGuide/">Flink 流处理简单引导</a>
-    </h1>
-  
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="示例程序"><a href="#示例程序" class="headerlink" title="示例程序"></a>示例程序</h3><a id="more"></a>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.FlatMapFunction;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.tuple.Tuple2;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.datastream.DataStream;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.windowing.time.Time;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WindowWordCount</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">        DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; dataStream = env</span><br><span class="line">                .socketTextStream(<span class="string">"localhost"</span>, <span class="number">9999</span>)</span><br><span class="line">                .flatMap(<span class="keyword">new</span> Splitter())</span><br><span class="line">                .keyBy(<span class="number">0</span>)</span><br><span class="line">                .timeWindow(Time.seconds(<span class="number">5</span>))</span><br><span class="line">                .sum(<span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">        dataStream.print();</span><br><span class="line"></span><br><span class="line">        env.execute(<span class="string">"Window WordCount"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Splitter</span> <span class="keyword">implements</span> <span class="title">FlatMapFunction</span>&lt;<span class="title">String</span>, <span class="title">Tuple2</span>&lt;<span class="title">String</span>, <span class="title">Integer</span>&gt;&gt; </span>&#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">flatMap</span><span class="params">(String sentence, Collector&lt;Tuple2&lt;String, Integer&gt;&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="keyword">for</span> (String word: sentence.split(<span class="string">" "</span>)) &#123;</span><br><span class="line">                out.collect(<span class="keyword">new</span> Tuple2&lt;String, Integer&gt;(word, <span class="number">1</span>));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="DataSource"><a href="#DataSource" class="headerlink" title="DataSource"></a>DataSource</h3><p>从StreamExecutionEnvironment可以获取的预定的source：<br>基于文件的(File-based)：</p>
+<ul>
+<li>readTextFile(path)</li>
+<li>readFile(fileInputFormat, path)</li>
+<li>readFile(fileInputFormat, path, watchType, interval, pathFilter, typeInfo)<br>基于Socket</li>
+<li>socketTextStream</li>
+</ul>
+<p>基于集合</p>
+<ul>
+<li>Collection-based </li>
+<li>fromCollection(Iterator, Class)</li>
+<li>fromElements(T …)</li>
+<li>fromParallelCollection(SplittableIterator, Class) 并行的从迭代器中获取数据。</li>
+<li>generateSequence(from, to) 从form到to并行的生成一系列间隔一定的数</li>
+</ul>
+<p>自定义</p>
+<ul>
+<li>addSource 添加一个新的数据源函数。例如：addSource(new FlinkKafkaConsumer08&lt;&gt;(…)).</li>
+</ul>
+<h3 id="Data-Sink"><a href="#Data-Sink" class="headerlink" title="Data Sink"></a>Data Sink</h3><ul>
+<li>writeAsText()</li>
+<li>writeAsCsv(…)</li>
+<li>print() / printToErr()</li>
+<li>writeUsingOutputFormat()</li>
+<li>writeToSocket</li>
+<li>addSink</li>
+<li>writeUsingOutputFormat() </li>
+</ul>
+<p>以上write*()方法都是内部debug使用，都不在flink的checkpointing的实践中。</p>
+<h3 id="Controlling-Latency（控制延迟）"><a href="#Controlling-Latency（控制延迟）" class="headerlink" title="Controlling Latency（控制延迟）"></a>Controlling Latency（控制延迟）</h3><p>元素不会一条条在网络上传输，而是会缓冲一部分。缓冲的大小可以在Flink 的配置文件中调整。虽然这种方法很好地优化了吞吐量，但是当传入的流不够快时，它会导致延迟问题。为了控制吞吐和牙齿，可以通过env.setBufferTimeout(timeoutMillis)设置一个最大的等待时间。超过这个时间，缓冲会马上下发而不是等到缓冲队列满。默认的时间是100ms。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">LocalStreamEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();</span><br><span class="line">env.setBufferTimeout(timeoutMillis);</span><br><span class="line"></span><br><span class="line">env.generateSequence(<span class="number">1</span>,<span class="number">10</span>).map(<span class="keyword">new</span> MyMapper()).setBufferTimeout(timeoutMillis);</span><br></pre></td></tr></table></figure>
+<p>如果是为-1，那么缓存没有满，数据是不会下发的。如果想要缩小延迟，可以将这个时间设置为一个接近0（5或者10ms）。应该避免缓冲区超时为0，因为这会导致严重的性能下降。</p>
+<h3 id="调试"><a href="#调试" class="headerlink" title="调试"></a>调试</h3><h5 id="Local-Execution-Environment"><a href="#Local-Execution-Environment" class="headerlink" title="Local Execution Environment"></a>Local Execution Environment</h5><p>创建本地环境，打上断点</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();</span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; lines = env.addSource(<span class="comment">/* some source */</span>);</span><br><span class="line"><span class="comment">// build your program</span></span><br><span class="line"></span><br><span class="line">env.execute();</span><br></pre></td></tr></table></figure>
+<h4 id="Collection-Data-Sources"><a href="#Collection-Data-Sources" class="headerlink" title="Collection Data Sources"></a>Collection Data Sources</h4><p>可以使用java的集合数据充当数据源方便调试<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> StreamExecutionEnvironment env = StreamExecutionEnvironment.createLocalEnvironment();</span><br><span class="line"></span><br><span class="line"><span class="comment">// Create a DataStream from a list of elements</span></span><br><span class="line">DataStream&lt;Integer&gt; myInts = env.fromElements(<span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span>, <span class="number">4</span>, <span class="number">5</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Create a DataStream from any Java collection</span></span><br><span class="line">List&lt;Tuple2&lt;String, Integer&gt;&gt; data = ...</span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; myTuples = env.fromCollection(data);</span><br><span class="line"></span><br><span class="line"><span class="comment">// Create a DataStream from an Iterator</span></span><br><span class="line">Iterator&lt;Long&gt; longIt = ...</span><br><span class="line">DataStream&lt;Long&gt; myLongs = env.fromCollection(longIt, Long.class);</span><br></pre></td></tr></table></figure></p>
+<p>注意：目前，集合数据源要求数据类型和迭代器实现可序列化。此外，收集数据源不能并行执行</p>
+<h4 id="Iterator-Data-Sink"><a href="#Iterator-Data-Sink" class="headerlink" title="Iterator Data Sink"></a>Iterator Data Sink</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.experimental.DataStreamUtils</span><br><span class="line"></span><br><span class="line">DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; myResult = ...</span><br><span class="line">Iterator&lt;Tuple2&lt;String, Integer&gt;&gt; myOutput = DataStreamUtils.collect(myResult)</span><br></pre></td></tr></table></figure>
+      
 
-        <div class="article-info info-on-right">
-          
-          
-
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=http://yoursite.com/2019/03/17/FlinkDataStreamGuide/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
+
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/skipTable/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:01:22.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
+<nav id="article-nav">
+  
+    <a href="/2019/03/17/Flink-WaterMark/" id="article-nav-newer" class="article-nav-link-wrap">
+      <i class="icon-circle-left"></i>
+      <div class="article-nav-title">
+        
+          Flink WaterMark 水位线
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2019/03/17/skipTable/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">skipTable 跳表介绍</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
+        
+        
+    </div>
+</aside>
+
+
+
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/skipTable/">skipTable 跳表介绍</a>
-    </h1>
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/RedisBasic/" class="archive-article-date">
-  	<time datetime="2019-03-17T03:53:40.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/RedisBasic/">Redis 基础介绍</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/jstormBasic/" class="archive-article-date">
-  	<time datetime="2019-03-17T02:55:08.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/jstormBasic/">JSTORM 基础概念</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
   
-  
-    </div></section>
-  
-
-    
 
 
           </div>
@@ -322,8 +371,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,

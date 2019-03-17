@@ -6,15 +6,19 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="dns-prefetch" href="http://yoursite.com">
-  <title>Archives: 2019 | Pray</title>
+  <title>Flink WaterMark 水位线 | Pray</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Pray">
-<meta property="og:url" content="http://yoursite.com/archives/2019/index.html">
+  <meta name="description" content="几个重要的概念简述：   Window：Window是处理无界流的关键，Windows将流拆分为一个个有限大小的buckets，可以可以在每一个buckets中进行计算 start_time,end_time：当Window时时间窗口的时候，每个window都会有一个开始时间和结束时间（前开后闭），这个时间是系统时间 event-time: 事件发生时间，是事件发生所在设备的当地时间，比如一个点">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink WaterMark 水位线">
+<meta property="og:url" content="http://yoursite.com/2019/03/17/Flink-WaterMark/index.html">
 <meta property="og:site_name" content="Pray">
+<meta property="og:description" content="几个重要的概念简述：   Window：Window是处理无界流的关键，Windows将流拆分为一个个有限大小的buckets，可以可以在每一个buckets中进行计算 start_time,end_time：当Window时时间窗口的时候，每个window都会有一个开始时间和结束时间（前开后闭），这个时间是系统时间 event-time: 事件发生时间，是事件发生所在设备的当地时间，比如一个点">
 <meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-17T04:59:22.446Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Pray">
+<meta name="twitter:title" content="Flink WaterMark 水位线">
+<meta name="twitter:description" content="几个重要的概念简述：   Window：Window是处理无界流的关键，Windows将流拆分为一个个有限大小的buckets，可以可以在每一个buckets中进行计算 start_time,end_time：当Window时时间窗口的时候，每个window都会有一个开始时间和结束时间（前开后闭），这个时间是系统时间 event-time: 事件发生时间，是事件发生所在设备的当地时间，比如一个点">
   
     <link rel="alternative" href="/atom.xml" title="Pray" type="application/atom+xml">
   
@@ -149,157 +153,172 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
+            <article id="post-Flink-WaterMark" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
   
+    <h1 class="article-title" itemprop="name">
+      Flink WaterMark 水位线
+    </h1>
   
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2019" class="archive-year">2019</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/Flink-WaterMark/" class="archive-article-date">
+
+        
+        <a href="/2019/03/17/Flink-WaterMark/" class="archive-article-date">
   	<time datetime="2019-03-17T04:58:30.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
 </a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/Flink-WaterMark/">Flink WaterMark 水位线</a>
-    </h1>
-  
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <ol>
+<li>几个重要的概念简述：</li>
+</ol>
+<ul>
+<li>Window：Window是处理无界流的关键，Windows将流拆分为一个个有限大小的buckets，可以可以在每一个buckets中进行计算</li>
+<li>start_time,end_time：当Window时时间窗口的时候，每个window都会有一个开始时间和结束时间（前开后闭），这个时间是系统时间</li>
+<li>event-time: 事件发生时间，是事件发生所在设备的当地时间，比如一个点击事件的时间发生时间，是用户点击操作所在的手机或电脑的时间</li>
+<li>Watermarks：可以把他理解为一个水位线，这个Watermarks在不断的变化，一旦Watermarks大于了某个window的end_time，就会触发此window的计算，Watermarks就是用来触发window计算的。</li>
+</ul>
+<a id="more"></a>
+<h1 id="2-如何使用Watermarks处理乱序的数据流"><a href="#2-如何使用Watermarks处理乱序的数据流" class="headerlink" title="2. 如何使用Watermarks处理乱序的数据流"></a>2. 如何使用Watermarks处理乱序的数据流</h1><p>什么是乱序呢？可以理解为数据到达的顺序和他的event-time排序不一致。导致这的原因有很多，比如延迟，消息积压，重试等等</p>
+<p>因为Watermarks是用来触发window窗口计算的，我们可以根据事件的event-time，计算出Watermarks，并且设置一些延迟，给迟到的数据一些机会。</p>
+<p>假如我们设置10s的时间窗口（window），那么0~10s，10~20s都是一个窗口，以0~10s为例，0位start-time，10为end-time。假如有4个数据的event-time分别是8(A),12.5(B),9(C),13.5(D)，我们设置Watermarks为当前所有到达数据event-time的最大值减去延迟值3.5秒</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">当A到达的时候，Watermarks为max&#123;8&#125;-3.5=8-3.5 = 4.5 &lt; 10,不会触发计算</span><br><span class="line">当B到达的时候，Watermarks为max(12.8,5)-3.5=12.5-3.5 = 9 &lt; 10,不会触发计算</span><br><span class="line">当C到达的时候，Watermarks为max(12.5,8,9)-3.5=12.5-3.5 = 9 &lt; 10,不会触发计算</span><br><span class="line">当D到达的时候，Watermarks为max(13.5,12.5,8,9)-3.5=13.5-3.5 = 10 = 10,触发计算</span><br><span class="line">触发计算的时候，会将AC（因为他们都小于10）都计算进去</span><br><span class="line"></span><br><span class="line">通过上面这种方式，我们就将迟到的C计算进去了</span><br></pre></td></tr></table></figure>
+<p>这里的延迟3.5s是我们假设一个数据到达的时候，比他早3.5s的数据肯定也都到达了，这个是需要根据经验推算的，加入D到达以后有到达了一个E,event-time=6，但是由于0~10的时间窗口已经开始计算了，所以E就丢了。</p>
+<h4 id="注意-使用水位线的时间，用的是毫秒时间戳，秒级时间戳会出问题。"><a href="#注意-使用水位线的时间，用的是毫秒时间戳，秒级时间戳会出问题。" class="headerlink" title="注意 使用水位线的时间，用的是毫秒时间戳，秒级时间戳会出问题。"></a>注意 使用水位线的时间，用的是毫秒时间戳，秒级时间戳会出问题。</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">* 该函数是以最大到达时间-允许延迟时间 作为水位线，例如     </span></span><br><span class="line"><span class="comment">* 现在是7:03分，3分钟作为允许延迟，时间窗口是1分钟，那么7.03分计算的是 </span></span><br><span class="line"><span class="comment">* 6.59-7.00分这个时间窗口的数据。6.59分之前的数据都会被丢弃。这种方式</span></span><br><span class="line"><span class="comment">* 的缺点是如果出现未来时间的数据，会导致很多数据被丢弃。</span></span><br><span class="line"><span class="comment">*</span></span><br><span class="line"><span class="comment">**/</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BoundedOutOfOrdernessGenerator</span> <span class="keyword">implements</span> <span class="title">AssignerWithPeriodicWatermarks</span>&lt;<span class="title">MyEvent</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">long</span> maxOutOfOrderness = <span class="number">3500</span>; <span class="comment">// 3.5 seconds</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">long</span> currentMaxTimestamp;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 提取当前时间戳</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(MyEvent element, <span class="keyword">long</span> previousElementTimestamp)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">long</span> timestamp = element.getCreationTime();</span><br><span class="line">        currentMaxTimestamp = Math.max(timestamp, currentMaxTimestamp);</span><br><span class="line">        <span class="keyword">return</span> timestamp;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获取当前水位线</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Watermark <span class="title">getCurrentWatermark</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// return the watermark as current highest timestamp minus the out-of-orderness bound</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Watermark(currentMaxTimestamp - maxOutOfOrderness);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">* 以当前系统时间-允许延迟，作为水位线。 缺点是如果太多的未来数据，</span></span><br><span class="line"><span class="comment">* 就会分别单独占用一个时间窗口，很容易导致内存爆炸，建议使用rockdb </span></span><br><span class="line"><span class="comment">* backend，不使用memory backend</span></span><br><span class="line"><span class="comment">**/</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TimeLagWatermarkGenerator</span> <span class="keyword">implements</span> <span class="title">AssignerWithPeriodicWatermarks</span>&lt;<span class="title">MyEvent</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">long</span> maxTimeLag = <span class="number">5000</span>; <span class="comment">// 5 seconds</span></span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(MyEvent element, <span class="keyword">long</span> previousElementTimestamp)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> element.getCreationTime();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Watermark <span class="title">getCurrentWatermark</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="comment">// return the watermark as current time minus the maximum time lag</span></span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> Watermark(System.currentTimeMillis() - maxTimeLag);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-        <div class="article-info info-on-right">
-          
-          
+      
 
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=http://yoursite.com/2019/03/17/Flink-WaterMark/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
+
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/FlinkDataStreamGuide/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:52:10.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
+<nav id="article-nav">
+  
+  
+    <a href="/2019/03/17/FlinkDataStreamGuide/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Flink 流处理简单引导</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
+        
+        
+    </div>
+</aside>
+
+
+
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/FlinkDataStreamGuide/">Flink 流处理简单引导</a>
-    </h1>
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/skipTable/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:01:22.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/skipTable/">skipTable 跳表介绍</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/RedisBasic/" class="archive-article-date">
-  	<time datetime="2019-03-17T03:53:40.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/RedisBasic/">Redis 基础介绍</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/jstormBasic/" class="archive-article-date">
-  	<time datetime="2019-03-17T02:55:08.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/jstormBasic/">JSTORM 基础概念</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-    
 
 
           </div>
@@ -322,8 +341,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,

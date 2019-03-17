@@ -19,7 +19,8 @@
     <link rel="alternative" href="/atom.xml" title="Pray" type="application/atom+xml">
   
   
-    <link rel="icon" href="/favicon.png">
+    <!--<link rel="icon" href="/favicon.png">-->
+    <link rel="icon" href="https://hexo.io/icon/apple-touch-icon-57x57.png">
   
   <link rel="stylesheet" type="text/css" href="/./main.0cf68a.css">
   <style type="text/css">
@@ -150,6 +151,144 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-Flink-WaterMark" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/03/17/Flink-WaterMark/">Flink WaterMark 水位线</a>
+    </h1>
+  
+
+        
+        <a href="/2019/03/17/Flink-WaterMark/" class="archive-article-date">
+  	<time datetime="2019-03-17T04:58:30.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <ol>
+<li>几个重要的概念简述：</li>
+</ol>
+<ul>
+<li>Window：Window是处理无界流的关键，Windows将流拆分为一个个有限大小的buckets，可以可以在每一个buckets中进行计算</li>
+<li>start_time,end_time：当Window时时间窗口的时候，每个window都会有一个开始时间和结束时间（前开后闭），这个时间是系统时间</li>
+<li>event-time: 事件发生时间，是事件发生所在设备的当地时间，比如一个点击事件的时间发生时间，是用户点击操作所在的手机或电脑的时间</li>
+<li>Watermarks：可以把他理解为一个水位线，这个Watermarks在不断的变化，一旦Watermarks大于了某个window的end_time，就会触发此window的计算，Watermarks就是用来触发window计算的。</li>
+</ul>
+        
+          <a class="article-more-a" href="/2019/03/17/Flink-WaterMark/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/03/17/Flink-WaterMark/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
+    <article id="post-FlinkDataStreamGuide" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/03/17/FlinkDataStreamGuide/">Flink 流处理简单引导</a>
+    </h1>
+  
+
+        
+        <a href="/2019/03/17/FlinkDataStreamGuide/" class="archive-article-date">
+  	<time datetime="2019-03-17T04:52:10.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="示例程序"><a href="#示例程序" class="headerlink" title="示例程序"></a>示例程序</h3>
+        
+          <a class="article-more-a" href="/2019/03/17/FlinkDataStreamGuide/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/03/17/FlinkDataStreamGuide/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-skipTable" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     
@@ -157,7 +296,7 @@
         
   
     <h1 itemprop="name">
-      <a class="article-title" href="/2019/03/17/skipTable/">skipTable</a>
+      <a class="article-title" href="/2019/03/17/skipTable/">skipTable 跳表介绍</a>
     </h1>
   
 
