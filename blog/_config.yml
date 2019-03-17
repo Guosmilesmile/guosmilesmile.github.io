@@ -8,7 +8,7 @@ subtitle: 人肉排渣工程师,擅长排渣数据，服务器排渣
 description:
 keywords:
 author: Chris
-language: zh-Hans
+language: zh-CN
 timezone:
 
 
@@ -74,7 +74,8 @@ pagination_dir: page
 # Extensions
 ## Plugins: https://hexo.io/plugins/
 ## Themes: https://hexo.io/themes/
-theme: yilia
+#theme: yilia
+theme: next
 
 # Deployment
 ## Docs: https://hexo.io/docs/deployment.html

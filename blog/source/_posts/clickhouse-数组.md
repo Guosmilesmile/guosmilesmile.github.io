@@ -1,7 +1,7 @@
 ---
 title: clickhouse 数组
 date: 2019-03-17 15:47:28
-tags:
+categories: clickhouse
 ---
 
 

@@ -2,6 +2,7 @@
 title: Flink WaterMark 水位线
 date: 2019-03-17 12:58:30
 tags:
+categories: Flink
 ---
 
  1. 几个重要的概念简述：

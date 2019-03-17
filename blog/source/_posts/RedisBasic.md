@@ -2,6 +2,7 @@
 title: Redis 基础介绍
 date: 2019-03-17 11:53:40
 tags:
+categories: Redis
 ---
 
 
