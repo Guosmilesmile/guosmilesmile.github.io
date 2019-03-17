@@ -133,6 +133,71 @@
           <div id="js-content" class="content-ll">
             
   
+    <article id="post-Kafka-porducter-code-analyse" class="article article-type-post  article-index" itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
+  
+    <h1 itemprop="name">
+      <a class="article-title" href="/2019/03/17/Kafka-porducter-code-analyse/">Kafka kafkaProducer源码解析</a>
+    </h1>
+  
+
+        
+        <a href="/2019/03/17/Kafka-porducter-code-analyse/" class="archive-article-date">
+  	<time datetime="2019-03-17T05:39:57.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
+</a>
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="send方法"><a href="#send方法" class="headerlink" title="send方法"></a>send方法</h3><p>…graph TB<br>A[确保topic对应的metaData是否可得]–&gt;B[序列化key和value]<br>B–&gt;C[如果没有指定partition,使用partitioner分配partition]<br>C–&gt;D[生成对应的TopicPartition:String topic,int partition]<br>D–&gt;E[用key和value生成RecordAppendResult,加入缓存池中]<br>E–&gt;F[如果创新一个新的batch或者batch满了,唤醒发送线程]<br>…</p>
+        
+          <a class="article-more-a" href="/2019/03/17/Kafka-porducter-code-analyse/#more">more >></a>
+        
+      
+
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+        <p class="article-more-link">
+          <a class="article-more-a" href="/2019/03/17/Kafka-porducter-code-analyse/">展开全文 >></a>
+        </p>
+      
+
+      
+      <div class="clearfix"></div>
+    </div>
+  </div>
+</article>
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
+        </div>
+        
+        
+    </div>
+</aside>
+
+
+
+
+  
     <article id="post-Flink-sideOutput" class="article article-type-post  article-index" itemscope itemprop="blogPost">
   <div class="article-inner">
     

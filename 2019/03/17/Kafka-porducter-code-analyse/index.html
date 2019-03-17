@@ -6,15 +6,19 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="dns-prefetch" href="http://yoursite.com">
-  <title>Archives: 2019/3 | Pray</title>
+  <title>Kafka kafkaProducer源码解析 | Pray</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Pray">
-<meta property="og:url" content="http://yoursite.com/archives/2019/03/index.html">
+  <meta name="description" content="send方法…graph TBA[确保topic对应的metaData是否可得]–&amp;gt;B[序列化key和value]B–&amp;gt;C[如果没有指定partition,使用partitioner分配partition]C–&amp;gt;D[生成对应的TopicPartition:String topic,int partition]D–&amp;gt;E[用key和value生成RecordAppendResu">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka kafkaProducer源码解析">
+<meta property="og:url" content="http://yoursite.com/2019/03/17/Kafka-porducter-code-analyse/index.html">
 <meta property="og:site_name" content="Pray">
+<meta property="og:description" content="send方法…graph TBA[确保topic对应的metaData是否可得]–&amp;gt;B[序列化key和value]B–&amp;gt;C[如果没有指定partition,使用partitioner分配partition]C–&amp;gt;D[生成对应的TopicPartition:String topic,int partition]D–&amp;gt;E[用key和value生成RecordAppendResu">
 <meta property="og:locale" content="zh-Hans">
+<meta property="og:updated_time" content="2019-03-17T05:49:37.791Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Pray">
+<meta name="twitter:title" content="Kafka kafkaProducer源码解析">
+<meta name="twitter:description" content="send方法…graph TBA[确保topic对应的metaData是否可得]–&amp;gt;B[序列化key和value]B–&amp;gt;C[如果没有指定partition,使用partitioner分配partition]C–&amp;gt;D[生成对应的TopicPartition:String topic,int partition]D–&amp;gt;E[用key和value生成RecordAppendResu">
   
     <link rel="alternative" href="/atom.xml" title="Pray" type="application/atom+xml">
   
@@ -131,238 +135,184 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            
+            <article id="post-Kafka-porducter-code-analyse" class="article article-type-post " itemscope itemprop="blogPost">
+  <div class="article-inner">
+    
+      <header class="article-header">
+        
   
+    <h1 class="article-title" itemprop="name">
+      Kafka kafkaProducer源码解析
+    </h1>
   
-    
-    
-      
-      
-      <section class="archives-wrap">
-        <div class="archive-year-wrap">
-          <a href="/archives/2019" class="archive-year">2019</a>
-        </div>
-        <div class="archives">
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/Kafka-porducter-code-analyse/" class="archive-article-date">
+
+        
+        <a href="/2019/03/17/Kafka-porducter-code-analyse/" class="archive-article-date">
   	<time datetime="2019-03-17T05:39:57.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
 </a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/Kafka-porducter-code-analyse/">Kafka kafkaProducer源码解析</a>
-    </h1>
-  
+        
+      </header>
+    
+    <div class="article-entry" itemprop="articleBody">
+      
+        <h3 id="send方法"><a href="#send方法" class="headerlink" title="send方法"></a>send方法</h3><p>…graph TB<br>A[确保topic对应的metaData是否可得]–&gt;B[序列化key和value]<br>B–&gt;C[如果没有指定partition,使用partitioner分配partition]<br>C–&gt;D[生成对应的TopicPartition:String topic,int partition]<br>D–&gt;E[用key和value生成RecordAppendResult,加入缓存池中]<br>E–&gt;F[如果创新一个新的batch或者batch满了,唤醒发送线程]<br>…</p>
+<a id="more"></a>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Future&lt;RecordMetadata&gt; <span class="title">doSend</span><span class="params">(ProducerRecord&lt;K, V&gt; record, Callback callback)</span> </span>&#123;</span><br><span class="line">        TopicPartition tp = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">// first make sure the metadata for the topic is available</span></span><br><span class="line">            ClusterAndWaitTime clusterAndWaitTime = waitOnMetadata(record.topic(), record.partition(), maxBlockTimeMs);</span><br><span class="line">            <span class="keyword">long</span> remainingWaitMs = Math.max(<span class="number">0</span>, maxBlockTimeMs - clusterAndWaitTime.waitedOnMetadataMs);</span><br><span class="line">            Cluster cluster = clusterAndWaitTime.cluster;</span><br><span class="line">            <span class="keyword">byte</span>[] serializedKey;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                serializedKey = keySerializer.serialize(record.topic(), record.headers(), record.key());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassCastException cce) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> SerializationException(<span class="string">"Can't convert key of class "</span> + record.key().getClass().getName() +</span><br><span class="line">                        <span class="string">" to class "</span> + producerConfig.getClass(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG).getName() +</span><br><span class="line">                        <span class="string">" specified in key.serializer"</span>, cce);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">byte</span>[] serializedValue;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                serializedValue = valueSerializer.serialize(record.topic(), record.headers(), record.value());</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassCastException cce) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> SerializationException(<span class="string">"Can't convert value of class "</span> + record.value().getClass().getName() +</span><br><span class="line">                        <span class="string">" to class "</span> + producerConfig.getClass(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG).getName() +</span><br><span class="line">                        <span class="string">" specified in value.serializer"</span>, cce);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">int</span> partition = partition(record, serializedKey, serializedValue, cluster);</span><br><span class="line">            tp = <span class="keyword">new</span> TopicPartition(record.topic(), partition);</span><br><span class="line"></span><br><span class="line">            setReadOnly(record.headers());</span><br><span class="line">            Header[] headers = record.headers().toArray();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">int</span> serializedSize = AbstractRecords.estimateSizeInBytesUpperBound(apiVersions.maxUsableProduceMagic(),</span><br><span class="line">                    compressionType, serializedKey, serializedValue, headers);</span><br><span class="line">            ensureValidRecordSize(serializedSize);</span><br><span class="line">            <span class="keyword">long</span> timestamp = record.timestamp() == <span class="keyword">null</span> ? time.milliseconds() : record.timestamp();</span><br><span class="line">            log.trace(<span class="string">"Sending record &#123;&#125; with callback &#123;&#125; to topic &#123;&#125; partition &#123;&#125;"</span>, record, callback, record.topic(), partition);</span><br><span class="line">            <span class="comment">// producer callback will make sure to call both 'callback' and interceptor callback</span></span><br><span class="line">            Callback interceptCallback = <span class="keyword">new</span> InterceptorCallback&lt;&gt;(callback, <span class="keyword">this</span>.interceptors, tp);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (transactionManager != <span class="keyword">null</span> &amp;&amp; transactionManager.isTransactional())</span><br><span class="line">                transactionManager.maybeAddPartitionToTransaction(tp);</span><br><span class="line"></span><br><span class="line">            RecordAccumulator.RecordAppendResult result = accumulator.append(tp, timestamp, serializedKey,</span><br><span class="line">                    serializedValue, headers, interceptCallback, remainingWaitMs);</span><br><span class="line">            <span class="keyword">if</span> (result.batchIsFull || result.newBatchCreated) &#123;</span><br><span class="line">                log.trace(<span class="string">"Waking up the sender since topic &#123;&#125; partition &#123;&#125; is either full or getting a new batch"</span>, record.topic(), partition);</span><br><span class="line">                <span class="keyword">this</span>.sender.wakeup();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> result.future;</span><br><span class="line">            <span class="comment">// handling exceptions and record the errors;</span></span><br><span class="line">            <span class="comment">// for API exceptions return them in the future,</span></span><br><span class="line">            <span class="comment">// for other exceptions throw directly</span></span><br><span class="line">        &#125; <span class="keyword">catch</span> (ApiException e) &#123;</span><br><span class="line">            log.debug(<span class="string">"Exception occurred during message send:"</span>, e);</span><br><span class="line">            <span class="keyword">if</span> (callback != <span class="keyword">null</span>)</span><br><span class="line">                callback.onCompletion(<span class="keyword">null</span>, e);</span><br><span class="line">            <span class="keyword">this</span>.errors.record();</span><br><span class="line">            <span class="keyword">this</span>.interceptors.onSendError(record, tp, e);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> FutureFailure(e);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (InterruptedException e) &#123;</span><br><span class="line">            <span class="keyword">this</span>.errors.record();</span><br><span class="line">            <span class="keyword">this</span>.interceptors.onSendError(record, tp, e);</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> InterruptException(e);</span><br><span class="line">        &#125; <span class="keyword">catch</span> (BufferExhaustedException e) &#123;</span><br><span class="line">            <span class="keyword">this</span>.errors.record();</span><br><span class="line">            <span class="keyword">this</span>.metrics.sensor(<span class="string">"buffer-exhausted-records"</span>).record();</span><br><span class="line">            <span class="keyword">this</span>.interceptors.onSendError(record, tp, e);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (KafkaException e) &#123;</span><br><span class="line">            <span class="keyword">this</span>.errors.record();</span><br><span class="line">            <span class="keyword">this</span>.interceptors.onSendError(record, tp, e);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">            <span class="comment">// we notify interceptor about all exceptions, since onSend is called before anything else in this method</span></span><br><span class="line">            <span class="keyword">this</span>.interceptors.onSendError(record, tp, e);</span><br><span class="line">            <span class="keyword">throw</span> e;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h4 id="waitOnMetadata"><a href="#waitOnMetadata" class="headerlink" title="waitOnMetadata"></a>waitOnMetadata</h4><p>等待获取集群的元数据，包括对应topic所有可得的partition</p>
+<h4 id="DefaultPartitioner-partition"><a href="#DefaultPartitioner-partition" class="headerlink" title="DefaultPartitioner.partition"></a>DefaultPartitioner.partition</h4><p>对要发送的数据分配对应的partition</p>
+<ul>
+<li>获取对应topic的所有partition信息和partition总数</li>
+<li>如果key存在，对key进行hash，然后取模partition总数</li>
+<li>如果key不存在，获取当前topic的对应的随机数，然后获取当前topic存活的partition，如果存在取模当前存活partition总数，返回对应partition的int类型。如果不存在存活的partition，直接取模partition总数，返回对应partition的int类型。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">partition</span><span class="params">(String topic, Object key, <span class="keyword">byte</span>[] keyBytes, Object value, <span class="keyword">byte</span>[] valueBytes, Cluster cluster)</span> </span>&#123;</span><br><span class="line">       List&lt;PartitionInfo&gt; partitions = cluster.partitionsForTopic(topic);</span><br><span class="line">       <span class="keyword">int</span> numPartitions = partitions.size();</span><br><span class="line">       <span class="keyword">if</span> (keyBytes == <span class="keyword">null</span>) &#123;</span><br><span class="line">           <span class="keyword">int</span> nextValue = nextValue(topic);</span><br><span class="line">           List&lt;PartitionInfo&gt; availablePartitions = cluster.availablePartitionsForTopic(topic);</span><br><span class="line">           <span class="keyword">if</span> (availablePartitions.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">               <span class="keyword">int</span> part = Utils.toPositive(nextValue) % availablePartitions.size();</span><br><span class="line">               <span class="keyword">return</span> availablePartitions.get(part).partition();</span><br><span class="line">           &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">               <span class="comment">// no partitions are available, give a non-available partition</span></span><br><span class="line">               <span class="keyword">return</span> Utils.toPositive(nextValue) % numPartitions;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">           <span class="comment">// hash the keyBytes to choose a partition</span></span><br><span class="line">           <span class="keyword">return</span> Utils.toPositive(Utils.murmur2(keyBytes)) % numPartitions;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="comment">//如果当前topic不存在对应的counter，随机生成一个，然后+1，如果存在，直接+1</span></span><br><span class="line">   <span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">nextValue</span><span class="params">(String topic)</span> </span>&#123;</span><br><span class="line">       AtomicInteger counter = topicCounterMap.get(topic);</span><br><span class="line">       <span class="keyword">if</span> (<span class="keyword">null</span> == counter) &#123;</span><br><span class="line">           counter = <span class="keyword">new</span> AtomicInteger(ThreadLocalRandom.current().nextInt());</span><br><span class="line">           AtomicInteger currentCounter = topicCounterMap.putIfAbsent(topic, counter);</span><br><span class="line">           <span class="keyword">if</span> (currentCounter != <span class="keyword">null</span>) &#123;</span><br><span class="line">               counter = currentCounter;</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> counter.getAndIncrement();</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<h4 id="producter启动的时候如果更新metadata"><a href="#producter启动的时候如果更新metadata" class="headerlink" title="producter启动的时候如果更新metadata"></a>producter启动的时候如果更新metadata</h4><p>在kafkaProducter中，producter负责读取metadata，sender中的MetadataUpdater负责更新metadata，在sender中有一个默认的NetworkClient负责获取网络上获取个各种信息。默认的metadata为DefaultMetadataUpdater，这个update调用了client中的leastLoadedNode随机获取一个node去连接对应的broker获取整个集群的拓扑信息。<strong>[选择有最少的未发送请求的node，要求这些node至少是可以连接的。这个方法会优先选择有可用的连接的节点，但是如果所有的已连接的节点都在使用，它就会选择还没有建立连接的节点。这个方法绝对不会选择忆经断开连接的节点或者正在reconnect backoff阶段的连接。]</strong></p>
+<ul>
+<li>获取所有node信息，并且随机一个0至node个数的随机数offset</li>
+<li>for循环节点个数，以offset为起点，获取对应位置的node</li>
+<li>获取对该node所有正在请求中的request的个数，如果为0而且已经建立连接，对该node没有请求在飞行中，返回该node（然后刚刚启动，并没有建立连接）</li>
+<li>如果不满足上面的条件，那么如果我们与给定节点断开连接并且无法重新建立连接，也不会选择该节点，直到遇到有连接过的节点或者没连接过的节点。<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Node <span class="title">leastLoadedNode</span><span class="params">(<span class="keyword">long</span> now)</span> </span>&#123;</span><br><span class="line">       List&lt;Node&gt; nodes = <span class="keyword">this</span>.metadataUpdater.fetchNodes();</span><br><span class="line">       <span class="keyword">int</span> inflight = Integer.MAX_VALUE;</span><br><span class="line">       Node found = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">int</span> offset = <span class="keyword">this</span>.randOffset.nextInt(nodes.size());</span><br><span class="line">       <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; nodes.size(); i++) &#123;</span><br><span class="line">           <span class="keyword">int</span> idx = (offset + i) % nodes.size();</span><br><span class="line">           Node node = nodes.get(idx);</span><br><span class="line">           <span class="keyword">int</span> currInflight = <span class="keyword">this</span>.inFlightRequests.count(node.idString());</span><br><span class="line">           <span class="keyword">if</span> (currInflight == <span class="number">0</span> &amp;&amp; isReady(node, now)) &#123;</span><br><span class="line">               <span class="comment">// if we find an established connection with no in-flight requests we can stop right away</span></span><br><span class="line">               log.trace(<span class="string">"Found least loaded node &#123;&#125; connected with no in-flight requests"</span>, node);</span><br><span class="line">               <span class="keyword">return</span> node;</span><br><span class="line">           &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!<span class="keyword">this</span>.connectionStates.isBlackedOut(node.idString(), now) &amp;&amp; currInflight &lt; inflight) &#123;</span><br><span class="line">               <span class="comment">// otherwise if this is the best we have found so far, record that</span></span><br><span class="line">               inflight = currInflight;</span><br><span class="line">               found = node;</span><br><span class="line">           &#125; <span class="keyword">else</span> <span class="keyword">if</span> (log.isTraceEnabled()) &#123;</span><br><span class="line">               log.trace(<span class="string">"Removing node &#123;&#125; from least loaded node selection: is-blacked-out: &#123;&#125;, in-flight-requests: &#123;&#125;"</span>,</span><br><span class="line">                       node, <span class="keyword">this</span>.connectionStates.isBlackedOut(node.idString(), now), currInflight);</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       <span class="keyword">if</span> (found != <span class="keyword">null</span>)</span><br><span class="line">           log.trace(<span class="string">"Found least loaded node &#123;&#125;"</span>, found);</span><br><span class="line">       <span class="keyword">else</span></span><br><span class="line">           log.trace(<span class="string">"Least loaded node selection failed to find an available node"</span>);</span><br><span class="line"></span><br><span class="line">       <span class="keyword">return</span> found;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>在0.8.2.2的kafkaProducter中存在一个bug，如果kafka的地址中存在一台没有kafka，新旧两个版本都有有一个random。新版的random的offset是每次调用函数都重新生成，而旧版的random在初始化的生成，调用函数不会更新，那么就会出现一个bug，如果获取的是错误的那台服务器，每次重新调用就都会去拿这个服务器，就会一直出错。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Node <span class="title">leastLoadedNode</span><span class="params">(<span class="keyword">long</span> now)</span> </span>&#123;</span><br><span class="line">        List&lt;Node&gt; nodes = <span class="keyword">this</span>.metadata.fetch().nodes();</span><br><span class="line">        <span class="keyword">int</span> inflight = Integer.MAX_VALUE;</span><br><span class="line">        Node found = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; nodes.size(); i++) &#123;</span><br><span class="line">            <span class="comment">//this.nodeIndexOffset初始化的时候生成，再不更新，会出现一开始初始化的时候都没有已经连接的node，如果存在错误的服务器，会一直连接这台。</span></span><br><span class="line">            <span class="keyword">int</span> idx = Utils.abs((<span class="keyword">this</span>.nodeIndexOffset + i) % nodes.size());</span><br><span class="line">            Node node = nodes.get(idx);</span><br><span class="line">            <span class="keyword">int</span> currInflight = <span class="keyword">this</span>.inFlightRequests.inFlightRequestCount(node.id());</span><br><span class="line">            <span class="keyword">if</span> (currInflight == <span class="number">0</span> &amp;&amp; <span class="keyword">this</span>.connectionStates.isConnected(node.id())) &#123;</span><br><span class="line">                <span class="comment">// if we find an established connection with no in-flight requests we can stop right away</span></span><br><span class="line">                <span class="keyword">return</span> node;</span><br><span class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (!<span class="keyword">this</span>.connectionStates.isBlackedOut(node.id(), now) &amp;&amp; currInflight &lt; inflight) &#123;</span><br><span class="line">                <span class="comment">// otherwise if this is the best we have found so far, record that</span></span><br><span class="line">                inflight = currInflight;</span><br><span class="line">                found = node;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> found;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h4 id="RecordAccumulator-缓冲池"><a href="#RecordAccumulator-缓冲池" class="headerlink" title="RecordAccumulator 缓冲池"></a>RecordAccumulator 缓冲池</h4><ul>
+<li>添加一条记录，计数器加一</li>
+<li>获取对应topic的partition的双端队列，队列里头存储的是一个个batch，如果不存在，直接创建新的双端队列</li>
+<li>添加对应记录，如果batch有剩余空间，则添加完成</li>
+<li>如果没有剩余空间，创建新的batch，分配新的空间，如果在bolck默认内存不够会锁住等待一定时间</li>
+<li>再次尝试一次在原来的空间添加记录，（可能会出现垃圾回收后有空间），如果成功则成功，如果不成功，在新分配的空间添加batch。</li>
+</ul>
+<h4 id="Sender-发送线程"><a href="#Sender-发送线程" class="headerlink" title="Sender 发送线程"></a>Sender 发送线程</h4><p><a href="https://www.jianshu.com/p/4b4e6d2455bc" target="_blank" rel="noopener">https://www.jianshu.com/p/4b4e6d2455bc</a><br><a href="https://www.cnblogs.com/benfly/p/9360563.html" target="_blank" rel="noopener">https://www.cnblogs.com/benfly/p/9360563.html</a><br><a href="https://blog.csdn.net/chunlongyu/article/details/52622422" target="_blank" rel="noopener">https://blog.csdn.net/chunlongyu/article/details/52622422</a></p>
 
-        <div class="article-info info-on-right">
-          
-          
+      
 
+      
+        <div class="page-reward">
+          <a href="javascript:;" class="page-reward-btn tooltip-top">
+            <div class="tooltip tooltip-east">
+            <span class="tooltip-item">
+              赏
+            </span>
+            <span class="tooltip-content">
+              <span class="tooltip-text">
+                <span class="tooltip-inner">
+                  <p class="reward-p"><i class="icon icon-quo-left"></i>谢谢你请我吃糖果<i class="icon icon-quo-right"></i></p>
+                  <div class="reward-box">
+                    
+                    
+                  </div>
+                </span>
+              </span>
+            </span>
+          </div>
+          </a>
         </div>
-        <div class="clearfix"></div>
-    </header>
+      
+    </div>
+    <div class="article-info article-info-index">
+      
+      
+      
+
+      
+
+      
+        
+<div class="share-btn share-icons tooltip-left">
+  <div class="tooltip tooltip-east">
+    <span class="tooltip-item">
+      <a href="javascript:;" class="share-sns share-outer">
+        <i class="icon icon-share"></i>
+      </a>
+    </span>
+    <span class="tooltip-content">
+      <div class="share-wrap">
+        <div class="share-icons">
+          <a class="weibo share-sns" href="javascript:;" data-type="weibo">
+            <i class="icon icon-weibo"></i>
+          </a>
+          <a class="weixin share-sns wxFab" href="javascript:;" data-type="weixin">
+            <i class="icon icon-weixin"></i>
+          </a>
+          <a class="qq share-sns" href="javascript:;" data-type="qq">
+            <i class="icon icon-qq"></i>
+          </a>
+          <a class="douban share-sns" href="javascript:;" data-type="douban">
+            <i class="icon icon-douban"></i>
+          </a>
+          <a class="qzone share-sns" href="javascript:;" data-type="qzone">
+            <i class="icon icon-qzone"></i>
+          </a>
+          <a class="facebook share-sns" href="javascript:;" data-type="facebook">
+            <i class="icon icon-facebook"></i>
+          </a>
+          <a class="twitter share-sns" href="javascript:;" data-type="twitter">
+            <i class="icon icon-twitter"></i>
+          </a>
+          <a class="google share-sns" href="javascript:;" data-type="google">
+            <i class="icon icon-google"></i>
+          </a>
+        </div>
+      </div>
+    </span>
+  </div>
+</div>
+
+<div class="page-modal wx-share js-wx-box">
+    <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
+    <p>扫一扫，分享到微信</p>
+    <div class="wx-qrcode">
+      <img src="//pan.baidu.com/share/qrcode?url=http://yoursite.com/2019/03/17/Kafka-porducter-code-analyse/" alt="微信分享二维码">
+    </div>
+</div>
+
+<div class="mask js-mask"></div>
+      
+      <div class="clearfix"></div>
+    </div>
   </div>
 </article>
+
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/Flink-sideOutput/" class="archive-article-date">
-  	<time datetime="2019-03-17T05:17:42.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
+<nav id="article-nav">
+  
+  
+    <a href="/2019/03/17/Flink-sideOutput/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Flink sideOutput 侧输出</div>
+      <i class="icon-circle-right"></i>
+    </a>
+  
+</nav>
+
+
+<aside class="wrap-side-operation">
+    <div class="mod-side-operation">
+        
+        <div class="jump-container" id="js-jump-container" style="display:none;">
+            <a href="javascript:void(0)" class="mod-side-operation__jump-to-top">
+                <i class="icon-font icon-back"></i>
+            </a>
+            <div id="js-jump-plan-container" class="jump-plan-container" style="top: -11px;">
+                <i class="icon-font icon-plane jump-plane"></i>
+            </div>
         </div>
-    	 
+        
+        
+    </div>
+</aside>
+
+
+
   
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/Flink-sideOutput/">Flink sideOutput 侧输出</a>
-    </h1>
+  
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/Flink-time/" class="archive-article-date">
-  	<time datetime="2019-03-17T05:04:56.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/Flink-time/">Flink 的时间类型</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/Flink-WaterMark/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:58:30.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/Flink-WaterMark/">Flink WaterMark 水位线</a>
-    </h1>
   
 
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
   
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/FlinkDataStreamGuide/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:52:10.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/FlinkDataStreamGuide/">Flink 流处理简单引导</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/skipTable/" class="archive-article-date">
-  	<time datetime="2019-03-17T04:01:22.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/skipTable/">skipTable 跳表介绍</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/RedisBasic/" class="archive-article-date">
-  	<time datetime="2019-03-17T03:53:40.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/RedisBasic/">Redis 基础介绍</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-    
-    
-    <article class="archive-article archive-type-post">
-  <div class="archive-article-inner">
-    <header class="archive-article-header">
-      	<div class="article-meta">
-	      	<a href="/2019/03/17/jstormBasic/" class="archive-article-date">
-  	<time datetime="2019-03-17T02:55:08.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
-</a>
-        </div>
-    	 
-  
-    <h1 itemprop="name">
-      <a class="archive-article-title" href="/2019/03/17/jstormBasic/">JSTORM 基础概念</a>
-    </h1>
-  
-
-        <div class="article-info info-on-right">
-          
-          
-
-        </div>
-        <div class="clearfix"></div>
-    </header>
-  </div>
-</article>
-  
-  
-    </div></section>
-  
-
-    
 
 
           </div>
@@ -385,8 +335,8 @@
 	var yiliaConfig = {
 		mathjax: false,
 		isHome: false,
-		isPost: false,
-		isArchive: true,
+		isPost: true,
+		isArchive: false,
 		isTag: false,
 		isCategory: false,
 		open_in_new: false,
