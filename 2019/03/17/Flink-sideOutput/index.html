@@ -6,24 +6,19 @@
   <meta name="renderer" content="webkit">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <link rel="dns-prefetch" href="http://yoursite.com">
-  <title>Flink 的时间类型 | Pray</title>
+  <title>Flink sideOutput 侧输出 | Pray</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="Event Time / Processing Time / Ingestion Time">
+  <meta name="description" content="除了从DataStream操作的结果中获取主数据流之外，你还可以产生任意数量额外的侧输出结果流。侧输出结果流的数据类型不需要与主数据流的类型一致，不同侧输出流的类型也可以不同。当您想要拆分数据流时(通常必须复制流),然后从每个流过滤出您不想拥有的数据，此操作将非常有用。当使用侧输出流时，你首先得定义一个OutputTag，这个OutputTag将用来标识一个侧输出流:">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Flink 的时间类型">
-<meta property="og:url" content="http://yoursite.com/2019/03/17/Flink-time/index.html">
+<meta property="og:title" content="Flink sideOutput 侧输出">
+<meta property="og:url" content="http://yoursite.com/2019/03/17/Flink-sideOutput/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="Event Time / Processing Time / Ingestion Time">
+<meta property="og:description" content="除了从DataStream操作的结果中获取主数据流之外，你还可以产生任意数量额外的侧输出结果流。侧输出结果流的数据类型不需要与主数据流的类型一致，不同侧输出流的类型也可以不同。当您想要拆分数据流时(通常必须复制流),然后从每个流过滤出您不想拥有的数据，此操作将非常有用。当使用侧输出流时，你首先得定义一个OutputTag，这个OutputTag将用来标识一个侧输出流:">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:image" content="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/times_clocks.svg">
-<meta property="og:image" content="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/stream_watermark_in_order.svg">
-<meta property="og:image" content="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/stream_watermark_out_of_order.svg">
-<meta property="og:image" content="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/parallel_streams_watermarks.svg">
-<meta property="og:updated_time" content="2019-03-17T05:05:48.750Z">
+<meta property="og:updated_time" content="2019-03-17T05:18:50.902Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Flink 的时间类型">
-<meta name="twitter:description" content="Event Time / Processing Time / Ingestion Time">
-<meta name="twitter:image" content="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/times_clocks.svg">
+<meta name="twitter:title" content="Flink sideOutput 侧输出">
+<meta name="twitter:description" content="除了从DataStream操作的结果中获取主数据流之外，你还可以产生任意数量额外的侧输出结果流。侧输出结果流的数据类型不需要与主数据流的类型一致，不同侧输出流的类型也可以不同。当您想要拆分数据流时(通常必须复制流),然后从每个流过滤出您不想拥有的数据，此操作将非常有用。当使用侧输出流时，你首先得定义一个OutputTag，这个OutputTag将用来标识一个侧输出流:">
   
     <link rel="alternative" href="/atom.xml" title="Pray" type="application/atom+xml">
   
@@ -140,50 +135,39 @@
             <canvas data-colors="#eaeaea" data-sectionHeight="100" data-contentId="js-content" id="myCanvas1" class="anm-canvas"></canvas>
           </div>
           <div id="js-content" class="content-ll">
-            <article id="post-Flink-time" class="article article-type-post " itemscope itemprop="blogPost">
+            <article id="post-Flink-sideOutput" class="article article-type-post " itemscope itemprop="blogPost">
   <div class="article-inner">
     
       <header class="article-header">
         
   
     <h1 class="article-title" itemprop="name">
-      Flink 的时间类型
+      Flink sideOutput 侧输出
     </h1>
   
 
         
-        <a href="/2019/03/17/Flink-time/" class="archive-article-date">
-  	<time datetime="2019-03-17T05:04:56.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
+        <a href="/2019/03/17/Flink-sideOutput/" class="archive-article-date">
+  	<time datetime="2019-03-17T05:17:42.000Z" itemprop="datePublished"><i class="icon-calendar icon"></i>2019-03-17</time>
 </a>
         
       </header>
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h3 id="Event-Time-Processing-Time-Ingestion-Time"><a href="#Event-Time-Processing-Time-Ingestion-Time" class="headerlink" title="Event Time / Processing Time / Ingestion Time"></a>Event Time / Processing Time / Ingestion Time</h3><a id="more"></a>
+        <p>除了从DataStream操作的结果中获取主数据流之外，你还可以产生任意数量额外的侧输出结果流。侧输出结果流的数据类型不需要与主数据流的类型一致，不同侧输出流的类型也可以不同。当您想要拆分数据流时(通常必须复制流),然后从每个流过滤出您不想拥有的数据，此操作将非常有用。<br>当使用侧输出流时，你首先得定义一个OutputTag，这个OutputTag将用来标识一个侧输出流:</p>
+<a id="more"></a>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// this needs to be an anonymous inner class, so that we can analyze the type</span></span><br><span class="line">OutputTag&lt;String&gt; outputTag = <span class="keyword">new</span> OutputTag&lt;String&gt;(<span class="string">"side-output"</span>) &#123;&#125;;</span><br></pre></td></tr></table></figure>
+<p>可以通过以下函数将数据发送到旁路输出：</p>
 <ul>
-<li><p>Processing time(处理时间): 机器执行相应操作时的系统时间。<br>当流程序在处理时间上运行时，所有基于时间的操作(比如时间窗口)都将使用运行各自操作的机器的系统时钟。每小时处理时间窗口将包含在系统时钟指示整个小时之间到达某个特定操作的所有记录。举例：如果一个应用在9.15分开始执行，第一个小时处理时间窗口将包含在上午9:15到10:00之间处理的事件，第一个小时处理时间窗口将包含在上午9:15到10:00之间处理的事件。<br>处理时间提供最好的处理性能和最低的延迟，但是在分布式环境和异步环境下这个时间会不准。</p>
-</li>
-<li><p>Event time（事件时间）：事件时间是指每个事件在其生产设备上发生的时间（源头标定的时间）。这个时间一般在记录进入Flink前就嵌入记录中，这个时间可以从每条记录中提取出来。事件时间程序必须指定如何生成事件时间的水位线，这个水位线是指示事件何时进行的信号。<br>不管事件什么时候到达，或者它们的顺序，事件时间处理将产生完全一致和确定性的结果。但是，除非已知事件是按顺序到达的(通过时间戳)，否则事件时间处理将在等待无序事件导致一些延迟。由于只能等待有限的时间，这就对确定性事件时间应用程序的限制。<br>假设所有数据都已到达，事件时间操作将按照预期执行，即使在处理无序或延迟事件或重新处理历史数据时也会产生正确且一致的结果。例如，每小时事件时间窗口将包含所有包含属于该小时的事件时间戳的记录，而不管它们到达的顺序如何，也不管它们在什么时候被处理</p>
-</li>
+<li>ProcessFunction</li>
+<li>CoProcessFunction</li>
+<li>ProcessWindowFunction</li>
+<li>ProcessAllWindowFunction</li>
 </ul>
-<p>Ingestion time（导入时间）:摄入时间是导入Flink的时间，在Source获取每一条记录的时候，source的当前时间为这条记录的导入时间。<br>导入时间概念上介于事件时间和处理时间之间。<br><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/times_clocks.svg" alt="image"></p>
-<h4 id="Setting-a-Time-Characteristic（设置时间特性）"><a href="#Setting-a-Time-Characteristic（设置时间特性）" class="headerlink" title="Setting a Time Characteristic（设置时间特性）"></a>Setting a Time Characteristic（设置时间特性）</h4><p>Flink DataStream程序的第一部分通常设置基本时间特征。该设置定义了数据流源的行为(例如，它们是否会分配时间戳)，以及像KeyedStream.timeWindow(time .seconds(30))这样的窗口操作应该使用什么时间概念。下面的例子定义了一小时的时间窗口。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line">env.setStreamTimeCharacteristic(TimeCharacteristic.ProcessingTime);</span><br><span class="line"></span><br><span class="line"><span class="comment">// alternatively:</span></span><br><span class="line"><span class="comment">// env.setStreamTimeCharacteristic(TimeCharacteristic.IngestionTime);</span></span><br><span class="line"><span class="comment">// env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);</span></span><br><span class="line"></span><br><span class="line">DataStream&lt;MyEvent&gt; stream = env.addSource(<span class="keyword">new</span> FlinkKafkaConsumer09&lt;MyEvent&gt;(topic, schema, props));</span><br><span class="line"></span><br><span class="line">stream</span><br><span class="line">    .keyBy( (event) -&gt; event.getUser() )</span><br><span class="line">    .timeWindow(Time.hours(<span class="number">1</span>))</span><br><span class="line">    .reduce( (a, b) -&gt; a.add(b) )</span><br><span class="line">    .addSink(...);</span><br></pre></td></tr></table></figure></p>
-<p><strong>注意，为了使用事件时间，程序需要使用直接标记事件时间和提交水位线的source，或者程序必须在源文件之后注入Timestamp Assigner &amp; Watermark Generator。这些函数描述了如何访问事件时间戳，以及事件流显示的异常程度有多严重</strong></p>
-<h3 id="Event-Time-and-Watermarks"><a href="#Event-Time-and-Watermarks" class="headerlink" title="Event Time and Watermarks"></a>Event Time and Watermarks</h3><p>支持事件时间的流处理器需要一种方法来度量事件时间的进度。例如，当事件时间超过一小时后，构建每小时窗口的窗口操作符需要得到通知，以便操作符可以在程序中关闭窗口。</p>
-<p>Flink中度量事件时间进度的机制是水位线。A Watermark(t) 表明事件时间已经到达流中的时间t。下图显示了具有(逻辑)时间戳和水位线的事件流。在本例中，事件是按顺序排列的(相对于它们的时间戳)，这意味着水位线只是流中的周期性标记。<br><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/stream_watermark_in_order.svg" alt="image"></p>
-<p>水位线对于无序的流是至关重要的，如下图所示，事件不是按照它们的时间戳来排序的。通常，水位线是一种声明，在流中的那个点之前，所有事件直到某个时间戳都应该到达。一旦水位线到达操作符，操作符可以将其内部事件时钟提前到水位线的值。（就是说，如果水位高告诉我们到了11，说明11之前的数据都已经到了，可以开始11前的计算，如果有比11小的数据到达，会跳过这个计算。）<br><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/stream_watermark_out_of_order.svg" alt="image"></p>
-<h4 id="Watermarks-in-Parallel-Streams（并行流中的水位线）"><a href="#Watermarks-in-Parallel-Streams（并行流中的水位线）" class="headerlink" title="Watermarks in Parallel Streams（并行流中的水位线）"></a>Watermarks in Parallel Streams（并行流中的水位线）</h4><p>水位线是在源函数处或直接在源函数之后生成的。源函数的每个并行子任务通常独立地生成其水位线。<br>当水位线通过流媒体程序时，它们在到达的操作符处提前了事件时间。当操作符提前其事件时间时，它将为其后续操作符在下游生成一个新的水印。</p>
-<p><img src="https://ci.apache.org/projects/flink/flink-docs-release-1.6/fig/parallel_streams_watermarks.svg" alt="image"></p>
-<h2 id="Generating-Timestamps-Watermarks"><a href="#Generating-Timestamps-Watermarks" class="headerlink" title="Generating Timestamps / Watermarks"></a>Generating Timestamps / Watermarks</h2><p>首先想要设定时间事件，必须设定事件时间<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);</span><br></pre></td></tr></table></figure></p>
-<h4 id="Assigning-Timestamps（指定时间戳）"><a href="#Assigning-Timestamps（指定时间戳）" class="headerlink" title="Assigning Timestamps（指定时间戳）"></a>Assigning Timestamps（指定时间戳）</h4><p>时间戳的指定和水位线的创建是一起的，可以通过两种方法赋予时间戳并且创建水位线</p>
-<ul>
-<li>在数据源头指定</li>
-<li>创建一个时间戳分配函数和水位线生成函数</li>
-</ul>
-<h4 id="Source-Functions-with-Timestamps-and-Watermarks（源函数中的时间戳和水位线）"><a href="#Source-Functions-with-Timestamps-and-Watermarks（源函数中的时间戳和水位线）" class="headerlink" title="Source Functions with Timestamps and Watermarks（源函数中的时间戳和水位线）"></a>Source Functions with Timestamps and Watermarks（源函数中的时间戳和水位线）</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(SourceContext&lt;MyType&gt; ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">	<span class="keyword">while</span> (<span class="comment">/* condition */</span>) &#123;</span><br><span class="line">		MyType next = getNext();</span><br><span class="line">		ctx.collectWithTimestamp(next, next.getEventTimestamp());</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (next.hasWatermarkTime()) &#123;</span><br><span class="line">			ctx.emitWatermark(<span class="keyword">new</span> Watermark(next.getWatermarkTime()));</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="Timestamp-Assigners-Watermark-Generators-时间戳指派-水位线生成"><a href="#Timestamp-Assigners-Watermark-Generators-时间戳指派-水位线生成" class="headerlink" title="Timestamp Assigners / Watermark Generators(时间戳指派/水位线生成)"></a>Timestamp Assigners / Watermark Generators(时间戳指派/水位线生成)</h3><p>时间戳指派函数会获取一条流，生成一条新流带有时间戳和水位线，如果原始流已经拥有时间戳或者水位线，那么时间戳指派函数会覆盖他们。</p>
-<p>不管在任何场景，时间戳指派必须在第一个操作前指定，</p>
+<p>注意，OutputTag是根据侧输出流所包含的元素的类型来输入的。<br>数据发送到侧输出流只能从一个ProcessFunction中发出，你可以使用Context参数来发送数据到一个通过OutputTag标记的侧输出流中:<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">DataStream&lt;Integer&gt; input = ...;</span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> OutputTag&lt;String&gt; outputTag = <span class="keyword">new</span> OutputTag&lt;String&gt;(<span class="string">"side-output"</span>)&#123;&#125;;</span><br><span class="line"></span><br><span class="line">SingleOutputStreamOperator&lt;Integer&gt; mainDataStream = input</span><br><span class="line">  .process(<span class="keyword">new</span> ProcessFunction&lt;Integer, Integer&gt;() &#123;</span><br><span class="line"></span><br><span class="line">      <span class="meta">@Override</span></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">          Integer value,</span></span></span><br><span class="line"><span class="function"><span class="params">          Context ctx,</span></span></span><br><span class="line"><span class="function"><span class="params">          Collector&lt;Integer&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// 将数据发送到常规输出中</span></span><br><span class="line">        out.collect(value);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// 将数据发送到侧输出中</span></span><br><span class="line">        ctx.output(outputTag, <span class="string">"sideout-"</span> + String.valueOf(value));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;);</span><br></pre></td></tr></table></figure></p>
+<p>你可以在DataStream操作的结果中使用getSideOutput(OutputTag)来获取侧输出，这里为您提供一个DataStream类型，用于输出端输出流的结果：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> OutputTag&lt;String&gt; outputTag = <span class="keyword">new</span> OutputTag&lt;String&gt;(<span class="string">"side-output"</span>)&#123;&#125;;</span><br><span class="line"></span><br><span class="line">SingleOutputStreamOperator&lt;Integer&gt; mainDataStream = ...;</span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; sideOutputStream = mainDataStream.getSideOutput(outputTag);</span><br></pre></td></tr></table></figure></p>
+<h3 id="目前觉得使用旁路输出可以将一条流分为多条流，并且是在一次算子中执行，而不是通过两次fliter，使用两次fliter会降低效率并且过滤多次原始数据。"><a href="#目前觉得使用旁路输出可以将一条流分为多条流，并且是在一次算子中执行，而不是通过两次fliter，使用两次fliter会降低效率并且过滤多次原始数据。" class="headerlink" title="目前觉得使用旁路输出可以将一条流分为多条流，并且是在一次算子中执行，而不是通过两次fliter，使用两次fliter会降低效率并且过滤多次原始数据。"></a>目前觉得使用旁路输出可以将一条流分为多条流，并且是在一次算子中执行，而不是通过两次fliter，使用两次fliter会降低效率并且过滤多次原始数据。</h3><p>demo：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        InputStream in = FlinkSideOutPut.class.getResourceAsStream(<span class="string">"/flink_content.properties"</span>);</span><br><span class="line">        <span class="keyword">final</span> ParameterTool parameterTool = ParameterTool.fromPropertiesFile(in);</span><br><span class="line">        <span class="keyword">int</span> sourceParam = parameterTool.getInt(<span class="string">"source.param"</span>);</span><br><span class="line">        <span class="keyword">int</span> lineParam = parameterTool.getInt(<span class="string">"line.param"</span>);</span><br><span class="line">        FlinkKafkaConsumer08 flinkKafkaConsumer08 = <span class="keyword">new</span> PlayerCountSource().init();</span><br><span class="line">        DataStream&lt;String&gt; input = env.addSource(flinkKafkaConsumer08).setParallelism(sourceParam);</span><br><span class="line">        DataStream&lt;PlayerCountEvent&gt; playerCountEventDataStream = input.flatMap(<span class="keyword">new</span> String2PlayerCountTransformation()).setParallelism(lineParam);</span><br><span class="line">        <span class="keyword">final</span> OutputTag&lt;PlayerCountEvent&gt; outputTag = <span class="keyword">new</span> OutputTag&lt;PlayerCountEvent&gt;(<span class="string">"side-output"</span>) &#123;</span><br><span class="line">        &#125;;</span><br><span class="line">        SingleOutputStreamOperator&lt;PlayerCountEvent&gt; mainDataStream = playerCountEventDataStream</span><br><span class="line">                .process(<span class="keyword">new</span> ProcessFunction&lt;PlayerCountEvent, PlayerCountEvent&gt;() &#123;</span><br><span class="line"></span><br><span class="line">                    <span class="comment">//可以在此进行分流，把在线人数大于和小于10分成两条流</span></span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(PlayerCountEvent playerCountEvent, Context context, Collector&lt;PlayerCountEvent&gt; collector)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">if</span> (playerCountEvent.getCount() &gt; <span class="number">10</span>) &#123;</span><br><span class="line">                            collector.collect(playerCountEvent);</span><br><span class="line">                        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                            <span class="comment">// emit data to side output</span></span><br><span class="line">                            context.output(outputTag, playerCountEvent);</span><br><span class="line">                        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line"></span><br><span class="line">        DataStream&lt;PlayerCountEvent&gt; sideOutputStream = mainDataStream.getSideOutput(outputTag);</span><br><span class="line">        sideOutputStream.print();</span><br><span class="line">        env.execute();</span><br></pre></td></tr></table></figure></p>
 
       
 
@@ -263,7 +247,7 @@
     <a class="close js-modal-close" href="javascript:;"><i class="icon icon-close"></i></a>
     <p>扫一扫，分享到微信</p>
     <div class="wx-qrcode">
-      <img src="//pan.baidu.com/share/qrcode?url=http://yoursite.com/2019/03/17/Flink-time/" alt="微信分享二维码">
+      <img src="//pan.baidu.com/share/qrcode?url=http://yoursite.com/2019/03/17/Flink-sideOutput/" alt="微信分享二维码">
     </div>
 </div>
 
@@ -277,18 +261,9 @@
   
 <nav id="article-nav">
   
-    <a href="/2019/03/17/Flink-sideOutput/" id="article-nav-newer" class="article-nav-link-wrap">
-      <i class="icon-circle-left"></i>
-      <div class="article-nav-title">
-        
-          Flink sideOutput 侧输出
-        
-      </div>
-    </a>
   
-  
-    <a href="/2019/03/17/Flink-WaterMark/" id="article-nav-older" class="article-nav-link-wrap">
-      <div class="article-nav-title">Flink WaterMark 水位线</div>
+    <a href="/2019/03/17/Flink-time/" id="article-nav-older" class="article-nav-link-wrap">
+      <div class="article-nav-title">Flink 的时间类型</div>
       <i class="icon-circle-right"></i>
     </a>
   
