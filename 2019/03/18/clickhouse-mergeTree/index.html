@@ -100,14 +100,14 @@
 
   <meta name="description" content="MergeTree一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个">
 <meta property="og:type" content="article">
-<meta property="og:title" content="clickhouse-mergeTree">
+<meta property="og:title" content="clickhouse MergeTree族原理和使用场景">
 <meta property="og:url" content="http://yoursite.com/2019/03/18/clickhouse-mergeTree/index.html">
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="MergeTree一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-18T14:33:11.981Z">
+<meta property="og:updated_time" content="2019-03-18T14:38:45.089Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="clickhouse-mergeTree">
+<meta name="twitter:title" content="clickhouse MergeTree族原理和使用场景">
 <meta name="twitter:description" content="MergeTree一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个">
 
 
@@ -125,7 +125,7 @@
   };
 </script>
 
-  <title>clickhouse-mergeTree | Pray</title>
+  <title>clickhouse MergeTree族原理和使用场景 | Pray</title>
   
 
 
@@ -328,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">clickhouse-mergeTree
+          <h1 class="post-title" itemprop="name headline">clickhouse MergeTree族原理和使用场景
 
               
             
@@ -354,7 +354,7 @@
                 
               
 
-              <time title="创建时间：2019-03-18 22:26:19 / 修改时间：22:33:11" itemprop="dateCreated datePublished" datetime="2019-03-18T22:26:19+08:00">2019-03-18</time>
+              <time title="创建时间：2019-03-18 22:26:19 / 修改时间：22:38:45" itemprop="dateCreated datePublished" datetime="2019-03-18T22:26:19+08:00">2019-03-18</time>
             
 
             
