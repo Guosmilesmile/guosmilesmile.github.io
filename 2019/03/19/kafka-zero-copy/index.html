@@ -98,24 +98,30 @@
 
 
 
-  <meta name="description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+  <meta name="description" content="Kafka在什么场景下使用该技术使用Zero copy方式在内核层直接将文件内容传送给网络Socket，避免应用层数据拷贝，减小IO开销。 消息消费的时候 包括外部Consumer以及Follower 从partiton Leader同步数据，都是如此。简单描述就是： Consumer从Broker获取文件数据的时候，直接通过下面的方法进行channel到channel的数据传输。 1234jav">
 <meta property="og:type" content="article">
-<meta property="og:title" content="clickhouse 数组">
-<meta property="og:url" content="http://yoursite.com/2019/03/17/clickhouse-数组/index.html">
+<meta property="og:title" content="zero copy">
+<meta property="og:url" content="http://yoursite.com/2019/03/19/kafka-zero-copy/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+<meta property="og:description" content="Kafka在什么场景下使用该技术使用Zero copy方式在内核层直接将文件内容传送给网络Socket，避免应用层数据拷贝，减小IO开销。 消息消费的时候 包括外部Consumer以及Follower 从partiton Leader同步数据，都是如此。简单描述就是： Consumer从Broker获取文件数据的时候，直接通过下面的方法进行channel到channel的数据传输。 1234jav">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-17T13:17:08.392Z">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AFEAC74A7C164243BAFF4F4897B4983C?method=download&shareKey=d827066e4f9c6d1e88eb0f94ef7d6b34">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/3D77500E9C944F56ACC75E8BC39E01E2?method=download&shareKey=54c9fa6b44066d50a9e106c8fd2250ca">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/A6156D3D90584AB9AF915574F5B851F1?method=download&shareKey=9533adac601c1e15590212f75a3d55c5">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/07A04527FCD54C8BBC9292014AF74336?method=download&shareKey=a77251bb23679e382e54004a79bd4b05">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/5DF3DA7C08CA4130B42C7DDDE783D0CB?method=download&shareKey=0c8032eac932d4dc1fb8fb74572a009b">
+<meta property="og:updated_time" content="2019-03-19T14:52:08.304Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="clickhouse 数组">
-<meta name="twitter:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+<meta name="twitter:title" content="zero copy">
+<meta name="twitter:description" content="Kafka在什么场景下使用该技术使用Zero copy方式在内核层直接将文件内容传送给网络Socket，避免应用层数据拷贝，减小IO开销。 消息消费的时候 包括外部Consumer以及Follower 从partiton Leader同步数据，都是如此。简单描述就是： Consumer从Broker获取文件数据的时候，直接通过下面的方法进行channel到channel的数据传输。 1234jav">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/AFEAC74A7C164243BAFF4F4897B4983C?method=download&shareKey=d827066e4f9c6d1e88eb0f94ef7d6b34">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/17/clickhouse-数组/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/19/kafka-zero-copy/">
 
 
 
@@ -125,7 +131,7 @@
   };
 </script>
 
-  <title>clickhouse 数组 | Pray</title>
+  <title>zero copy | Pray</title>
   
 
 
@@ -311,7 +317,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/17/clickhouse-数组/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/19/kafka-zero-copy/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="Chris">
@@ -328,7 +334,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">clickhouse 数组
+          <h1 class="post-title" itemprop="name headline">zero copy
 
               
             
@@ -354,7 +360,7 @@
                 
               
 
-              <time title="创建时间：2019-03-17 15:47:28 / 修改时间：21:17:08" itemprop="dateCreated datePublished" datetime="2019-03-17T15:47:28+08:00">2019-03-17</time>
+              <time title="创建时间：2019-03-19 22:47:19 / 修改时间：22:52:08" itemprop="dateCreated datePublished" datetime="2019-03-19T22:47:19+08:00">2019-03-19</time>
             
 
             
@@ -376,7 +382,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/clickhouse/" itemprop="url" rel="index"><span itemprop="name">clickhouse</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/kafka/" itemprop="url" rel="index"><span itemprop="name">kafka</span></a></span>
 
                 
                 
@@ -411,14 +417,27 @@
       
 
       
-        <h4 id="数据的集合"><a href="#数据的集合" class="headerlink" title="数据的集合"></a>数据的集合</h4><p>可以是各种类型，但是数组内的数据必须是同一种类型</p>
-<h4 id="创建数组"><a href="#创建数组" class="headerlink" title="创建数组"></a>创建数组</h4><p>可以通过array(T)或者[]创建数组</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">array(1, 2)</span><br><span class="line"> [1, 2]</span><br><span class="line"></span><br><span class="line">array(&apos;1&apos;,&apos;2&apos;)</span><br><span class="line"> [&apos;1&apos;,&apos;2&apos;]</span><br></pre></td></tr></table></figure>
-<h4 id="建表语句"><a href="#建表语句" class="headerlink" title="建表语句"></a>建表语句</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">create table test.testTable</span><br><span class="line">(id Int64, app Array(string), all_count Int64)</span><br><span class="line">ENGINE = MergeTree(stat_day,id,8192)</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">insert into test.xxx  values (1,[&apos;1&apos;,&apos;2&apos;],30).</span><br></pre></td></tr></table></figure>
-<h5 id="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><a href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。" class="headerlink" title="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。"></a>clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</h5><h5 id="如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><a href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in" class="headerlink" title="如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in"></a>如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</h5><h5 id="如果需要进行group-by，需要将这个数组进行arrayJoin"><a href="#如果需要进行group-by，需要将这个数组进行arrayJoin" class="headerlink" title="如果需要进行group by，需要将这个数组进行arrayJoin"></a>如果需要进行group by，需要将这个数组进行arrayJoin</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count),arrayJoin(isp) from xx where arrayJoin(isp) in (?,?) group by arrayJoin(isp)</span><br></pre></td></tr></table></figure>
-<p>其他数组操作函数详见</p>
-<p><a href="https://clickhouse.yandex/docs/en/query_language/functions/array_functions/" target="_blank" rel="noopener">https://clickhouse.yandex/docs/en/query_language/functions/array_functions/</a></p>
+        <h4 id="Kafka在什么场景下使用该技术"><a href="#Kafka在什么场景下使用该技术" class="headerlink" title="Kafka在什么场景下使用该技术"></a>Kafka在什么场景下使用该技术</h4><p>使用Zero copy方式在内核层直接将文件内容传送给网络Socket，避免应用层数据拷贝，减小IO开销。</p>
+<p><strong>消息消费的时候</strong></p>
+<p>包括外部Consumer以及Follower 从partiton Leader同步数据，都是如此。简单描述就是：</p>
+<p>Consumer从Broker获取文件数据的时候，直接通过下面的方法进行channel到channel的数据传输。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">java.nio.FileChannel.transferTo(</span><br><span class="line">long position, </span><br><span class="line">long count,                                </span><br><span class="line">WritableByteChannel target)`</span><br></pre></td></tr></table></figure>
+<p>也就是说你的数据源是一个Channel,数据接收端也是一个Channel(SocketChannel),则通过该方式进行数据传输，是直接在内核态进行的，避免拷贝数据导致的内核态和用户态的多次切换。</p>
+<h4 id="zero-copy介绍"><a href="#zero-copy介绍" class="headerlink" title="zero-copy介绍"></a>zero-copy介绍</h4><p>data从硬盘读出之后，原封不动的通过socket传输给用户。这种操作看起来可能不会怎么消耗CPU，但是实际上它是低效的：kernal把数据从disk读出来，然后把它传输给user级的application，然后application再次把同样的内容再传回给处于kernal级的socket。这种场景下，application实际上只是作为一种低效的中间介质，用来把disk file的data传给socket。</p>
+<p>data每次穿过user-kernel boundary，都会被copy，这会消耗cpu，并且占用RAM的带宽。幸运的是，你可以用一种叫做Zero-Copy的技术来去掉这些无谓的copy。应用程序用zero copy来请求kernel直接把disk的data传输给socket，而不是通过应用程序传输。Zero copy大大提高了应用程序的性能，并且减少了kernel和user模式的上下文切换。</p>
+<p>考虑一下这个场景，通过网络把一个文件传输给另一个程序。这个操作的核心代码就是下面的两个函数：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">File.read(fileDesc, buf, len);</span><br><span class="line">Socket.send(socket, buf, len);</span><br></pre></td></tr></table></figure>
+<p>尽管看起来很简单，但是在OS的内部，这个copy操作要经历四次user mode和kernel mode之间的上下文切换，甚至连数据都被拷贝了四次！Figure 1描述了data是怎么移动的。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/AFEAC74A7C164243BAFF4F4897B4983C?method=download&amp;shareKey=d827066e4f9c6d1e88eb0f94ef7d6b34" alt="image"></p>
+<p>Figure 2 描述了上下文切换</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/3D77500E9C944F56ACC75E8BC39E01E2?method=download&amp;shareKey=54c9fa6b44066d50a9e106c8fd2250ca" alt="image"></p>
+<p>其中的步骤如下：</p>
+<p>read() 引入了一次从user mode到kernel mode的上下文切换。实际上调用了sys_read() 来从文件中读取data。第一次copy由DMA完成，将文件内容从disk读出，存储在kernel的buffer中。<br>然后data被copy到user buffer中，此时read()成功返回。这是触发了第二次context switch: 从kernel到user。至此，数据存储在user的buffer中。<br>send() socket call 带来了第三次context switch，这次是从user mode到kernel mode。同时，也发生了第三次copy：把data放到了kernel adress space中。当然，这次的kernel buffer和第一步的buffer是不同的两个buffer。<br>最终 send() system call 返回了，同时也造成了第四次context switch。同时第四次copy发生，DMA将data从kernel buffer拷贝到protocol engine中。第四次copy是独立而且异步的。<br>使用kernel buffer做中介(而不是直接把data传到user buffer中)看起来比较低效(多了一次copy)。然而实际上kernel buffer是用来提高性能的。在进行读操作的时候，kernel buffer起到了预读cache的作用。当写请求的data size比kernel buffer的size小的时候，这能够显著的提升性能。在进行写操作时，kernel buffer的存在可以使得写请求完全异步。</p>
+<p>悲剧的是，当请求的data size远大于kernel buffer size的时候，这个方法本身变成了性能的瓶颈。因为data需要在disk，kernel buffer，user buffer之间拷贝很多次(每次写满整个buffer)。</p>
+<p>而Zero copy正是通过消除这些多余的data copy来提升性能。<br>如果重新检查一遍traditional approach，你会注意到实际上第二次和第三次copy是毫无意义的。应用程序仅仅缓存了一下data就原封不动的把它发回给socket buffer。实际上，data应该直接在read buffer和socket buffer之间传输。transferTo()方法正是做了这样的操作。              </p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/A6156D3D90584AB9AF915574F5B851F1?method=download&amp;shareKey=9533adac601c1e15590212f75a3d55c5" alt="image"></p>
+<p>Figure 4 展示了在使用transferTo()之后的上下文切换<br><img src="https://note.youdao.com/yws/api/personal/file/07A04527FCD54C8BBC9292014AF74336?method=download&amp;shareKey=a77251bb23679e382e54004a79bd4b05" alt="image"></p>
+<p>transferTo()方法使得文件内容被DMA engine直接copy到一个read buffer中。然后数据被kernel再次拷贝到和output socket相关联的那个kernel buffer中去。<br>第三次拷贝由DMA engine完成，它把kernel buffer中的data拷贝到protocol engine中。<br>这是一个很明显的进步：我们把context switch的次数从4次减少到了2次，同时也把data copy的次数从4次降低到了3次(而且其中只有一次占用了CPU，另外两次由DMA完成)。但是，要做到zero copy，这还差得远。如果网卡支持 gather operation，我们可以通过kernel进一步减少数据的拷贝操作。在2.4及以上版本的linux内核中，开发者修改了socket buffer descriptor来适应这一需求。这个方法不仅减少了context switch，还消除了和CPU有关的数据拷贝。user层面的使用方法没有变，但是内部原理却发生了变化：<br>transferTo()方法使得文件内容被copy到了kernel buffer，这一动作由DMA engine完成。<br>没有data被copy到socket buffer。取而代之的是socket buffer被追加了一些descriptor的信息，包括data的位置和长度。然后DMA engine直接把data从kernel buffer传输到protocol engine，这样就消除了唯一的一次需要占用CPU的拷贝操作。<br>Figure 5描述了新的transferTo()方法中的data copy:<br><img src="https://note.youdao.com/yws/api/personal/file/5DF3DA7C08CA4130B42C7DDDE783D0CB?method=download&amp;shareKey=0c8032eac932d4dc1fb8fb74572a009b" alt="image"></p>
 
       
     </div>
@@ -449,8 +468,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/17/Kafka-porducter-code-analyse/" rel="next" title="Kafka kafkaProducer源码解析">
-                <i class="fa fa-chevron-left"></i> Kafka kafkaProducer源码解析
+              <a href="/2019/03/18/clickhouse-mergeTree/" rel="next" title="clickhouse MergeTree族原理和使用场景">
+                <i class="fa fa-chevron-left"></i> clickhouse MergeTree族原理和使用场景
               </a>
             
           </div>
@@ -458,10 +477,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/17/Flink-UDF/" rel="prev" title="Flink-UDF">
-                Flink-UDF <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -603,7 +618,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据的集合"><span class="nav-number">1.</span> <span class="nav-text">数据的集合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建数组"><span class="nav-number">2.</span> <span class="nav-text">创建数组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#建表语句"><span class="nav-number">3.</span> <span class="nav-text">建表语句</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><span class="nav-number">3.1.</span> <span class="nav-text">clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><span class="nav-number">3.2.</span> <span class="nav-text">如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要进行group-by，需要将这个数组进行arrayJoin"><span class="nav-number">3.3.</span> <span class="nav-text">如果需要进行group by，需要将这个数组进行arrayJoin</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#Kafka在什么场景下使用该技术"><span class="nav-number">1.</span> <span class="nav-text">Kafka在什么场景下使用该技术</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#zero-copy介绍"><span class="nav-number">2.</span> <span class="nav-text">zero-copy介绍</span></a></li></ol></div>
             
 
           </div>
