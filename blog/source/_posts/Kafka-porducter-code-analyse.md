@@ -2,7 +2,7 @@
 title: Kafka kafkaProducer源码解析
 date: 2019-03-17 13:39:57
 tags:
-categories: Kafka
+categories: kafka
 ---
 
 
