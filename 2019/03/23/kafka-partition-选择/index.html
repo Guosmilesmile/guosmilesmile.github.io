@@ -98,24 +98,24 @@
 
 
 
-  <meta name="description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+  <meta name="description" content="越多的分区可以提供更高的吞吐量首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，">
 <meta property="og:type" content="article">
-<meta property="og:title" content="clickhouse 数组">
-<meta property="og:url" content="http://yoursite.com/2019/03/17/clickhouse-数组/index.html">
+<meta property="og:title" content="kafka partition 数量选择">
+<meta property="og:url" content="http://yoursite.com/2019/03/23/kafka-partition-选择/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+<meta property="og:description" content="越多的分区可以提供更高的吞吐量首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-17T13:17:08.392Z">
+<meta property="og:updated_time" content="2019-03-23T13:11:03.225Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="clickhouse 数组">
-<meta name="twitter:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+<meta name="twitter:title" content="kafka partition 数量选择">
+<meta name="twitter:description" content="越多的分区可以提供更高的吞吐量首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/17/clickhouse-数组/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/23/kafka-partition-选择/">
 
 
 
@@ -125,7 +125,7 @@
   };
 </script>
 
-  <title>clickhouse 数组 | Pray</title>
+  <title>kafka partition 数量选择 | Pray</title>
   
 
 
@@ -311,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/17/clickhouse-数组/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/23/kafka-partition-选择/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">clickhouse 数组
+          <h1 class="post-title" itemprop="name headline">kafka partition 数量选择
 
               
             
@@ -354,7 +354,7 @@
                 
               
 
-              <time title="创建时间：2019-03-17 15:47:28 / 修改时间：21:17:08" itemprop="dateCreated datePublished" datetime="2019-03-17T15:47:28+08:00">2019-03-17</time>
+              <time title="创建时间：2019-03-23 21:10:33 / 修改时间：21:11:03" itemprop="dateCreated datePublished" datetime="2019-03-23T21:10:33+08:00">2019-03-23</time>
             
 
             
@@ -376,7 +376,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/clickhouse/" itemprop="url" rel="index"><span itemprop="name">clickhouse</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/kafka/" itemprop="url" rel="index"><span itemprop="name">kafka</span></a></span>
 
                 
                 
@@ -411,14 +411,13 @@
       
 
       
-        <h4 id="数据的集合"><a href="#数据的集合" class="headerlink" title="数据的集合"></a>数据的集合</h4><p>可以是各种类型，但是数组内的数据必须是同一种类型</p>
-<h4 id="创建数组"><a href="#创建数组" class="headerlink" title="创建数组"></a>创建数组</h4><p>可以通过array(T)或者[]创建数组</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">array(1, 2)</span><br><span class="line"> [1, 2]</span><br><span class="line"></span><br><span class="line">array(&apos;1&apos;,&apos;2&apos;)</span><br><span class="line"> [&apos;1&apos;,&apos;2&apos;]</span><br></pre></td></tr></table></figure>
-<h4 id="建表语句"><a href="#建表语句" class="headerlink" title="建表语句"></a>建表语句</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">create table test.testTable</span><br><span class="line">(id Int64, app Array(string), all_count Int64)</span><br><span class="line">ENGINE = MergeTree(stat_day,id,8192)</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">insert into test.xxx  values (1,[&apos;1&apos;,&apos;2&apos;],30).</span><br></pre></td></tr></table></figure>
-<h5 id="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><a href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。" class="headerlink" title="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。"></a>clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</h5><h5 id="如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><a href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in" class="headerlink" title="如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in"></a>如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</h5><h5 id="如果需要进行group-by，需要将这个数组进行arrayJoin"><a href="#如果需要进行group-by，需要将这个数组进行arrayJoin" class="headerlink" title="如果需要进行group by，需要将这个数组进行arrayJoin"></a>如果需要进行group by，需要将这个数组进行arrayJoin</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count),arrayJoin(isp) from xx where arrayJoin(isp) in (?,?) group by arrayJoin(isp)</span><br></pre></td></tr></table></figure>
-<p>其他数组操作函数详见</p>
-<p><a href="https://clickhouse.yandex/docs/en/query_language/functions/array_functions/" target="_blank" rel="noopener">https://clickhouse.yandex/docs/en/query_language/functions/array_functions/</a></p>
+        <h3 id="越多的分区可以提供更高的吞吐量"><a href="#越多的分区可以提供更高的吞吐量" class="headerlink" title="越多的分区可以提供更高的吞吐量"></a>越多的分区可以提供更高的吞吐量</h3><p>首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，每一个Consumer Group内部的consumer并行度完全依赖于被消费的分区数量。综上所述，通常情况下，在一个Kafka集群中，partition的数量越多，意味着可以到达的吞吐量越大。</p>
+<p>　　我们可以粗略地通过吞吐量来计算kafka集群的分区数量。假设对于单个partition，producer端的可达吞吐量为p，Consumer端的可达吞吐量为c，期望的目标吞吐量为t，那么集群所需要的partition数量至少为max(t/p,t/c)。在producer端，单个分区的吞吐量大小会受到批量大小、数据压缩方法、 确认类型（同步/异步）、复制因子等配置参数的影响。经过测试，在producer端，单个partition的吞吐量通常是在10MB/s左右。在consumer端，单个partition的吞吐量依赖于consumer端每个消息的应用逻辑处理速度。因此，我们需要对consumer端的吞吐量进行测量。
+　　</p>
+<h3 id="越多的分区需要打开更多地文件句柄"><a href="#越多的分区需要打开更多地文件句柄" class="headerlink" title="越多的分区需要打开更多地文件句柄"></a>越多的分区需要打开更多地文件句柄</h3><p>在kafka的broker中，每个分区都会对照着文件系统的一个目录。在kafka的数据日志文件目录中，每个日志数据段都会分配两个文件，一个索引文件和一个数据文件。当前版本的kafka，每个broker会为每个日志段文件打开一个index文件句柄和一个数据文件句柄。因此，随着partition的增多，需要底层操作系统配置更高的文件句柄数量限制。</p>
+<h3 id="越多的partition意味着需要客户端需要更多的内存"><a href="#越多的partition意味着需要客户端需要更多的内存" class="headerlink" title="越多的partition意味着需要客户端需要更多的内存"></a>越多的partition意味着需要客户端需要更多的内存</h3><p>如果partition的数量增加，消息将会在producer端按更多的partition进行积累。众多的partition所消耗的内存汇集起来，有可能会超过设置的内容大小限制。当这种情况发生时，producer必须通过消息堵塞或者丢失一些新消息的方式解决上述问题，但是这两种做法都不理想。为了避免这种情况发生，我们必须重新将produder的内存设置得更大一些。</p>
+<h3 id="不要设置太多的partition"><a href="#不要设置太多的partition" class="headerlink" title="不要设置太多的partition"></a>不要设置太多的partition</h3><p>分区是Kafka可伸缩性的关键，但这并不意味着应该有太多的分区，topic中的每个分区都使用大量RAM(文件描述符)。随着分区的增加，CPU上的负载也会增加，因为Kafka需要跟踪所有分区。如果在broker多的情况下，一个topic分配50个partition是一个比较合理的数值</p>
+<h3 id="在cpu核心和消费者之间保持良好的平衡"><a href="#在cpu核心和消费者之间保持良好的平衡" class="headerlink" title="在cpu核心和消费者之间保持良好的平衡"></a>在cpu核心和消费者之间保持良好的平衡</h3><p>Kafka中的每个分区都是单线程的，如果服务器上的核心数量很低，那么太多的分区将无法充分发挥其潜力。因此，您需要在核心和消费者之间保持良好的平衡。</p>
 
       
     </div>
@@ -449,8 +448,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/17/Kafka-porducter-code-analyse/" rel="next" title="Kafka kafkaProducer源码解析">
-                <i class="fa fa-chevron-left"></i> Kafka kafkaProducer源码解析
+              <a href="/2019/03/21/Flink-批处理-map-与-mapPartition/" rel="next" title="Flink 批处理  map 与 mapPartition">
+                <i class="fa fa-chevron-left"></i> Flink 批处理  map 与 mapPartition
               </a>
             
           </div>
@@ -458,10 +457,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/17/Flink-UDF/" rel="prev" title="Flink-UDF">
-                Flink-UDF <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -601,7 +596,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据的集合"><span class="nav-number">1.</span> <span class="nav-text">数据的集合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建数组"><span class="nav-number">2.</span> <span class="nav-text">创建数组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#建表语句"><span class="nav-number">3.</span> <span class="nav-text">建表语句</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><span class="nav-number">3.1.</span> <span class="nav-text">clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><span class="nav-number">3.2.</span> <span class="nav-text">如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要进行group-by，需要将这个数组进行arrayJoin"><span class="nav-number">3.3.</span> <span class="nav-text">如果需要进行group by，需要将这个数组进行arrayJoin</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#越多的分区可以提供更高的吞吐量"><span class="nav-number">1.</span> <span class="nav-text">越多的分区可以提供更高的吞吐量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#越多的分区需要打开更多地文件句柄"><span class="nav-number">2.</span> <span class="nav-text">越多的分区需要打开更多地文件句柄</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#越多的partition意味着需要客户端需要更多的内存"><span class="nav-number">3.</span> <span class="nav-text">越多的partition意味着需要客户端需要更多的内存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#不要设置太多的partition"><span class="nav-number">4.</span> <span class="nav-text">不要设置太多的partition</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在cpu核心和消费者之间保持良好的平衡"><span class="nav-number">5.</span> <span class="nav-text">在cpu核心和消费者之间保持良好的平衡</span></a></li></ol></div>
             
 
           </div>
