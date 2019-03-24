@@ -98,24 +98,24 @@
 
 
 
-  <meta name="description" content="越多的分区可以提供更高的吞吐量首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，">
+  <meta name="description" content="out-of-order element与late element 通过watermark机制来处理out-of-order的问题，属于第一层防护，属于全局性的防护，通常说的乱序问题的解决办法，就是指这类； 通过窗口上的allowedLateness机制来处理out-of-order的问题，属于第二层防护，属于特定window operator的防护，late element的问题就是指这类。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="kafka partition 数量选择">
-<meta property="og:url" content="http://yoursite.com/2019/03/23/kafka-partition-选择/index.html">
+<meta property="og:title" content="Flink allowedLateness">
+<meta property="og:url" content="http://yoursite.com/2019/03/24/Flink-allowedLateness/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="越多的分区可以提供更高的吞吐量首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，">
+<meta property="og:description" content="out-of-order element与late element 通过watermark机制来处理out-of-order的问题，属于第一层防护，属于全局性的防护，通常说的乱序问题的解决办法，就是指这类； 通过窗口上的allowedLateness机制来处理out-of-order的问题，属于第二层防护，属于特定window operator的防护，late element的问题就是指这类。">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-23T13:11:03.225Z">
+<meta property="og:updated_time" content="2019-03-24T05:36:41.816Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="kafka partition 数量选择">
-<meta name="twitter:description" content="越多的分区可以提供更高的吞吐量首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，">
+<meta name="twitter:title" content="Flink allowedLateness">
+<meta name="twitter:description" content="out-of-order element与late element 通过watermark机制来处理out-of-order的问题，属于第一层防护，属于全局性的防护，通常说的乱序问题的解决办法，就是指这类； 通过窗口上的allowedLateness机制来处理out-of-order的问题，属于第二层防护，属于特定window operator的防护，late element的问题就是指这类。">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/23/kafka-partition-选择/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/24/Flink-allowedLateness/">
 
 
 
@@ -125,7 +125,7 @@
   };
 </script>
 
-  <title>kafka partition 数量选择 | Pray</title>
+  <title>Flink allowedLateness | Pray</title>
   
 
 
@@ -311,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/23/kafka-partition-选择/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/24/Flink-allowedLateness/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">kafka partition 数量选择
+          <h1 class="post-title" itemprop="name headline">Flink allowedLateness
 
               
             
@@ -354,7 +354,7 @@
                 
               
 
-              <time title="创建时间：2019-03-23 21:10:33 / 修改时间：21:11:03" itemprop="dateCreated datePublished" datetime="2019-03-23T21:10:33+08:00">2019-03-23</time>
+              <time title="创建时间：2019-03-24 13:34:18 / 修改时间：13:36:41" itemprop="dateCreated datePublished" datetime="2019-03-24T13:34:18+08:00">2019-03-24</time>
             
 
             
@@ -376,7 +376,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/kafka/" itemprop="url" rel="index"><span itemprop="name">kafka</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
 
                 
                 
@@ -411,13 +411,33 @@
       
 
       
-        <h3 id="越多的分区可以提供更高的吞吐量"><a href="#越多的分区可以提供更高的吞吐量" class="headerlink" title="越多的分区可以提供更高的吞吐量"></a>越多的分区可以提供更高的吞吐量</h3><p>首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，每一个Consumer Group内部的consumer并行度完全依赖于被消费的分区数量。综上所述，通常情况下，在一个Kafka集群中，partition的数量越多，意味着可以到达的吞吐量越大。</p>
-<p>　　我们可以粗略地通过吞吐量来计算kafka集群的分区数量。假设对于单个partition，producer端的可达吞吐量为p，Consumer端的可达吞吐量为c，期望的目标吞吐量为t，那么集群所需要的partition数量至少为max(t/p,t/c)。在producer端，单个分区的吞吐量大小会受到批量大小、数据压缩方法、 确认类型（同步/异步）、复制因子等配置参数的影响。经过测试，在producer端，单个partition的吞吐量通常是在10MB/s左右。在consumer端，单个partition的吞吐量依赖于consumer端每个消息的应用逻辑处理速度。因此，我们需要对consumer端的吞吐量进行测量。
-　　</p>
-<h3 id="越多的分区需要打开更多地文件句柄"><a href="#越多的分区需要打开更多地文件句柄" class="headerlink" title="越多的分区需要打开更多地文件句柄"></a>越多的分区需要打开更多地文件句柄</h3><p>在kafka的broker中，每个分区都会对照着文件系统的一个目录。在kafka的数据日志文件目录中，每个日志数据段都会分配两个文件，一个索引文件和一个数据文件。当前版本的kafka，每个broker会为每个日志段文件打开一个index文件句柄和一个数据文件句柄。因此，随着partition的增多，需要底层操作系统配置更高的文件句柄数量限制。</p>
-<h3 id="越多的partition意味着需要客户端需要更多的内存"><a href="#越多的partition意味着需要客户端需要更多的内存" class="headerlink" title="越多的partition意味着需要客户端需要更多的内存"></a>越多的partition意味着需要客户端需要更多的内存</h3><p>如果partition的数量增加，消息将会在producer端按更多的partition进行积累。众多的partition所消耗的内存汇集起来，有可能会超过设置的内容大小限制。当这种情况发生时，producer必须通过消息堵塞或者丢失一些新消息的方式解决上述问题，但是这两种做法都不理想。为了避免这种情况发生，我们必须重新将produder的内存设置得更大一些。</p>
-<h3 id="不要设置太多的partition"><a href="#不要设置太多的partition" class="headerlink" title="不要设置太多的partition"></a>不要设置太多的partition</h3><p>分区是Kafka可伸缩性的关键，但这并不意味着应该有太多的分区，topic中的每个分区都使用大量RAM(文件描述符)。随着分区的增加，CPU上的负载也会增加，因为Kafka需要跟踪所有分区。如果在broker多的情况下，一个topic分配50个partition是一个比较合理的数值</p>
-<h3 id="在cpu核心和消费者之间保持良好的平衡"><a href="#在cpu核心和消费者之间保持良好的平衡" class="headerlink" title="在cpu核心和消费者之间保持良好的平衡"></a>在cpu核心和消费者之间保持良好的平衡</h3><p>Kafka中的每个分区都是单线程的，如果服务器上的核心数量很低，那么太多的分区将无法充分发挥其潜力。因此，您需要在核心和消费者之间保持良好的平衡。</p>
+        <h3 id="out-of-order-element与late-element"><a href="#out-of-order-element与late-element" class="headerlink" title="out-of-order element与late element"></a>out-of-order element与late element</h3><ul>
+<li>通过watermark机制来处理out-of-order的问题，属于第一层防护，属于全局性的防护，通常说的乱序问题的解决办法，就是指这类；</li>
+<li>通过窗口上的allowedLateness机制来处理out-of-order的问题，属于第二层防护，属于特定window operator的防护，late element的问题就是指这类。</li>
+</ul>
+<h3 id="allowedLateness"><a href="#allowedLateness" class="headerlink" title="allowedLateness"></a>allowedLateness</h3><p>当watermark通过end-of-window之后，再有之前的数据到达时，这些数据会被删除。为了避免有些迟到的数据被删除，因此产生了allowedLateness的概念。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">DataStream&lt;T&gt; input = ...;</span><br><span class="line"></span><br><span class="line">input</span><br><span class="line">    .keyBy(&lt;key selector&gt;)</span><br><span class="line">    .window(&lt;window assigner&gt;)</span><br><span class="line">    .allowedLateness(&lt;time&gt;)</span><br><span class="line">    .&lt;windowed transformation&gt;(&lt;window function&gt;);</span><br></pre></td></tr></table></figure></p>
+<p><strong>注意</strong>：对于trigger是默认的EventTimeTrigger的情况下，allowedLateness会再次触发窗口的计算，而之前触发的数据，会buffer起来，直到watermark超过end-of-window + allowedLateness（）的时间，窗口的数据及元数据信息才会被删除。再次计算就是DataFlow模型中的Accumulating的情况。</p>
+<h3 id="例子"><a href="#例子" class="headerlink" title="例子"></a>例子</h3><p>在EventTime的情况下，       </p>
+<ol>
+<li><p>一条记录的事件时间来控制此条记录属于哪一个窗口，Watermarks来控制这个窗口什么时候激活。</p>
+</li>
+<li><p>假如一个窗口时间为00:00:00～00:00:05，Watermarks为5秒，那么当flink收到事件事件为00:00:10秒的数据时，即Watermarks到达00:00:05，激活这个窗口。</p>
+</li>
+<li><p>假如设置allowedLateness为60秒，那么窗口的状态会一直保持到事件时间为00:01:05的数据到达，或者如果最后一条数据早于00:01:05秒，则等到最后一条数据到达后再等待此数据于00:01:05的差值时间。    </p>
+</li>
+<li><p>那么在窗口被销毁前，可以通过一些方式再次激活。注意，allowedLateness只能控制窗口销毁行为，并不能控制窗口再次激活的行为，这是独立的两部分行为。</p>
+</li>
+<li><p>官方文档推荐的方式为Getting late data as a side output，可以单独获得再次被激活的窗口流<br><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.7/dev/stream/operators/windows.html#getting-late-data-as-a-side-output" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.7/dev/stream/operators/windows.html#getting-late-data-as-a-side-output</a></p>
+</li>
+</ol>
+<h3 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h3><ul>
+<li>Flink中处理乱序依赖watermark+window+trigger，属于全局性的处理；</li>
+<li>同时，对于window而言，还提供了allowedLateness方法，使得更大限度的允许乱序，属于局部性的处理；</li>
+<li>其中，allowedLateness只针对Event Time有效；</li>
+<li>allowedLateness可用于TumblingEventTimeWindow、SlidingEventTimeWindow以及EventTimeSessionWindows，要注意这可能使得窗口再次被触发，相当于对前一次窗口的窗口的修正（累加计算或者累加撤回计算）；</li>
+<li>要注意再次触发窗口时，UDF中的状态值的处理，要考虑state在计算时的去重问题。(重要)</li>
+<li>最后要注意的问题，就是sink的问题，由于同一个key的同一个window可能被sink多次，因此sink的数据库要能够接收此类数据。</li>
+</ul>
 
       
     </div>
@@ -448,8 +468,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/21/Flink-批处理-map-与-mapPartition/" rel="next" title="Flink 批处理  map 与 mapPartition">
-                <i class="fa fa-chevron-left"></i> Flink 批处理  map 与 mapPartition
+              <a href="/2019/03/24/Flink-trigger/" rel="next" title="Flink trigger">
+                <i class="fa fa-chevron-left"></i> Flink trigger
               </a>
             
           </div>
@@ -457,10 +477,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/24/Flink-trigger/" rel="prev" title="Flink trigger">
-                Flink trigger <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -600,7 +616,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#越多的分区可以提供更高的吞吐量"><span class="nav-number">1.</span> <span class="nav-text">越多的分区可以提供更高的吞吐量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#越多的分区需要打开更多地文件句柄"><span class="nav-number">2.</span> <span class="nav-text">越多的分区需要打开更多地文件句柄</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#越多的partition意味着需要客户端需要更多的内存"><span class="nav-number">3.</span> <span class="nav-text">越多的partition意味着需要客户端需要更多的内存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#不要设置太多的partition"><span class="nav-number">4.</span> <span class="nav-text">不要设置太多的partition</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#在cpu核心和消费者之间保持良好的平衡"><span class="nav-number">5.</span> <span class="nav-text">在cpu核心和消费者之间保持良好的平衡</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#out-of-order-element与late-element"><span class="nav-number">1.</span> <span class="nav-text">out-of-order element与late element</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#allowedLateness"><span class="nav-number">2.</span> <span class="nav-text">allowedLateness</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#例子"><span class="nav-number">3.</span> <span class="nav-text">例子</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#summary"><span class="nav-number">4.</span> <span class="nav-text">summary</span></a></li></ol></div>
             
 
           </div>
