@@ -105,7 +105,7 @@
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-17T13:17:08.392Z">
+<meta property="og:updated_time" content="2019-03-25T15:13:08.187Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="clickhouse 数组">
 <meta name="twitter:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
@@ -354,12 +354,24 @@
                 
               
 
-              <time title="创建时间：2019-03-17 15:47:28 / 修改时间：21:17:08" itemprop="dateCreated datePublished" datetime="2019-03-17T15:47:28+08:00">2019-03-17</time>
+              <time title="创建时间：2019-03-17 15:47:28" itemprop="dateCreated datePublished" datetime="2019-03-17T15:47:28+08:00">2019-03-17</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-03-25 23:13:08" itemprop="dateModified" datetime="2019-03-25T23:13:08+08:00">2019-03-25</time>
               
             
           </span>
@@ -417,6 +429,49 @@
 <h4 id="建表语句"><a href="#建表语句" class="headerlink" title="建表语句"></a>建表语句</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">create table test.testTable</span><br><span class="line">(id Int64, app Array(string), all_count Int64)</span><br><span class="line">ENGINE = MergeTree(stat_day,id,8192)</span><br></pre></td></tr></table></figure>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">insert into test.xxx  values (1,[&apos;1&apos;,&apos;2&apos;],30).</span><br></pre></td></tr></table></figure>
 <h5 id="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><a href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。" class="headerlink" title="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。"></a>clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</h5><h5 id="如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><a href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in" class="headerlink" title="如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in"></a>如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</h5><h5 id="如果需要进行group-by，需要将这个数组进行arrayJoin"><a href="#如果需要进行group-by，需要将这个数组进行arrayJoin" class="headerlink" title="如果需要进行group by，需要将这个数组进行arrayJoin"></a>如果需要进行group by，需要将这个数组进行arrayJoin</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count),arrayJoin(isp) from xx where arrayJoin(isp) in (?,?) group by arrayJoin(isp)</span><br></pre></td></tr></table></figure>
+<h3 id="Attention"><a href="#Attention" class="headerlink" title="Attention"></a>Attention</h3><p>使用ArrayJoin的时候，如果直接进行数据求和，会出现数据重复计算的场景</p>
+<table>
+<thead>
+<tr>
+<th>A</th>
+<th>count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>[‘1’,’2’]</td>
+<td>10</td>
+</tr>
+<tr>
+<td>[‘2’,’3’]</td>
+<td>10</td>
+</tr>
+<tr>
+<td>[‘3’,’4’]</td>
+<td>10</td>
+</tr>
+<tr>
+<td>[‘5’,’6’]</td>
+<td>10</td>
+</tr>
+<tr>
+<td>[‘5’,’6’]</td>
+<td>10</td>
+</tr>
+</tbody>
+</table>
+<p>过滤出A中有5、6的 count总和</p>
+<p>正确答案是20</p>
+<p>如果使用arrayJoin<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count) from table where arrayJoin(A) in (&apos;5&apos;,&apos;6&apos;)</span><br></pre></td></tr></table></figure></p>
+<p>结果查出来却是40…</p>
+<p>因为arrayJoin将数据拆成了4条，每条都是10，求和就是40.</p>
+<p>应该要用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count) from table where hasAny(A,[&apos;5&apos;,&apos;6&apos;])</span><br></pre></td></tr></table></figure>
+<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><ul>
+<li>arrayJoin是将数据拆分成多条，会导致数据重复</li>
+<li>如果需要拆分使用arrayJoin，请加上group by 这个字段，才可以进行数值操作</li>
+<li>使用hasAny可以进行数值计算，因为数组还没拆分</li>
+</ul>
 <p>其他数组操作函数详见</p>
 <p><a href="https://clickhouse.yandex/docs/en/query_language/functions/array_functions/" target="_blank" rel="noopener">https://clickhouse.yandex/docs/en/query_language/functions/array_functions/</a></p>
 
@@ -532,7 +587,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">18</span>
+                    <span class="site-state-item-count">19</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
@@ -561,7 +616,9 @@
                     
                       
                     
-                    <span class="site-state-item-count">6</span>
+                      
+                    
+                    <span class="site-state-item-count">7</span>
                     <span class="site-state-item-name">分类</span>
                   </a>
                 </div>
@@ -601,7 +658,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据的集合"><span class="nav-number">1.</span> <span class="nav-text">数据的集合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建数组"><span class="nav-number">2.</span> <span class="nav-text">创建数组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#建表语句"><span class="nav-number">3.</span> <span class="nav-text">建表语句</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><span class="nav-number">3.1.</span> <span class="nav-text">clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><span class="nav-number">3.2.</span> <span class="nav-text">如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要进行group-by，需要将这个数组进行arrayJoin"><span class="nav-number">3.3.</span> <span class="nav-text">如果需要进行group by，需要将这个数组进行arrayJoin</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据的集合"><span class="nav-number">1.</span> <span class="nav-text">数据的集合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建数组"><span class="nav-number">2.</span> <span class="nav-text">创建数组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#建表语句"><span class="nav-number">3.</span> <span class="nav-text">建表语句</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><span class="nav-number">3.1.</span> <span class="nav-text">clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><span class="nav-number">3.2.</span> <span class="nav-text">如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要进行group-by，需要将这个数组进行arrayJoin"><span class="nav-number">3.3.</span> <span class="nav-text">如果需要进行group by，需要将这个数组进行arrayJoin</span></a></li></ol></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#Attention"><span class="nav-number"></span> <span class="nav-text">Attention</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#总结"><span class="nav-number">1.</span> <span class="nav-text">总结</span></a></li></ol></li></div>
             
 
           </div>
