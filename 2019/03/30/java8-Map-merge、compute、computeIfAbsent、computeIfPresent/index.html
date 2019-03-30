@@ -98,24 +98,24 @@
 
 
 
-  <meta name="description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+  <meta name="description" content="单词计数1var words = List.of(&quot;Foo&quot;, &quot;Bar&quot;, &quot;Foo&quot;, &quot;Buzz&quot;, &quot;Foo&quot;, &quot;Buzz&quot;, &quot;Fizz&quot;, &quot;Fizz&quot;); 普通写法123456789var map = new HashMap&amp;lt;String, Integer&amp;gt;();words.forEach(word -&amp;gt; &amp;#123;    var prev = map.get(">
 <meta property="og:type" content="article">
-<meta property="og:title" content="clickhouse 数组">
-<meta property="og:url" content="http://yoursite.com/2019/03/17/clickhouse-数组/index.html">
+<meta property="og:title" content="java8 Map merge、compute、computeIfAbsent、computeIfPresent">
+<meta property="og:url" content="http://yoursite.com/2019/03/30/java8-Map-merge、compute、computeIfAbsent、computeIfPresent/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+<meta property="og:description" content="单词计数1var words = List.of(&quot;Foo&quot;, &quot;Bar&quot;, &quot;Foo&quot;, &quot;Buzz&quot;, &quot;Foo&quot;, &quot;Buzz&quot;, &quot;Fizz&quot;, &quot;Fizz&quot;); 普通写法123456789var map = new HashMap&amp;lt;String, Integer&amp;gt;();words.forEach(word -&amp;gt; &amp;#123;    var prev = map.get(">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-25T15:13:08.187Z">
+<meta property="og:updated_time" content="2019-03-30T02:46:43.509Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="clickhouse 数组">
-<meta name="twitter:description" content="数据的集合可以是各种类型，但是数组内的数据必须是同一种类型 创建数组可以通过array(T)或者[]创建数组 12345array(1, 2) [1, 2]array(&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;) [&amp;apos;1&amp;apos;,&amp;apos;2&amp;apos;] 建表语句123create table test.testTable(id Int64, app Array(st">
+<meta name="twitter:title" content="java8 Map merge、compute、computeIfAbsent、computeIfPresent">
+<meta name="twitter:description" content="单词计数1var words = List.of(&quot;Foo&quot;, &quot;Bar&quot;, &quot;Foo&quot;, &quot;Buzz&quot;, &quot;Foo&quot;, &quot;Buzz&quot;, &quot;Fizz&quot;, &quot;Fizz&quot;); 普通写法123456789var map = new HashMap&amp;lt;String, Integer&amp;gt;();words.forEach(word -&amp;gt; &amp;#123;    var prev = map.get(">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/17/clickhouse-数组/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/30/java8-Map-merge、compute、computeIfAbsent、computeIfPresent/">
 
 
 
@@ -125,7 +125,7 @@
   };
 </script>
 
-  <title>clickhouse 数组 | Pray</title>
+  <title>java8 Map merge、compute、computeIfAbsent、computeIfPresent | Pray</title>
   
 
 
@@ -311,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/17/clickhouse-数组/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/30/java8-Map-merge、compute、computeIfAbsent、computeIfPresent/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">clickhouse 数组
+          <h1 class="post-title" itemprop="name headline">java8 Map merge、compute、computeIfAbsent、computeIfPresent
 
               
             
@@ -354,24 +354,12 @@
                 
               
 
-              <time title="创建时间：2019-03-17 15:47:28" itemprop="dateCreated datePublished" datetime="2019-03-17T15:47:28+08:00">2019-03-17</time>
+              <time title="创建时间：2019-03-30 10:46:12 / 修改时间：10:46:43" itemprop="dateCreated datePublished" datetime="2019-03-30T10:46:12+08:00">2019-03-30</time>
             
 
             
               
 
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2019-03-25 23:13:08" itemprop="dateModified" datetime="2019-03-25T23:13:08+08:00">2019-03-25</time>
               
             
           </span>
@@ -388,7 +376,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/clickhouse/" itemprop="url" rel="index"><span itemprop="name">clickhouse</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/java/" itemprop="url" rel="index"><span itemprop="name">java</span></a></span>
 
                 
                 
@@ -423,57 +411,28 @@
       
 
       
-        <h4 id="数据的集合"><a href="#数据的集合" class="headerlink" title="数据的集合"></a>数据的集合</h4><p>可以是各种类型，但是数组内的数据必须是同一种类型</p>
-<h4 id="创建数组"><a href="#创建数组" class="headerlink" title="创建数组"></a>创建数组</h4><p>可以通过array(T)或者[]创建数组</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">array(1, 2)</span><br><span class="line"> [1, 2]</span><br><span class="line"></span><br><span class="line">array(&apos;1&apos;,&apos;2&apos;)</span><br><span class="line"> [&apos;1&apos;,&apos;2&apos;]</span><br></pre></td></tr></table></figure>
-<h4 id="建表语句"><a href="#建表语句" class="headerlink" title="建表语句"></a>建表语句</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">create table test.testTable</span><br><span class="line">(id Int64, app Array(string), all_count Int64)</span><br><span class="line">ENGINE = MergeTree(stat_day,id,8192)</span><br></pre></td></tr></table></figure>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">insert into test.xxx  values (1,[&apos;1&apos;,&apos;2&apos;],30).</span><br></pre></td></tr></table></figure>
-<h5 id="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><a href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。" class="headerlink" title="clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。"></a>clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</h5><h5 id="如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><a href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in" class="headerlink" title="如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in"></a>如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</h5><h5 id="如果需要进行group-by，需要将这个数组进行arrayJoin"><a href="#如果需要进行group-by，需要将这个数组进行arrayJoin" class="headerlink" title="如果需要进行group by，需要将这个数组进行arrayJoin"></a>如果需要进行group by，需要将这个数组进行arrayJoin</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count),arrayJoin(isp) from xx where arrayJoin(isp) in (?,?) group by arrayJoin(isp)</span><br></pre></td></tr></table></figure>
-<h3 id="Attention"><a href="#Attention" class="headerlink" title="Attention"></a>Attention</h3><p>使用ArrayJoin的时候，如果直接进行数据求和，会出现数据重复计算的场景</p>
-<table>
-<thead>
-<tr>
-<th>A</th>
-<th>count</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>[‘1’,’2’]</td>
-<td>10</td>
-</tr>
-<tr>
-<td>[‘2’,’3’]</td>
-<td>10</td>
-</tr>
-<tr>
-<td>[‘3’,’4’]</td>
-<td>10</td>
-</tr>
-<tr>
-<td>[‘5’,’6’]</td>
-<td>10</td>
-</tr>
-<tr>
-<td>[‘5’,’6’]</td>
-<td>10</td>
-</tr>
-</tbody>
-</table>
-<p>过滤出A中有5、6的 count总和</p>
-<p>正确答案是20</p>
-<p>如果使用arrayJoin<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count) from table where arrayJoin(A) in (&apos;5&apos;,&apos;6&apos;)</span><br></pre></td></tr></table></figure></p>
-<p>结果查出来却是40…</p>
-<p>因为arrayJoin将数据拆成了4条，每条都是10，求和就是40.</p>
-<p>应该要用</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">select sum(count) from table where hasAny(A,[&apos;5&apos;,&apos;6&apos;])</span><br></pre></td></tr></table></figure>
-<h4 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h4><ul>
-<li>arrayJoin是将数据拆分成多条，会导致数据重复</li>
-<li>如果需要拆分使用arrayJoin，请加上group by 这个字段，才可以进行数值操作</li>
-<li>使用hasAny可以进行数值计算，因为数组还没拆分</li>
+        <h3 id="单词计数"><a href="#单词计数" class="headerlink" title="单词计数"></a>单词计数</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> words = List.of(<span class="string">"Foo"</span>, <span class="string">"Bar"</span>, <span class="string">"Foo"</span>, <span class="string">"Buzz"</span>, <span class="string">"Foo"</span>, <span class="string">"Buzz"</span>, <span class="string">"Fizz"</span>, <span class="string">"Fizz"</span>);</span><br></pre></td></tr></table></figure>
+<h5 id="普通写法"><a href="#普通写法" class="headerlink" title="普通写法"></a>普通写法</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">var</span> map = <span class="keyword">new</span> HashMap&lt;String, Integer&gt;();</span><br><span class="line">words.forEach(word -&gt; &#123;</span><br><span class="line">    <span class="keyword">var</span> prev = map.get(word);</span><br><span class="line">    <span class="keyword">if</span> (prev == <span class="keyword">null</span>) &#123;</span><br><span class="line">        map.put(word, <span class="number">1</span>);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        map.put(word, prev + <span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<h5 id="putIfAbsent写法"><a href="#putIfAbsent写法" class="headerlink" title="putIfAbsent写法"></a>putIfAbsent写法</h5><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">words.forEach(word -&gt; &#123;</span><br><span class="line">    map.putIfAbsent(word, 0);</span><br><span class="line">    map.put(word, map.get(word) + 1);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>putIfAbsent 如果不存在该key才执行，则put对应的value到对应的key。</p>
+<h5 id="computeIfPresent写法"><a href="#computeIfPresent写法" class="headerlink" title="computeIfPresent写法"></a>computeIfPresent写法</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">words.forEach(word -&gt; &#123;</span><br><span class="line">    map.putIfAbsent(word, <span class="number">0</span>);</span><br><span class="line">    map.computeIfPresent(word, (w, prev) -&gt; prev + <span class="number">1</span>);</span><br><span class="line">&#125;);</span><br></pre></td></tr></table></figure>
+<p>computeIfPresent是仅当 word中的的key存在的时候才调用给定的转换。否则它什么都不处理。我们通过将key初始化为零来确保key存在，因此增量始终有效。</p>
+<h5 id="computer写法"><a href="#computer写法" class="headerlink" title="computer写法"></a>computer写法</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">words.forEach(word -&gt;</span><br><span class="line">        map.compute(word, (w, prev) -&gt; prev != <span class="keyword">null</span> ? prev + <span class="number">1</span> : <span class="number">1</span>)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>compute ()就像是computeIfPresent()，但无论给定key的存在与否如何都会调用它。如果key的值不存在，则prev参数为null</p>
+<h5 id="merge写法"><a href="#merge写法" class="headerlink" title="merge写法"></a>merge写法</h5><p>merge() 适用于两种情况。如果给定的key不存在，它就变成了put(key, value)。但是，如果key已经存在一些值，我们  remappingFunction 可以选择合并的方式。这个功能是完美契机上面的场景：</p>
+<ul>
+<li>只需返回新值即可覆盖旧值： (old, new) -&gt; new</li>
+<li>只需返回旧值即可保留旧值：(old, new) -&gt; old</li>
+<li>以某种方式合并两者，例如：(old, new) -&gt; old + new</li>
+<li>甚至删除旧值：(old, new) -&gt; null</li>
 </ul>
-<p>其他数组操作函数详见</p>
-<p><a href="https://clickhouse.yandex/docs/en/query_language/functions/array_functions/" target="_blank" rel="noopener">https://clickhouse.yandex/docs/en/query_language/functions/array_functions/</a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">words.forEach(word -&gt;</span><br><span class="line">        map.merge(word, <span class="number">1</span>, (prev, one) -&gt; prev + one)</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<h4 id="put-和-compute-和-computeIfAbsent-和-putIfAbsent-差别？"><a href="#put-和-compute-和-computeIfAbsent-和-putIfAbsent-差别？" class="headerlink" title="put 和 compute 和 computeIfAbsent 和 putIfAbsent 差别？"></a>put 和 compute 和 computeIfAbsent 和 putIfAbsent 差别？</h4><ul>
+<li>put返回旧值，如果没有则返回null，并且替换该key的value</li>
+<li>compute（相当于put,只不过返回的是新值），并且替换该key的value</li>
+<li>putIfAbsent返回旧值，如果没有则返回null 如果不存在新增，如果存在，不操作</li>
+<li>computeIfAbsent:存在时返回存在的值，不存在时返回新值。如果存在不替换</li>
+</ul>
 
       
     </div>
@@ -504,8 +463,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/17/Kafka-porducter-code-analyse/" rel="next" title="Kafka kafkaProducer源码解析">
-                <i class="fa fa-chevron-left"></i> Kafka kafkaProducer源码解析
+              <a href="/2019/03/25/SimpleDateFormat线程不安全以及解决方法/" rel="next" title="SimpleDateFormat线程不安全以及解决方法">
+                <i class="fa fa-chevron-left"></i> SimpleDateFormat线程不安全以及解决方法
               </a>
             
           </div>
@@ -513,10 +472,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/17/Flink-UDF/" rel="prev" title="Flink-UDF">
-                Flink-UDF <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -660,7 +615,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#数据的集合"><span class="nav-number">1.</span> <span class="nav-text">数据的集合</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#创建数组"><span class="nav-number">2.</span> <span class="nav-text">创建数组</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#建表语句"><span class="nav-number">3.</span> <span class="nav-text">建表语句</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString-方法将其转为字符串。"><span class="nav-number">3.1.</span> <span class="nav-text">clickhouse的数组在使用上是一般字段一致，select出来看不到对应的详细内容，需要通过toString 方法将其转为字符串。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要判断某个值是否在数组内，可以通过has-array-element-的方法判断，后者是通过hasAny-array-array-的方法来判断-等价于in"><span class="nav-number">3.2.</span> <span class="nav-text">如果需要判断某个值是否在数组内，可以通过has(array,element)的方法判断，后者是通过hasAny(array,array)的方法来判断,等价于in</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#如果需要进行group-by，需要将这个数组进行arrayJoin"><span class="nav-number">3.3.</span> <span class="nav-text">如果需要进行group by，需要将这个数组进行arrayJoin</span></a></li></ol></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#Attention"><span class="nav-number"></span> <span class="nav-text">Attention</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#总结"><span class="nav-number">1.</span> <span class="nav-text">总结</span></a></li></ol></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#单词计数"><span class="nav-number">1.</span> <span class="nav-text">单词计数</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#普通写法"><span class="nav-number">1.0.1.</span> <span class="nav-text">普通写法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#putIfAbsent写法"><span class="nav-number">1.0.2.</span> <span class="nav-text">putIfAbsent写法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#computeIfPresent写法"><span class="nav-number">1.0.3.</span> <span class="nav-text">computeIfPresent写法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#computer写法"><span class="nav-number">1.0.4.</span> <span class="nav-text">computer写法</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#merge写法"><span class="nav-number">1.0.5.</span> <span class="nav-text">merge写法</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#put-和-compute-和-computeIfAbsent-和-putIfAbsent-差别？"><span class="nav-number">1.1.</span> <span class="nav-text">put 和 compute 和 computeIfAbsent 和 putIfAbsent 差别？</span></a></li></ol></div>
             
 
           </div>
