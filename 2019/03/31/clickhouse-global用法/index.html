@@ -98,33 +98,24 @@
 
 
 
-  <meta name="description" content="有序表的搜索考虑一个有序表：">
+  <meta name="description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
 <meta property="og:type" content="article">
-<meta property="og:title" content="skipTable 跳表介绍">
-<meta property="og:url" content="http://yoursite.com/2019/03/17/skipTable/index.html">
+<meta property="og:title" content="clickhouse global用法">
+<meta property="og:url" content="http://yoursite.com/2019/03/31/clickhouse-global用法/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="有序表的搜索考虑一个有序表：">
+<meta property="og:description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&shareKey=abc7f2419331c6165e71662b7ea0a1bc">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/618190186D5C4B2EA9A91ECEE2400220?method=download&shareKey=d6ec9e06cb7a6194f8aac38a2d7f179d">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/E598C089E15D4486B8D5A1A7D60CFF54?method=download&shareKey=7b7ecc65125a6906a0872cdcef0f033c">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/2E398EC62E7D404492C4287DA9F4C2A4?method=download&shareKey=97b90f7f1d17a120eeb9403f87695899">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/00C00049DED44703B6D025D2A9EBC945?method=download&shareKey=da0c34e02440a6d3a45c237c159c8966">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AC32E285E1C34D138D746D07C8A90661?method=download&shareKey=fefc4a6256c3221a138f3c718df5b876">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/ABA5C322CF71468388CF952690A6024A?method=download&shareKey=c0d4c38b4e4f98b91465aef4d7a6b5c6">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6877AA6E2FDC4EDD910FFB4261C9A044?method=download&shareKey=eb7a6d135f4601cf7ba70f8f1a5b3b2f">
-<meta property="og:updated_time" content="2019-03-17T12:54:23.096Z">
+<meta property="og:updated_time" content="2019-03-31T15:56:22.082Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="skipTable 跳表介绍">
-<meta name="twitter:description" content="有序表的搜索考虑一个有序表：">
-<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&shareKey=abc7f2419331c6165e71662b7ea0a1bc">
+<meta name="twitter:title" content="clickhouse global用法">
+<meta name="twitter:description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/17/skipTable/">
+  <link rel="canonical" href="http://yoursite.com/2019/03/31/clickhouse-global用法/">
 
 
 
@@ -134,7 +125,7 @@
   };
 </script>
 
-  <title>skipTable 跳表介绍 | Pray</title>
+  <title>clickhouse global用法 | Pray</title>
   
 
 
@@ -320,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/17/skipTable/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/31/clickhouse-global用法/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -337,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">skipTable 跳表介绍
+          <h1 class="post-title" itemprop="name headline">clickhouse global用法
 
               
             
@@ -363,7 +354,7 @@
                 
               
 
-              <time title="创建时间：2019-03-17 12:01:22 / 修改时间：20:54:23" itemprop="dateCreated datePublished" datetime="2019-03-17T12:01:22+08:00">2019-03-17</time>
+              <time title="创建时间：2019-03-31 23:55:57 / 修改时间：23:56:22" itemprop="dateCreated datePublished" datetime="2019-03-31T23:55:57+08:00">2019-03-31</time>
             
 
             
@@ -385,7 +376,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/算法/" itemprop="url" rel="index"><span itemprop="name">算法</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/clickhouse/" itemprop="url" rel="index"><span itemprop="name">clickhouse</span></a></span>
 
                 
                 
@@ -420,62 +411,22 @@
       
 
       
-        <h4 id="有序表的搜索"><a href="#有序表的搜索" class="headerlink" title="有序表的搜索"></a>有序表的搜索</h4><p>考虑一个有序表：</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/8E93B489938B4A198BDB4F41B0B64AA7?method=download&amp;shareKey=abc7f2419331c6165e71662b7ea0a1bc" alt="image"></p>
-<a id="more"></a>
-<p>从该有序表中搜索元素 &lt; 23, 43, 59 &gt; ，需要比较的次数分别为 &lt; 2, 4, 6 &gt;，总共比较的次数</p>
-<p>为 2 + 4 + 6 = 12 次。有没有优化的算法吗?  链表是有序的，但不能使用二分查找。类似二叉</p>
-<p>搜索树，我们把一些节点提取出来，作为索引。得到如下结构：</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/618190186D5C4B2EA9A91ECEE2400220?method=download&amp;shareKey=d6ec9e06cb7a6194f8aac38a2d7f179d" alt="image"></p>
-<p>这里我们把 &lt; 14, 34, 50, 72 &gt; 提取出来作为一级索引，这样搜索的时候就可以减少比较次数了。</p>
-<p>我们还可以再从一级索引提取一些元素出来，作为二级索引，变成如下结构：</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/E598C089E15D4486B8D5A1A7D60CFF54?method=download&amp;shareKey=7b7ecc65125a6906a0872cdcef0f033c" alt="image"></p>
-<p>这里元素不多，体现不出优势，如果元素足够多，这种索引结构就能体现出优势来了。</p>
-<p>这基本上就是跳表的核心思想，其实也是一种通过“空间来换取时间”的一个算法，通过在每个节点中增加了向前的指针，从而提升查找的效率。</p>
-<p>跳表</p>
-<p>下面的结构是就是跳表：</p>
-<p>其中 -1 表示 INT_MIN， 链表的最小值，1 表示 INT_MAX，链表的最大值。</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/2E398EC62E7D404492C4287DA9F4C2A4?method=download&amp;shareKey=97b90f7f1d17a120eeb9403f87695899" alt="image"></p>
-<p>跳表具有如下性质：</p>
-<p>(1) 由很多层结构组成</p>
-<p>(2) 每一层都是一个有序的链表</p>
-<p>(3) 最底层(Level 1)的链表包含所有元素</p>
-<p>(4) 如果一个元素出现在 Level i 的链表中，则它在 Level i 之下的链表也都会出现。</p>
-<p>(5) 每个节点包含两个指针，一个指向同一链表中的下一个元素，一个指向下面一层的元素。</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/00C00049DED44703B6D025D2A9EBC945?method=download&amp;shareKey=da0c34e02440a6d3a45c237c159c8966" alt="image"></p>
-<p>例子：查找元素 117</p>
-<p>(1) 比较 21， 比 21 大，往后面找</p>
-<p>(2) 比较 37,   比 37大，比链表最大值小，从 37 的下面一层开始找</p>
-<p>(3) 比较 71,  比 71 大，比链表最大值小，从 71 的下面一层开始找</p>
-<p>(4) 比较 85， 比 85 大，从后面找</p>
-<p>(5) 比较 117， 等于 117， 找到了节点。</p>
-<p>具体的搜索算法如下：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"></span><br><span class="line"> find(x)  </span><br><span class="line"></span><br><span class="line"> &#123; </span><br><span class="line"></span><br><span class="line">     p = top; </span><br><span class="line"></span><br><span class="line"> while (1) &#123; </span><br><span class="line"> while (p-&gt;next-&gt;key &lt; x) </span><br><span class="line"></span><br><span class="line">            p = p-&gt;next; </span><br><span class="line"></span><br><span class="line">if (p-&gt;down == NULL)  </span><br><span class="line"></span><br><span class="line"> return p-&gt;next; </span><br><span class="line"></span><br><span class="line">        p = p-&gt;down; </span><br><span class="line"></span><br><span class="line">     &#125; </span><br><span class="line"></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
-<p>跳表的插入</p>
-<p>先确定该元素要占据的层数 K（采用丢硬币的方式，这完全是随机的）</p>
-<p>然后在 Level 1 … Level K 各个层的链表都插入元素。</p>
-<p>例子：插入 119， K = 2</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/AC32E285E1C34D138D746D07C8A90661?method=download&amp;shareKey=fefc4a6256c3221a138f3c718df5b876" alt="image"></p>
-<p>如果 K 大于链表的层数，则要添加新的层。</p>
-<p>例子：插入 119， K = 4</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/ABA5C322CF71468388CF952690A6024A?method=download&amp;shareKey=c0d4c38b4e4f98b91465aef4d7a6b5c6" alt="image"></p>
-<p>丢硬币决定 K</p>
-<p>插入元素的时候，元素所占有的层数完全是随机的，通过一下随机算法产生：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">int random_level() </span><br><span class="line"></span><br><span class="line">&#123; </span><br><span class="line">     K = 1; </span><br><span class="line"></span><br><span class="line"></span><br><span class="line"> while (random(0,1)) </span><br><span class="line"></span><br><span class="line">        K++; </span><br><span class="line"></span><br><span class="line"> return K; </span><br><span class="line"></span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
-<p>相当与做一次丢硬币的实验，如果遇到正面，继续丢，遇到反面，则停止，</p>
-<p>用实验中丢硬币的次数 K 作为元素占有的层数。显然随机变量 K 满足参数为 p = 1/2 的几何分布，</p>
-<p>K 的期望值 E[K] = 1/p = 2. 就是说，各个元素的层数，期望值是 2 层。</p>
-<p>跳表的高度。</p>
-<p>n 个元素的跳表，每个元素插入的时候都要做一次实验，用来决定元素占据的层数 K，</p>
-<p>跳表的高度等于这 n 次实验中产生的最大 K，待续。。。</p>
-<p>跳表的空间复杂度分析</p>
-<p>根据上面的分析，每个元素的期望高度为 2， 一个大小为 n 的跳表，其节点数目的</p>
-<p>期望值是 2n。</p>
-<p>跳表的删除</p>
-<p>在各个层中找到包含 x 的节点，使用标准的 delete from list 方法删除该节点。</p>
-<p>例子：删除 71</p>
-<p><img src="https://note.youdao.com/yws/api/personal/file/6877AA6E2FDC4EDD910FFB4261C9A044?method=download&amp;shareKey=eb7a6d135f4601cf7ba70f8f1a5b3b2f" alt="image"></p>
-<p><a href="https://www.cnblogs.com/a8457013/p/8251967.html" target="_blank" rel="noopener">https://www.cnblogs.com/a8457013/p/8251967.html</a></p>
+        <h3 id="global介绍"><a href="#global介绍" class="headerlink" title="global介绍"></a>global介绍</h3><p>global 有两种用法，GLOBAL in /GLOBAL join。</p>
+<h3 id="分布式查询"><a href="#分布式查询" class="headerlink" title="分布式查询"></a>分布式查询</h3><p>先介绍一下分布式查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> distributed_table</span><br></pre></td></tr></table></figure></p>
+<p>将会被发送到所有远程服务器<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table</span><br></pre></td></tr></table></figure></p>
+<p>然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上合并，最终的结果将被发送到客户端。</p>
+<h3 id="in-join-的问题"><a href="#in-join-的问题" class="headerlink" title="in/join 的问题"></a>in/join 的问题</h3><p>当使用in的时候，查询被发送到远程服务器，并且每个服务器都在IN或JOIN子句中运行子查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">IN</span> (<span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span>)</span><br></pre></td></tr></table></figure></p>
+<p>这个查询将发送到所有服务器,子查询的分布式表名会替换成本地表名<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">IN</span> (<span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span>)</span><br></pre></td></tr></table></figure></p>
+<p>子查询将开始在每个远程服务器上运行。由于子查询使用分布式表，所以每个远程服务器上的子查询将会对每个远程服务器都感到不满，如果您有一个100个服务器集群，执行整个查询将需要10000个基本请求，这通常被认为是不可接受的。</p>
+<h3 id="使用GLOBAL-in-GLOBAL-join"><a href="#使用GLOBAL-in-GLOBAL-join" class="headerlink" title="使用GLOBAL in /GLOBAL join"></a>使用GLOBAL in /GLOBAL join</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT uniq(UserID) FROM distributed_table WHERE CounterID = 101500 AND UserID GLOBAL IN (SELECT UserID FROM distributed_table WHERE CounterID = 34)</span><br></pre></td></tr></table></figure>
+<p>服务器将运行子查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span></span><br></pre></td></tr></table></figure></p>
+<p>结果将被放在RAM中的临时表中。然后请求将被发送到每个远程服务器<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">GLOBAL</span> <span class="keyword">IN</span> _data1</span><br></pre></td></tr></table></figure></p>
+<p>临时表“data1”将连同查询一起被发送到每个远程服务器（临时表的名称是实现定义的）。</p>
+<h3 id="使用注意"><a href="#使用注意" class="headerlink" title="使用注意"></a>使用注意</h3><ul>
+<li>创建临时表时，数据不是唯一的，为了减少通过网络传输的数据量，请在子查询中使用DISTINCT（你不需要在普通的IN中这么做）</li>
+<li>临时表将发送到所有远程服务器。其中传输不考虑网络的拓扑结构。例如，如果你有10个远程服务器存在与请求服务器非常远的数据中心中，则数据将通过通道发送数据到远程数据中心10次。使用GLOBAL IN时应避免大数据集。</li>
+<li>当使用global…JOIN，首先会在请求者服务器运行一个子查询来计右表(right table)。将此临时表传递给每个远程服务器，并使用传输的临时数据在其上运行查询。会出现网络传输，因此尽量将小表放在右表。</li>
+</ul>
 
       
     </div>
@@ -506,8 +457,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/17/RedisBasic/" rel="next" title="Redis 基础介绍">
-                <i class="fa fa-chevron-left"></i> Redis 基础介绍
+              <a href="/2019/03/30/java8-Map-merge、compute、computeIfAbsent、computeIfPresent/" rel="next" title="java8 Map merge、compute、computeIfAbsent、computeIfPresent">
+                <i class="fa fa-chevron-left"></i> java8 Map merge、compute、computeIfAbsent、computeIfPresent
               </a>
             
           </div>
@@ -515,10 +466,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/03/17/FlinkDataStreamGuide/" rel="prev" title="Flink 流处理简单引导">
-                Flink 流处理简单引导 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -662,7 +609,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#有序表的搜索"><span class="nav-number">1.</span> <span class="nav-text">有序表的搜索</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#global介绍"><span class="nav-number">1.</span> <span class="nav-text">global介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分布式查询"><span class="nav-number">2.</span> <span class="nav-text">分布式查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#in-join-的问题"><span class="nav-number">3.</span> <span class="nav-text">in/join 的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用GLOBAL-in-GLOBAL-join"><span class="nav-number">4.</span> <span class="nav-text">使用GLOBAL in /GLOBAL join</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用注意"><span class="nav-number">5.</span> <span class="nav-text">使用注意</span></a></li></ol></div>
             
 
           </div>
