@@ -98,24 +98,24 @@
 
 
 
-  <meta name="description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
+  <meta name="description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天 全量域名    测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sq">
 <meta property="og:type" content="article">
-<meta property="og:title" content="clickhouse global用法">
-<meta property="og:url" content="http://yoursite.com/2019/03/31/clickhouse-global用法/index.html">
+<meta property="og:title" content="clickhouse join和并发测试">
+<meta property="og:url" content="http://yoursite.com/2019/04/14/clickhouse-join和并发测试/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
+<meta property="og:description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天 全量域名    测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sq">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-31T15:56:22.082Z">
+<meta property="og:updated_time" content="2019-04-14T02:36:53.157Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="clickhouse global用法">
-<meta name="twitter:description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
+<meta name="twitter:title" content="clickhouse join和并发测试">
+<meta name="twitter:description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天 全量域名    测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sq">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/31/clickhouse-global用法/">
+  <link rel="canonical" href="http://yoursite.com/2019/04/14/clickhouse-join和并发测试/">
 
 
 
@@ -125,7 +125,7 @@
   };
 </script>
 
-  <title>clickhouse global用法 | Pray</title>
+  <title>clickhouse join和并发测试 | Pray</title>
   
 
 
@@ -311,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/31/clickhouse-global用法/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/04/14/clickhouse-join和并发测试/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">clickhouse global用法
+          <h1 class="post-title" itemprop="name headline">clickhouse join和并发测试
 
               
             
@@ -354,7 +354,7 @@
                 
               
 
-              <time title="创建时间：2019-03-31 23:55:57 / 修改时间：23:56:22" itemprop="dateCreated datePublished" datetime="2019-03-31T23:55:57+08:00">2019-03-31</time>
+              <time title="创建时间：2019-04-14 10:36:28 / 修改时间：10:36:53" itemprop="dateCreated datePublished" datetime="2019-04-14T10:36:28+08:00">2019-04-14</time>
             
 
             
@@ -411,22 +411,189 @@
       
 
       
-        <h3 id="global介绍"><a href="#global介绍" class="headerlink" title="global介绍"></a>global介绍</h3><p>global 有两种用法，GLOBAL in /GLOBAL join。</p>
-<h3 id="分布式查询"><a href="#分布式查询" class="headerlink" title="分布式查询"></a>分布式查询</h3><p>先介绍一下分布式查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> distributed_table</span><br></pre></td></tr></table></figure></p>
-<p>将会被发送到所有远程服务器<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table</span><br></pre></td></tr></table></figure></p>
-<p>然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上合并，最终的结果将被发送到客户端。</p>
-<h3 id="in-join-的问题"><a href="#in-join-的问题" class="headerlink" title="in/join 的问题"></a>in/join 的问题</h3><p>当使用in的时候，查询被发送到远程服务器，并且每个服务器都在IN或JOIN子句中运行子查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">IN</span> (<span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span>)</span><br></pre></td></tr></table></figure></p>
-<p>这个查询将发送到所有服务器,子查询的分布式表名会替换成本地表名<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">IN</span> (<span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span>)</span><br></pre></td></tr></table></figure></p>
-<p>子查询将开始在每个远程服务器上运行。由于子查询使用分布式表，所以每个远程服务器上的子查询将会对每个远程服务器都感到不满，如果您有一个100个服务器集群，执行整个查询将需要10000个基本请求，这通常被认为是不可接受的。</p>
-<h3 id="使用GLOBAL-in-GLOBAL-join"><a href="#使用GLOBAL-in-GLOBAL-join" class="headerlink" title="使用GLOBAL in /GLOBAL join"></a>使用GLOBAL in /GLOBAL join</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT uniq(UserID) FROM distributed_table WHERE CounterID = 101500 AND UserID GLOBAL IN (SELECT UserID FROM distributed_table WHERE CounterID = 34)</span><br></pre></td></tr></table></figure>
-<p>服务器将运行子查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span></span><br></pre></td></tr></table></figure></p>
-<p>结果将被放在RAM中的临时表中。然后请求将被发送到每个远程服务器<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">GLOBAL</span> <span class="keyword">IN</span> _data1</span><br></pre></td></tr></table></figure></p>
-<p>临时表“data1”将连同查询一起被发送到每个远程服务器（临时表的名称是实现定义的）。</p>
-<h3 id="使用注意"><a href="#使用注意" class="headerlink" title="使用注意"></a>使用注意</h3><ul>
-<li>创建临时表时，数据不是唯一的，为了减少通过网络传输的数据量，请在子查询中使用DISTINCT（你不需要在普通的IN中这么做）</li>
-<li>临时表将发送到所有远程服务器。其中传输不考虑网络的拓扑结构。例如，如果你有10个远程服务器存在与请求服务器非常远的数据中心中，则数据将通过通道发送数据到远程数据中心10次。使用GLOBAL IN时应避免大数据集。</li>
-<li>当使用global…JOIN，首先会在请求者服务器运行一个子查询来计右表(right table)。将此临时表传递给每个远程服务器，并使用传输的临时数据在其上运行查询。会出现网络传输，因此尽量将小表放在右表。</li>
-</ul>
+        <h3 id="集群规模"><a href="#集群规模" class="headerlink" title="集群规模"></a>集群规模</h3><table>
+<thead>
+<tr>
+<th>机器数量</th>
+<th>内存大小</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>6台</td>
+<td>40G</td>
+</tr>
+</tbody>
+</table>
+<h3 id="数据规模"><a href="#数据规模" class="headerlink" title="数据规模"></a>数据规模</h3><table>
+<thead>
+<tr>
+<th>数据名称</th>
+<th>数据量</th>
+<th>总数据量</th>
+<th>时间范围 </th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>数据A</td>
+<td>3千万（每天）</td>
+<td>9千万</td>
+<td>3天 </td>
+</tr>
+<tr>
+<td>数据B</td>
+<td>6亿（每天）</td>
+<td>18亿</td>
+<td>3天</td>
+<td>全量域名</td>
+</tr>
+</tbody>
+</table>
+<h3 id="测试场景"><a href="#测试场景" class="headerlink" title="测试场景"></a>测试场景</h3><ol>
+<li>通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k</li>
+<li>以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。</li>
+</ol>
+<h3 id="sql模板"><a href="#sql模板" class="headerlink" title="sql模板"></a>sql模板</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">select</span><br><span class="line">	a,</span><br><span class="line">	unix_time,</span><br><span class="line">	count1,</span><br><span class="line">	count2</span><br><span class="line">from</span><br><span class="line">	(</span><br><span class="line">		select</span><br><span class="line">			a,</span><br><span class="line">			unix_time,</span><br><span class="line">			sum( hit ) as count1</span><br><span class="line">		from</span><br><span class="line">			db.tableA</span><br><span class="line">		where</span><br><span class="line">			dt = &apos;2019-03-30&apos;</span><br><span class="line">			and unix_time &gt;= 1553918100</span><br><span class="line">			and unix_time &lt;= 1553919000</span><br><span class="line">			and a in(</span><br><span class="line">			xxxx</span><br><span class="line">)</span><br><span class="line">		group by</span><br><span class="line">			a,</span><br><span class="line">			unix_time</span><br><span class="line">	) all left join(</span><br><span class="line">		select</span><br><span class="line">			a,</span><br><span class="line">			unix_time,</span><br><span class="line">			sum( hit ) as count2</span><br><span class="line">		from</span><br><span class="line">			db.tableB</span><br><span class="line">		where</span><br><span class="line">			dt = &apos;2019-03-30&apos;</span><br><span class="line">			and unix_time &gt;= 1553918400</span><br><span class="line">			and unix_time &lt;= 1553919300</span><br><span class="line">			and a in(</span><br><span class="line">				xxxx</span><br><span class="line">			)</span><br><span class="line">		group by</span><br><span class="line">			a,</span><br><span class="line">			unix_time</span><br><span class="line">	)</span><br><span class="line">		using(</span><br><span class="line">		a,</span><br><span class="line">		unix_time</span><br><span class="line">	)</span><br><span class="line">where</span><br><span class="line">	unix_time &gt;= 1553918400</span><br><span class="line">	and unix_time &lt;= 1553919300</span><br></pre></td></tr></table></figure>
+<h3 id="压测结果"><a href="#压测结果" class="headerlink" title="压测结果"></a>压测结果</h3><p><strong>单次查询在无并发的情况下查询耗时为8.2s</strong></p>
+<p>每隔1s调用一次数据</p>
+<table>
+<thead>
+<tr>
+<th>线程数</th>
+<th>最大耗时</th>
+<th>平均耗时</th>
+<th>95分耗时</th>
+<th>时间跨度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>12.9s</td>
+<td>8.0s</td>
+<td>10.5s</td>
+<td>15min</td>
+</tr>
+<tr>
+<td>5</td>
+<td>29s</td>
+<td>16.6s</td>
+<td>21s</td>
+<td>15min</td>
+</tr>
+<tr>
+<td>10</td>
+<td>34s</td>
+<td>22s</td>
+<td>34s</td>
+<td>15min</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>线程数</th>
+<th>最大耗时</th>
+<th>平均耗时</th>
+<th>95分耗时</th>
+<th>时间跨度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>16.1s</td>
+<td>10.0s</td>
+<td>16.1s</td>
+<td>30min</td>
+</tr>
+<tr>
+<td>5</td>
+<td>28s</td>
+<td>13s</td>
+<td>28s</td>
+<td>30min</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>线程数</th>
+<th>数据库压力</th>
+<th>时间跨度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>无</td>
+<td>15分钟</td>
+</tr>
+<tr>
+<td>5</td>
+<td>查询有压力</td>
+<td>15分钟</td>
+</tr>
+<tr>
+<td>10</td>
+<td>查询可能出现无响应</td>
+<td>15分钟</td>
+</tr>
+<tr>
+<td>20</td>
+<td>查询无响应</td>
+<td>15分钟</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>线程数</th>
+<th>数据库压力</th>
+<th>时间跨度</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>无</td>
+<td>30分钟</td>
+</tr>
+<tr>
+<td>5</td>
+<td>查询有压力</td>
+<td>30分钟</td>
+</tr>
+<tr>
+<td>10</td>
+<td>查询能出现无响应</td>
+<td>30分钟</td>
+</tr>
+</tbody>
+</table>
+<h3 id="summary"><a href="#summary" class="headerlink" title="summary"></a>summary</h3><p>clickhouse的并发性能并不是很好，在复杂查询场景下，并发过大会出现无响应的情况，并且在并发场景下，查询耗时都会一起受影响，原先8s的查询在并发下增长。下面是clickhouse单台机器扫描数据的耗时。一开始tableB是通过a作为第一索引，可是查询的时候用4k个a作为查询条件，而且还带有很多其他条件，导致单台服务器就要扫描7亿的数据，一天的数据才16亿，6台服务器平均一台才3亿，重复扫了将近两倍的数据，因此在场景明确的情况下，时间当做第一索引可以减轻扫描压力，如果是查询时间范围很大的查询，将a条件作为第一索引。有必要可以多存储一份另外索引的数据，用空间换时间。</p>
+<table>
+<thead>
+<tr>
+<th>扫描数据量</th>
+<th>时间</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4亿</td>
+<td>4s</td>
+</tr>
+<tr>
+<td>7亿</td>
+<td>5s</td>
+</tr>
+</tbody>
+</table>
 
       
     </div>
@@ -457,8 +624,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/30/java8-Map-merge、compute、computeIfAbsent、computeIfPresent/" rel="next" title="java8 Map merge、compute、computeIfAbsent、computeIfPresent">
-                <i class="fa fa-chevron-left"></i> java8 Map merge、compute、computeIfAbsent、computeIfPresent
+              <a href="/2019/04/05/flink-异步io/" rel="next" title="Flink 异步io">
+                <i class="fa fa-chevron-left"></i> Flink 异步io
               </a>
             
           </div>
@@ -466,10 +633,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/04/02/clickhouse-字典/" rel="prev" title="clickhouse 字典">
-                clickhouse 字典 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -613,7 +776,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#global介绍"><span class="nav-number">1.</span> <span class="nav-text">global介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分布式查询"><span class="nav-number">2.</span> <span class="nav-text">分布式查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#in-join-的问题"><span class="nav-number">3.</span> <span class="nav-text">in/join 的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用GLOBAL-in-GLOBAL-join"><span class="nav-number">4.</span> <span class="nav-text">使用GLOBAL in /GLOBAL join</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用注意"><span class="nav-number">5.</span> <span class="nav-text">使用注意</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#集群规模"><span class="nav-number">1.</span> <span class="nav-text">集群规模</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据规模"><span class="nav-number">2.</span> <span class="nav-text">数据规模</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#测试场景"><span class="nav-number">3.</span> <span class="nav-text">测试场景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#sql模板"><span class="nav-number">4.</span> <span class="nav-text">sql模板</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#压测结果"><span class="nav-number">5.</span> <span class="nav-text">压测结果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#summary"><span class="nav-number">6.</span> <span class="nav-text">summary</span></a></li></ol></div>
             
 
           </div>

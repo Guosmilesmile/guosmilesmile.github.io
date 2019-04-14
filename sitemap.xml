@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/14/clickhouse-join%E5%92%8C%E5%B9%B6%E5%8F%91%E6%B5%8B%E8%AF%95/</loc>
+    
+    <lastmod>2019-04-14T02:36:53.157Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/05/flink-%E5%BC%82%E6%AD%A5io/</loc>
+    
+    <lastmod>2019-04-05T11:37:42.720Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/02/clickhouse-%E5%AD%97%E5%85%B8/</loc>
+    
+    <lastmod>2019-04-01T16:11:47.152Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/31/clickhouse-global%E7%94%A8%E6%B3%95/</loc>
+    
+    <lastmod>2019-03-31T15:56:22.082Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/30/java8-Map-merge%E3%80%81compute%E3%80%81computeIfAbsent%E3%80%81computeIfPresent/</loc>
+    
+    <lastmod>2019-03-30T02:46:43.509Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/25/SimpleDateFormat%E7%BA%BF%E7%A8%8B%E4%B8%8D%E5%AE%89%E5%85%A8%E4%BB%A5%E5%8F%8A%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/</loc>
+    
+    <lastmod>2019-03-25T15:50:48.899Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/clickhouse-%E6%95%B0%E7%BB%84/</loc>
+    
+    <lastmod>2019-03-25T15:13:08.187Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/24/Flink-allowedLateness/</loc>
+    
+    <lastmod>2019-03-24T05:36:41.816Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/24/Flink-trigger/</loc>
+    
+    <lastmod>2019-03-24T05:32:58.607Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/23/kafka-partition-%E9%80%89%E6%8B%A9/</loc>
+    
+    <lastmod>2019-03-23T13:11:03.225Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/21/Flink-%E6%89%B9%E5%A4%84%E7%90%86-map-%E4%B8%8E-mapPartition/</loc>
+    
+    <lastmod>2019-03-21T14:50:16.602Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/21/Flink-%E5%88%86%E5%B8%83%E5%BC%8F%E7%BC%93%E5%AD%98Distributed-Cache/</loc>
+    
+    <lastmod>2019-03-21T14:49:21.746Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/21/kafka-Coordinator/</loc>
+    
+    <lastmod>2019-03-21T14:33:22.090Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Kafka-porducter-code-analyse/</loc>
+    
+    <lastmod>2019-03-19T14:56:47.609Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/19/kafka-zero-copy/</loc>
+    
+    <lastmod>2019-03-19T14:52:08.304Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/18/clickhouse-mergeTree/</loc>
+    
+    <lastmod>2019-03-18T15:11:46.078Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-UDF/</loc>
+    
+    <lastmod>2019-03-17T13:25:19.716Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/skipTable/</loc>
+    
+    <lastmod>2019-03-17T12:54:23.096Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/RedisBasic/</loc>
+    
+    <lastmod>2019-03-17T12:54:14.185Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/jstormBasic/</loc>
+    
+    <lastmod>2019-03-17T12:53:55.249Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-WaterMark/</loc>
+    
+    <lastmod>2019-03-17T12:53:48.434Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-time/</loc>
+    
+    <lastmod>2019-03-17T12:53:42.011Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-sideOutput/</loc>
+    
+    <lastmod>2019-03-17T12:53:34.647Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/FlinkDataStreamGuide/</loc>
+    
+    <lastmod>2019-03-17T12:53:26.716Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/categories/index.html</loc>
+    
+    <lastmod>2019-03-17T12:51:51.560Z</lastmod>
+    
+  </url>
+  
+</urlset>
