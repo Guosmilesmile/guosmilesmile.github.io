@@ -98,17 +98,17 @@
 
 
 
-  <meta name="description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天 全量域名    测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sq">
+  <meta name="description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天     测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sql模板1">
 <meta property="og:type" content="article">
 <meta property="og:title" content="clickhouse join和并发测试">
 <meta property="og:url" content="http://yoursite.com/2019/04/14/clickhouse-join和并发测试/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天 全量域名    测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sq">
+<meta property="og:description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天     测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sql模板1">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-04-14T02:36:53.157Z">
+<meta property="og:updated_time" content="2019-04-18T13:33:55.435Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="clickhouse join和并发测试">
-<meta name="twitter:description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天 全量域名    测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sq">
+<meta name="twitter:description" content="集群规模   机器数量 内存大小     6台 40G    数据规模   数据名称 数据量 总数据量 时间范围      数据A 3千万（每天） 9千万 3天    数据B 6亿（每天） 18亿 3天     测试场景 通过数据A查出一定时间范围内的条件a数据，作为数据B的查询条件，大约4k 以时间、a为条件到数据库中选择两个时间片进行自连接，获取当前分钟的数据和上一分钟的数据。  sql模板1">
 
 
 
@@ -354,12 +354,24 @@
                 
               
 
-              <time title="创建时间：2019-04-14 10:36:28 / 修改时间：10:36:53" itemprop="dateCreated datePublished" datetime="2019-04-14T10:36:28+08:00">2019-04-14</time>
+              <time title="创建时间：2019-04-14 10:36:28" itemprop="dateCreated datePublished" datetime="2019-04-14T10:36:28+08:00">2019-04-14</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-04-18 21:33:55" itemprop="dateModified" datetime="2019-04-18T21:33:55+08:00">2019-04-18</time>
               
             
           </span>
@@ -445,8 +457,7 @@
 <td>数据B</td>
 <td>6亿（每天）</td>
 <td>18亿</td>
-<td>3天</td>
-<td>全量域名</td>
+<td>3天 </td>
 </tr>
 </tbody>
 </table>
@@ -736,7 +747,7 @@
                     
                       
                     
-                    <span class="site-state-item-count">8</span>
+                    <span class="site-state-item-count">7</span>
                     <span class="site-state-item-name">分类</span>
                   </a>
                 </div>
