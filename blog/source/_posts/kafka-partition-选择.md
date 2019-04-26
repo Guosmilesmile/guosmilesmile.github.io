@@ -2,7 +2,7 @@
 title: kafka partition 数量选择
 date: 2019-03-23 21:10:33
 tags:
-categories: kafka
+categories: Kafka
 ---
 ### 越多的分区可以提供更高的吞吐量
 首先我们需要明白以下事实：在kafka中，单个patition是kafka并行操作的最小单元。在producer和broker端，向每一个分区写入数据是可以完全并行化的，此时，可以通过加大硬件资源的利用率来提升系统的吞吐量，例如对数据进行压缩。在consumer段，kafka只允许单个partition的数据被一个consumer线程消费。因此，在consumer端，每一个Consumer Group内部的consumer并行度完全依赖于被消费的分区数量。综上所述，通常情况下，在一个Kafka集群中，partition的数量越多，意味着可以到达的吞吐量越大。

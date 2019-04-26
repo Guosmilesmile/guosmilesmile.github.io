@@ -2,7 +2,7 @@
 title: java8 Map merge、compute、computeIfAbsent、computeIfPresent
 date: 2019-03-30 10:46:12
 tags:
-categories: java
+categories: Java
 ---
 
 ### 单词计数

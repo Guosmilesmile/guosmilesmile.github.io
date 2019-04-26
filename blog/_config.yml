@@ -104,4 +104,5 @@ jsonContent:
 
 flowchart:
  # raphael: # optional, the source url of raphael.js# flowchart: # optional, the source url of flowchart.jsoptions: # options used for `drawSVG`
- 
+sitemap:
+path: sitemap.xml

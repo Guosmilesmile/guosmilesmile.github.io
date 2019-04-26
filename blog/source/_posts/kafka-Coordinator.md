@@ -2,7 +2,7 @@
 title: kafka Coordinator
 date: 2019-03-21 22:25:51
 tags:
-categories: kafka
+categories: Kafka
 ---
 
 ### Rebalance
