@@ -98,14 +98,21 @@
 
 
 
-  <meta property="og:type" content="article">
+  <meta name="description" content="常见压缩算法   Algorithm % remaining Encoding Decoding     GZIP 13.4% 21 MB/s 118 MB/s   LZO 20.5% 135 MB/s 410 MB/s   Zippy/Snappy 22.2% 172 MB/s 409 MB/s   Lz4 大约等于snappy snappy两倍 snappy两倍     GZIP的压缩率最高，">
+<meta property="og:type" content="article">
 <meta property="og:title" content="Assemble（系列一）">
 <meta property="og:url" content="http://yoursite.com/2019/05/01/Assemble（系列一）/index.html">
 <meta property="og:site_name" content="Pray">
+<meta property="og:description" content="常见压缩算法   Algorithm % remaining Encoding Decoding     GZIP 13.4% 21 MB/s 118 MB/s   LZO 20.5% 135 MB/s 410 MB/s   Zippy/Snappy 22.2% 172 MB/s 409 MB/s   Lz4 大约等于snappy snappy两倍 snappy两倍     GZIP的压缩率最高，">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-05-01T02:25:04.878Z">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B85F71CC9F744B09A01F87975EB9036C?method=download&shareKey=2895c21b23226c54a0ac15c25f7600e5">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B92B6C9AA6A84FDA9C3D1BE986FF9871?method=download&shareKey=22fd310560a29024b5084b7771dfd214">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/8BE0BC6A377948B79240879DA6769877?method=download&shareKey=4a64a53555bc826a6977311c18480257">
+<meta property="og:updated_time" content="2019-05-01T03:06:28.581Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Assemble（系列一）">
+<meta name="twitter:description" content="常见压缩算法   Algorithm % remaining Encoding Decoding     GZIP 13.4% 21 MB/s 118 MB/s   LZO 20.5% 135 MB/s 410 MB/s   Zippy/Snappy 22.2% 172 MB/s 409 MB/s   Lz4 大约等于snappy snappy两倍 snappy两倍     GZIP的压缩率最高，">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/B85F71CC9F744B09A01F87975EB9036C?method=download&shareKey=2895c21b23226c54a0ac15c25f7600e5">
 
 
 
@@ -351,7 +358,7 @@
                 
               
 
-              <time title="创建时间：2019-05-01 10:24:31 / 修改时间：10:25:04" itemprop="dateCreated datePublished" datetime="2019-05-01T10:24:31+08:00">2019-05-01</time>
+              <time title="创建时间：2019-05-01 10:24:31 / 修改时间：11:06:28" itemprop="dateCreated datePublished" datetime="2019-05-01T10:24:31+08:00">2019-05-01</time>
             
 
             
@@ -408,7 +415,59 @@
       
 
       
-        
+        <h2 id="常见压缩算法"><a href="#常见压缩算法" class="headerlink" title="常见压缩算法"></a>常见压缩算法</h2><table>
+<thead>
+<tr>
+<th>Algorithm</th>
+<th>% remaining</th>
+<th>Encoding</th>
+<th>Decoding</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GZIP</td>
+<td>13.4%</td>
+<td>21 MB/s</td>
+<td>118 MB/s</td>
+</tr>
+<tr>
+<td>LZO</td>
+<td>20.5%</td>
+<td>135 MB/s</td>
+<td>410 MB/s</td>
+</tr>
+<tr>
+<td>Zippy/Snappy</td>
+<td>22.2%</td>
+<td>172 MB/s</td>
+<td>409 MB/s</td>
+</tr>
+<tr>
+<td>Lz4</td>
+<td>大约等于snappy</td>
+<td>snappy两倍</td>
+<td>snappy两倍</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>GZIP的压缩率最高，但是是cpu密集型，对cpu的消耗要大很多，压缩也解压速度都满</li>
+<li>L4Z的压缩率和snappy差不多，但是速度是snappy的两倍。</li>
+</ul>
+<h2 id="列式存储压缩算法"><a href="#列式存储压缩算法" class="headerlink" title="列式存储压缩算法"></a>列式存储压缩算法</h2><ol>
+<li>字典编码<br>将相同的值提取出来生成符号表（感觉就是建立索引表），每个列值则直接存储该值映射成的符号表值id（通过索引id的短来减少存储），但是如果量很大的时候，索引也会很大，等于没效果<br><img src="https://note.youdao.com/yws/api/personal/file/B85F71CC9F744B09A01F87975EB9036C?method=download&amp;shareKey=2895c21b23226c54a0ac15c25f7600e5" alt="image"></li>
+<li>常量编码<br>当区内的数据大部分的数据相同，只有少数不同时，可以采用常量编码。该编码将区内数据出现最多的一个值作为常量值，其他值作为异常值。异常值使用&lt;行号+值&gt;的方式存储。（将不一样的单独拎出来，加以行号）</li>
+</ol>
+<p><img src="https://note.youdao.com/yws/api/personal/file/B92B6C9AA6A84FDA9C3D1BE986FF9871?method=download&amp;shareKey=22fd310560a29024b5084b7771dfd214" alt="image"></p>
+<ol start="3">
+<li><p>RLE编码<br>当区内的数据存在大量的相同值，每个不同值的个数比较均匀，且连续出现时，可以使用RLE编码。<br><img src="https://note.youdao.com/yws/api/personal/file/8BE0BC6A377948B79240879DA6769877?method=download&amp;shareKey=4a64a53555bc826a6977311c18480257" alt="image"></p>
+</li>
+<li><p>序列编码</p>
+</li>
+</ol>
+<p>打字ing</p>
+<h2 id="java-向上转型和向下转型"><a href="#java-向上转型和向下转型" class="headerlink" title="java 向上转型和向下转型"></a>java 向上转型和向下转型</h2>
       
     </div>
 
@@ -490,8 +549,17 @@
       
 
       
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
 
-      <div class="site-overview-wrap sidebar-panel sidebar-panel-active">
+      <div class="site-overview-wrap sidebar-panel">
         <div class="site-overview">
           <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
             
@@ -572,6 +640,23 @@
         </div>
       </div>
 
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#常见压缩算法"><span class="nav-number">1.</span> <span class="nav-text">常见压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#列式存储压缩算法"><span class="nav-number">2.</span> <span class="nav-text">列式存储压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#java-向上转型和向下转型"><span class="nav-number">3.</span> <span class="nav-text">java 向上转型和向下转型</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
       
 
       
