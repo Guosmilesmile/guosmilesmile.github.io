@@ -98,24 +98,24 @@
 
 
 
-  <meta name="description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
+  <meta name="description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
 <meta property="og:type" content="article">
-<meta property="og:title" content="clickhouse global用法">
-<meta property="og:url" content="http://yoursite.com/2019/03/31/clickhouse-global用法/index.html">
+<meta property="og:title" content="Assemble（系列二）java基础">
+<meta property="og:url" content="http://yoursite.com/2019/05/01/Assemble（系列二）java基础/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
+<meta property="og:description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-03-31T15:56:22.082Z">
+<meta property="og:updated_time" content="2019-05-01T03:41:04.242Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="clickhouse global用法">
-<meta name="twitter:description" content="global介绍global 有两种用法，GLOBAL in /GLOBAL join。 分布式查询先介绍一下分布式查询1SELECT uniq(UserID) FROM distributed_table 将会被发送到所有远程服务器1SELECT uniq(UserID) FROM local_table 然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上">
+<meta name="twitter:title" content="Assemble（系列二）java基础">
+<meta name="twitter:description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/03/31/clickhouse-global用法/">
+  <link rel="canonical" href="http://yoursite.com/2019/05/01/Assemble（系列二）java基础/">
 
 
 
@@ -125,7 +125,7 @@
   };
 </script>
 
-  <title>clickhouse global用法 | Pray</title>
+  <title>Assemble（系列二）java基础 | Pray</title>
   
 
 
@@ -311,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/31/clickhouse-global用法/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/01/Assemble（系列二）java基础/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">clickhouse global用法
+          <h1 class="post-title" itemprop="name headline">Assemble（系列二）java基础
 
               
             
@@ -354,7 +354,7 @@
                 
               
 
-              <time title="创建时间：2019-03-31 23:55:57 / 修改时间：23:56:22" itemprop="dateCreated datePublished" datetime="2019-03-31T23:55:57+08:00">2019-03-31</time>
+              <time title="创建时间：2019-05-01 11:39:11 / 修改时间：11:41:04" itemprop="dateCreated datePublished" datetime="2019-05-01T11:39:11+08:00">2019-05-01</time>
             
 
             
@@ -376,7 +376,7 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/clickhouse/" itemprop="url" rel="index"><span itemprop="name">clickhouse</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Assemble/" itemprop="url" rel="index"><span itemprop="name">Assemble</span></a></span>
 
                 
                 
@@ -411,22 +411,17 @@
       
 
       
-        <h3 id="global介绍"><a href="#global介绍" class="headerlink" title="global介绍"></a>global介绍</h3><p>global 有两种用法，GLOBAL in /GLOBAL join。</p>
-<h3 id="分布式查询"><a href="#分布式查询" class="headerlink" title="分布式查询"></a>分布式查询</h3><p>先介绍一下分布式查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> distributed_table</span><br></pre></td></tr></table></figure></p>
-<p>将会被发送到所有远程服务器<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table</span><br></pre></td></tr></table></figure></p>
-<p>然后并行运行，直到达到中间结果可以结合的阶段。然后，中间结果将被返回给请求者服务器并在其上合并，最终的结果将被发送到客户端。</p>
-<h3 id="in-join-的问题"><a href="#in-join-的问题" class="headerlink" title="in/join 的问题"></a>in/join 的问题</h3><p>当使用in的时候，查询被发送到远程服务器，并且每个服务器都在IN或JOIN子句中运行子查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">IN</span> (<span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span>)</span><br></pre></td></tr></table></figure></p>
-<p>这个查询将发送到所有服务器,子查询的分布式表名会替换成本地表名<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">IN</span> (<span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span>)</span><br></pre></td></tr></table></figure></p>
-<p>子查询将开始在每个远程服务器上运行。由于子查询使用分布式表，所以每个远程服务器上的子查询将会对每个远程服务器都感到不满，如果您有一个100个服务器集群，执行整个查询将需要10000个基本请求，这通常被认为是不可接受的。</p>
-<h3 id="使用GLOBAL-in-GLOBAL-join"><a href="#使用GLOBAL-in-GLOBAL-join" class="headerlink" title="使用GLOBAL in /GLOBAL join"></a>使用GLOBAL in /GLOBAL join</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SELECT uniq(UserID) FROM distributed_table WHERE CounterID = 101500 AND UserID GLOBAL IN (SELECT UserID FROM distributed_table WHERE CounterID = 34)</span><br></pre></td></tr></table></figure>
-<p>服务器将运行子查询<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> UserID <span class="keyword">FROM</span> distributed_table <span class="keyword">WHERE</span> CounterID = <span class="number">34</span></span><br></pre></td></tr></table></figure></p>
-<p>结果将被放在RAM中的临时表中。然后请求将被发送到每个远程服务器<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> uniq(UserID) <span class="keyword">FROM</span> local_table <span class="keyword">WHERE</span> CounterID = <span class="number">101500</span> <span class="keyword">AND</span> UserID <span class="keyword">GLOBAL</span> <span class="keyword">IN</span> _data1</span><br></pre></td></tr></table></figure></p>
-<p>临时表“data1”将连同查询一起被发送到每个远程服务器（临时表的名称是实现定义的）。</p>
-<h3 id="使用注意"><a href="#使用注意" class="headerlink" title="使用注意"></a>使用注意</h3><ul>
-<li>创建临时表时，数据不是唯一的，为了减少通过网络传输的数据量，请在子查询中使用DISTINCT（你不需要在普通的IN中这么做）</li>
-<li>临时表将发送到所有远程服务器。其中传输不考虑网络的拓扑结构。例如，如果你有10个远程服务器存在与请求服务器非常远的数据中心中，则数据将通过通道发送数据到远程数据中心10次。使用GLOBAL IN时应避免大数据集。</li>
-<li>当使用global…JOIN，首先会在请求者服务器运行一个子查询来计右表(right table)。将此临时表传递给每个远程服务器，并使用传输的临时数据在其上运行查询。会出现网络传输，因此尽量将小表放在右表。</li>
+        <h2 id="java-向上转型和向下转型"><a href="#java-向上转型和向下转型" class="headerlink" title="java 向上转型和向下转型"></a>java 向上转型和向下转型</h2><ul>
+<li>向上转型：子类对象转为父类，父类可以是接口。<br>公式：Father f = new Son();<br>Father是父类或接口，son是子类。</li>
+<li>向下转型：父类对象转为子类。公式：Son s = (Son)f;</li>
 </ul>
+<p>向上转型没有什么好说的，就是多态，看下向下转型。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Human</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sleep</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Human sleep.."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Human h = <span class="keyword">new</span> Male();<span class="comment">// 向上转型</span></span><br><span class="line">        Human h1 = <span class="keyword">new</span> Human();</span><br><span class="line">        <span class="comment">//h.speak();此时需要向下转型，否则不能调用speak方法。</span></span><br><span class="line">         Male m = (Male) h;</span><br><span class="line">         m.speak();</span><br><span class="line">         <span class="comment">/**Male m1 = (Male)h1;</span></span><br><span class="line"><span class="comment">         m1.speak();    此时会出现运行时错误，所以可以用instanceOF判断*/</span></span><br><span class="line">         <span class="keyword">if</span> (h1 <span class="keyword">instanceof</span> Male)&#123;</span><br><span class="line">             Male m1 = (Male)h1;</span><br><span class="line">             m1.speak();</span><br><span class="line">             </span><br><span class="line">         &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Male</span> <span class="keyword">extends</span> <span class="title">Human</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sleep</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Male sleep.."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">speak</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"I am Male"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h5 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h5><p>向下转型需要考虑安全性，如果父类引用的对象是父类本身，那么在向下转型的过程中是不安全的，编译不会出错，但是运行时会出现java.lang.ClassCastException错误。它可以使用instanceof来避免出错此类错误即能否向下转型，只有先经过向上转型的对象才能继续向下转型。</p>
+<h2 id="String-StringBuffer-StringBuilder-的区别是什么？String为什么是不可变的？"><a href="#String-StringBuffer-StringBuilder-的区别是什么？String为什么是不可变的？" class="headerlink" title="String,StringBuffer, StringBuilder 的区别是什么？String为什么是不可变的？"></a>String,StringBuffer, StringBuilder 的区别是什么？String为什么是不可变的？</h2><ol>
+<li>String是字符串常亮，其余两个是字符串变量，后者内容可变，前者创建后内容不可变。</li>
+<li>String不可变是因为jdk中String类被声明成final</li>
+<li>StringBuffer是线程安全的，StringBulider是非线程安全的</li>
+</ol>
 
       
     </div>
@@ -457,8 +452,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/03/30/java8-Map-merge、compute、computeIfAbsent、computeIfPresent/" rel="next" title="java8 Map merge、compute、computeIfAbsent、computeIfPresent">
-                <i class="fa fa-chevron-left"></i> java8 Map merge、compute、computeIfAbsent、computeIfPresent
+              <a href="/2019/05/01/Assemble（系列一）/" rel="next" title="Assemble（系列一）大数据">
+                <i class="fa fa-chevron-left"></i> Assemble（系列一）大数据
               </a>
             
           </div>
@@ -466,10 +461,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/04/02/clickhouse-字典/" rel="prev" title="clickhouse 字典">
-                clickhouse 字典 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -615,7 +606,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#global介绍"><span class="nav-number">1.</span> <span class="nav-text">global介绍</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分布式查询"><span class="nav-number">2.</span> <span class="nav-text">分布式查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#in-join-的问题"><span class="nav-number">3.</span> <span class="nav-text">in/join 的问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用GLOBAL-in-GLOBAL-join"><span class="nav-number">4.</span> <span class="nav-text">使用GLOBAL in /GLOBAL join</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用注意"><span class="nav-number">5.</span> <span class="nav-text">使用注意</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#java-向上转型和向下转型"><span class="nav-number">1.</span> <span class="nav-text">java 向上转型和向下转型</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#注意点"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">注意点</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#String-StringBuffer-StringBuilder-的区别是什么？String为什么是不可变的？"><span class="nav-number">2.</span> <span class="nav-text">String,StringBuffer, StringBuilder 的区别是什么？String为什么是不可变的？</span></a></li></div>
             
 
           </div>
