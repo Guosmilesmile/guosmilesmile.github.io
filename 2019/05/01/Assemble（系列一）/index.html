@@ -112,7 +112,7 @@
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AC551EF155914DDE8F3AFB4548B2E02E?method=download&shareKey=67752b545ab2722563b497965b603eed">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/9BC6BA03C3424B4DBD81407088435DC1?method=download&shareKey=4ef9bcbc584bebcf254a26c4d1a4d6fa">
 <meta property="og:image" content="http://wx4.sinaimg.cn/large/8b2dfbcaly1g2nddmg0uxj20bh09kmy0.jpg">
-<meta property="og:updated_time" content="2019-05-02T15:13:03.763Z">
+<meta property="og:updated_time" content="2019-05-02T15:16:54.322Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Assemble（系列一）大数据">
 <meta name="twitter:description" content="常见压缩算法   Algorithm % remaining Encoding Decoding     GZIP 13.4% 21 MB/s 118 MB/s   LZO 20.5% 135 MB/s 410 MB/s   Zippy/Snappy 22.2% 172 MB/s 409 MB/s   Lz4 大约等于snappy snappy两倍 snappy两倍     GZIP的压缩率最高，">
@@ -379,7 +379,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-05-02 23:13:03" itemprop="dateModified" datetime="2019-05-02T23:13:03+08:00">2019-05-02</time>
+                <time title="修改时间：2019-05-02 23:16:54" itemprop="dateModified" datetime="2019-05-02T23:16:54+08:00">2019-05-02</time>
               
             
           </span>
@@ -495,7 +495,7 @@
 <li>BloomFilter<br>在海量数据中，布隆过滤器里头可以选缓存数据库到底有什么key。<br>在缓存之前在加一层 BloomFilter ，在查询的时候先去 BloomFilter 去查询 key 是否存在，如果不存在就直接返回，存在再走查缓存 -&gt; 查 DB</li>
 </ol>
 <h4 id="缓存击穿"><a href="#缓存击穿" class="headerlink" title="缓存击穿"></a>缓存击穿</h4><p>在高并发系统中，大量请求查询一个key，这个key又刚好失效，那么就会有大量的数据打到数据库中。</p>
-<h6 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h6><p>可以在第一个查询数据的请求上使用一个 互斥锁来锁住它。</p>
+<h5 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h5><p>可以在第一个查询数据的请求上使用一个 互斥锁来锁住它。</p>
 <p>其他的线程走到这一步拿不到锁就等着，等第一个线程查询到了数据，然后做缓存。后面的线程进来发现已经有缓存了，就直接走缓存。（可以利用guava中的机制，第一个请求阻塞等待，其他请求先获取旧的数据，等新的数据获取到后更新）</p>
 <h4 id="缓存雪崩"><a href="#缓存雪崩" class="headerlink" title="缓存雪崩"></a>缓存雪崩</h4><p>当某一时刻发生大规模的缓存失效的情况，比如你的缓存服务宕机了，会有大量的请求进来直接打到DB上面。结果就是DB 扛不住，挂掉。</p>
 <h5 id="解决-1"><a href="#解决-1" class="headerlink" title="解决"></a>解决</h5><ol>
@@ -689,7 +689,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#常见压缩算法"><span class="nav-number">1.</span> <span class="nav-text">常见压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#列式存储压缩算法"><span class="nav-number">2.</span> <span class="nav-text">列式存储压缩算法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Reference"><span class="nav-number">2.0.0.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存系列"><span class="nav-number">3.</span> <span class="nav-text">缓存系列</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存穿透"><span class="nav-number">3.0.1.</span> <span class="nav-text">缓存穿透</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#避免"><span class="nav-number">3.0.1.1.</span> <span class="nav-text">避免</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存击穿"><span class="nav-number">3.0.2.</span> <span class="nav-text">缓存击穿</span></a><ol class="nav-child"><li class="nav-item nav-level-6"><a class="nav-link" href="#解决"><span class="nav-number">3.0.2.0.1.</span> <span class="nav-text">解决</span></a></li></ol></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存雪崩"><span class="nav-number">3.0.3.</span> <span class="nav-text">缓存雪崩</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决-1"><span class="nav-number">3.0.3.1.</span> <span class="nav-text">解决</span></a></li></ol></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#常见压缩算法"><span class="nav-number">1.</span> <span class="nav-text">常见压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#列式存储压缩算法"><span class="nav-number">2.</span> <span class="nav-text">列式存储压缩算法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Reference"><span class="nav-number">2.0.0.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存系列"><span class="nav-number">3.</span> <span class="nav-text">缓存系列</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存穿透"><span class="nav-number">3.0.1.</span> <span class="nav-text">缓存穿透</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#避免"><span class="nav-number">3.0.1.1.</span> <span class="nav-text">避免</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存击穿"><span class="nav-number">3.0.2.</span> <span class="nav-text">缓存击穿</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决"><span class="nav-number">3.0.2.1.</span> <span class="nav-text">解决</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存雪崩"><span class="nav-number">3.0.3.</span> <span class="nav-text">缓存雪崩</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决-1"><span class="nav-number">3.0.3.1.</span> <span class="nav-text">解决</span></a></li></ol></li></ol></li></div>
             
 
           </div>
