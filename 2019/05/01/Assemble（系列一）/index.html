@@ -112,7 +112,7 @@
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AC551EF155914DDE8F3AFB4548B2E02E?method=download&shareKey=67752b545ab2722563b497965b603eed">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/9BC6BA03C3424B4DBD81407088435DC1?method=download&shareKey=4ef9bcbc584bebcf254a26c4d1a4d6fa">
 <meta property="og:image" content="http://wx4.sinaimg.cn/large/8b2dfbcaly1g2nddmg0uxj20bh09kmy0.jpg">
-<meta property="og:updated_time" content="2019-05-02T15:18:17.188Z">
+<meta property="og:updated_time" content="2019-05-08T13:19:23.139Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Assemble（系列一）大数据">
 <meta name="twitter:description" content="常见压缩算法   Algorithm % remaining Encoding Decoding     GZIP 13.4% 21 MB/s 118 MB/s   LZO 20.5% 135 MB/s 410 MB/s   Zippy/Snappy 22.2% 172 MB/s 409 MB/s   Lz4 大约等于snappy snappy两倍 snappy两倍     GZIP的压缩率最高，">
@@ -379,7 +379,7 @@
                 
                   <span class="post-meta-item-text">更新于</span>
                 
-                <time title="修改时间：2019-05-02 23:18:17" itemprop="dateModified" datetime="2019-05-02T23:18:17+08:00">2019-05-02</time>
+                <time title="修改时间：2019-05-08 21:19:23" itemprop="dateModified" datetime="2019-05-08T21:19:23+08:00">2019-05-08</time>
               
             
           </span>
@@ -503,6 +503,190 @@
 <li>Hystrix限流&amp;降级</li>
 <li>开启Redis持久化机制，尽快恢复缓存集群</li>
 </ol>
+<h2 id="分库分表的数据库如何进行数据迁移"><a href="#分库分表的数据库如何进行数据迁移" class="headerlink" title="分库分表的数据库如何进行数据迁移"></a>分库分表的数据库如何进行数据迁移</h2><h4 id="停服扩容"><a href="#停服扩容" class="headerlink" title="停服扩容"></a>停服扩容</h4><ol>
+<li>停止服务</li>
+<li>新建2*n个新库，并做好高可用</li>
+<li>进行数据迁移，把数据从n个库里select出来，insert到2*n个库里；（耗时最长）</li>
+<li>修改微服务的数据库路由配置，模n变为模2*n；</li>
+<li>微服务重启，连接新库重新对外提供服务；</li>
+</ol>
+<h4 id="平滑扩容"><a href="#平滑扩容" class="headerlink" title="平滑扩容"></a>平滑扩容</h4><h5 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h5><p>每台db都有一个salve，作为高可用也好，扩容也好</p>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>db1 salve</td>
+<td>无</td>
+<td></td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>db2 salve</td>
+<td>无</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h5 id="步骤一：修改配置。"><a href="#步骤一：修改配置。" class="headerlink" title="步骤一：修改配置。"></a>步骤一：修改配置。</h5><ul>
+<li>数据库实例所在的机器做双虚ip：   </li>
+<li><ul>
+<li>原%2=0的库是虚ip0，现增加一个虚ip00</li>
+</ul>
+</li>
+<li><ul>
+<li>原%2=1的库是虚ip1，现增加一个虚ip11</li>
+</ul>
+</li>
+<li>修改服务的配置，将2个库的数据库配置，改为4个库的数据库配置，修改的时候要注意旧库与新库的映射关系：</li>
+<li><ul>
+<li>%2=0的库，会变为%4=0与%4=2</li>
+</ul>
+</li>
+<li><ul>
+<li>%2=1的部分，会变为%4=1与%4=3</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0，ip00</td>
+<td>0</td>
+</tr>
+<tr>
+<td>db1 salve</td>
+<td>ip0，ip00</td>
+<td></td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip1，ip11</td>
+<td>1</td>
+</tr>
+<tr>
+<td>db2 salve</td>
+<td>ip1，ip11</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h5 id="步骤二：reload配置，实例扩容"><a href="#步骤二：reload配置，实例扩容" class="headerlink" title="步骤二：reload配置，实例扩容"></a>步骤二：reload配置，实例扩容</h5><p>reload可能是这么几种方式：</p>
+<ul>
+<li>比较原始的，重启服务，读新的配置文件；</li>
+<li>高级一点的，配置中心给服务发信号，重读配置文件，重新初始化数据库连接池；</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0，ip00</td>
+<td>0</td>
+</tr>
+<tr>
+<td>db1 salve</td>
+<td>ip0，ip00</td>
+<td>2</td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip1，ip11</td>
+<td>1</td>
+</tr>
+<tr>
+<td>db2 salve</td>
+<td>ip1，ip11</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<h5 id="步骤三：收尾工作，数据收缩"><a href="#步骤三：收尾工作，数据收缩" class="headerlink" title="步骤三：收尾工作，数据收缩"></a>步骤三：收尾工作，数据收缩</h5><ul>
+<li>把双虚ip修改回单虚ip；</li>
+<li>解除旧的双主同步，让成对库的数据不再同步增加；</li>
+<li>增加新的双主同步，保证高可用；</li>
+<li>删除掉冗余数据，例如：ip0里%4=2的数据全部删除，只为%4=0的数据提供服务</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>new db1 salve</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip00</td>
+<td>2</td>
+</tr>
+<tr>
+<td>new db2 salve</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>db3</td>
+<td>ip1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>new db3 salve</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>db4</td>
+<td>ip11</td>
+<td>3</td>
+</tr>
+<tr>
+<td>new db4 salve</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h5 id="Reference-1"><a href="#Reference-1" class="headerlink" title="Reference"></a>Reference</h5><p><a href="https://mp.weixin.qq.com/s?__biz=MjM5ODYxMDA5OQ==&amp;mid=2651962231&amp;idx=1&amp;sn=1b51d042c243f0b3ce0b748ddbcff865&amp;chksm=bd2d0eab8a5a87bdcbe7dd08fb4c969ad76fa0ea00b2c78645db8561fd2a78d813d7b8bef2ac&amp;mpshare=1&amp;scene=1&amp;srcid=&amp;key=d9a46d47128ca0584390daedbbb1c39077582436967d7e2189f09b10441423d60e73732ec92855b3f85f6cb547616c14be51b004a0da4c46163e1cf8d0ead0630120007ed885a7a4d0cc383294ea8e15&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+10&amp;version=62060739&amp;lang=zh_CN&amp;pass_ticket=8%2BAcIGVZ5r%2B3LMkUMz0mfS12OgN7SW%2B%2B1eeeqRcOcIFUut%2FZk5Lj0iFnfAWSN4HV" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?__biz=MjM5ODYxMDA5OQ==&amp;mid=2651962231&amp;idx=1&amp;sn=1b51d042c243f0b3ce0b748ddbcff865&amp;chksm=bd2d0eab8a5a87bdcbe7dd08fb4c969ad76fa0ea00b2c78645db8561fd2a78d813d7b8bef2ac&amp;mpshare=1&amp;scene=1&amp;srcid=&amp;key=d9a46d47128ca0584390daedbbb1c39077582436967d7e2189f09b10441423d60e73732ec92855b3f85f6cb547616c14be51b004a0da4c46163e1cf8d0ead0630120007ed885a7a4d0cc383294ea8e15&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+10&amp;version=62060739&amp;lang=zh_CN&amp;pass_ticket=8%2BAcIGVZ5r%2B3LMkUMz0mfS12OgN7SW%2B%2B1eeeqRcOcIFUut%2FZk5Lj0iFnfAWSN4HV</a></p>
 
       
     </div>
@@ -689,7 +873,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#常见压缩算法"><span class="nav-number">1.</span> <span class="nav-text">常见压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#列式存储压缩算法"><span class="nav-number">2.</span> <span class="nav-text">列式存储压缩算法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Reference"><span class="nav-number">2.0.0.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存系列"><span class="nav-number">3.</span> <span class="nav-text">缓存系列</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存穿透"><span class="nav-number">3.0.1.</span> <span class="nav-text">缓存穿透</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#避免"><span class="nav-number">3.0.1.1.</span> <span class="nav-text">避免</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存击穿"><span class="nav-number">3.0.2.</span> <span class="nav-text">缓存击穿</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决"><span class="nav-number">3.0.2.1.</span> <span class="nav-text">解决</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存雪崩"><span class="nav-number">3.0.3.</span> <span class="nav-text">缓存雪崩</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决-1"><span class="nav-number">3.0.3.1.</span> <span class="nav-text">解决</span></a></li></ol></li></ol></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#常见压缩算法"><span class="nav-number">1.</span> <span class="nav-text">常见压缩算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#列式存储压缩算法"><span class="nav-number">2.</span> <span class="nav-text">列式存储压缩算法</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Reference"><span class="nav-number">2.0.0.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#缓存系列"><span class="nav-number">3.</span> <span class="nav-text">缓存系列</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存穿透"><span class="nav-number">3.0.1.</span> <span class="nav-text">缓存穿透</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#避免"><span class="nav-number">3.0.1.1.</span> <span class="nav-text">避免</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存击穿"><span class="nav-number">3.0.2.</span> <span class="nav-text">缓存击穿</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决"><span class="nav-number">3.0.2.1.</span> <span class="nav-text">解决</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存雪崩"><span class="nav-number">3.0.3.</span> <span class="nav-text">缓存雪崩</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决-1"><span class="nav-number">3.0.3.1.</span> <span class="nav-text">解决</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#分库分表的数据库如何进行数据迁移"><span class="nav-number">4.</span> <span class="nav-text">分库分表的数据库如何进行数据迁移</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#停服扩容"><span class="nav-number">4.0.1.</span> <span class="nav-text">停服扩容</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#平滑扩容"><span class="nav-number">4.0.2.</span> <span class="nav-text">平滑扩容</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#前提"><span class="nav-number">4.0.2.1.</span> <span class="nav-text">前提</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#步骤一：修改配置。"><span class="nav-number">4.0.2.2.</span> <span class="nav-text">步骤一：修改配置。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#步骤二：reload配置，实例扩容"><span class="nav-number">4.0.2.3.</span> <span class="nav-text">步骤二：reload配置，实例扩容</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#步骤三：收尾工作，数据收缩"><span class="nav-number">4.0.2.4.</span> <span class="nav-text">步骤三：收尾工作，数据收缩</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Reference-1"><span class="nav-number">4.0.2.5.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></li></div>
             
 
           </div>
