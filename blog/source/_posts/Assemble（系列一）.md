@@ -79,3 +79,83 @@ https://blog.csdn.net/bitcarmanlee/article/details/50938970
 3. 开启Redis持久化机制，尽快恢复缓存集群
 
 
+
+## 分库分表的数据库如何进行数据迁移
+
+#### 停服扩容
+
+1. 停止服务
+2. 新建2*n个新库，并做好高可用
+3. 进行数据迁移，把数据从n个库里select出来，insert到2*n个库里；（耗时最长）
+4. 修改微服务的数据库路由配置，模n变为模2*n；
+5. 微服务重启，连接新库重新对外提供服务；
+
+
+#### 平滑扩容
+
+##### 前提
+每台db都有一个salve，作为高可用也好，扩容也好
+
+
+
+db| ip映射 | 取模
+---|---|---
+db1 | ip0 |  0
+db1 salve | 无  | 
+db2 | ip1 |  1
+db2 salve | 无 | 
+
+##### 步骤一：修改配置。
+
+* 数据库实例所在的机器做双虚ip：   
+* * 原%2=0的库是虚ip0，现增加一个虚ip00
+* * 原%2=1的库是虚ip1，现增加一个虚ip11
+* 修改服务的配置，将2个库的数据库配置，改为4个库的数据库配置，修改的时候要注意旧库与新库的映射关系：
+* *  %2=0的库，会变为%4=0与%4=2
+* *  %2=1的部分，会变为%4=1与%4=3
+
+
+db| ip映射 | 取模
+---|---|---
+db1 | ip0，ip00 |  0
+db1 salve | ip0，ip00  |
+db2 | ip1，ip11 |  1
+db2 salve | ip1，ip11 | 
+
+
+##### 步骤二：reload配置，实例扩容
+
+
+reload可能是这么几种方式：
+* 比较原始的，重启服务，读新的配置文件；
+* 高级一点的，配置中心给服务发信号，重读配置文件，重新初始化数据库连接池；
+ 
+db| ip映射 | 取模
+---|---|---
+db1 | ip0，ip00 |  0
+db1 salve | ip0，ip00  | 2
+db2 | ip1，ip11 |  1
+db2 salve | ip1，ip11 | 3
+
+
+##### 步骤三：收尾工作，数据收缩
+
+
+* 把双虚ip修改回单虚ip；
+* 解除旧的双主同步，让成对库的数据不再同步增加；
+* 增加新的双主同步，保证高可用；
+* 删除掉冗余数据，例如：ip0里%4=2的数据全部删除，只为%4=0的数据提供服务
+
+db| ip映射 | 取模
+---|---|---
+db1 | ip0 |  0
+new db1 salve |  | 
+db2 | ip00  | 2
+new db2 salve |  | 
+db3 | ip1 |  1
+new db3 salve |  | 
+db4 | ip11 | 3
+new db4 salve |  | 
+
+##### Reference
+https://mp.weixin.qq.com/s?__biz=MjM5ODYxMDA5OQ==&mid=2651962231&idx=1&sn=1b51d042c243f0b3ce0b748ddbcff865&chksm=bd2d0eab8a5a87bdcbe7dd08fb4c969ad76fa0ea00b2c78645db8561fd2a78d813d7b8bef2ac&mpshare=1&scene=1&srcid=&key=d9a46d47128ca0584390daedbbb1c39077582436967d7e2189f09b10441423d60e73732ec92855b3f85f6cb547616c14be51b004a0da4c46163e1cf8d0ead0630120007ed885a7a4d0cc383294ea8e15&ascene=1&uin=MjU3NDYyMjA0Mw%3D%3D&devicetype=Windows+10&version=62060739&lang=zh_CN&pass_ticket=8%2BAcIGVZ5r%2B3LMkUMz0mfS12OgN7SW%2B%2B1eeeqRcOcIFUut%2FZk5Lj0iFnfAWSN4HV
