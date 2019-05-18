@@ -98,24 +98,26 @@
 
 
 
-  <meta name="description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
+  <meta name="description" content="简单缓存逻辑 缓存穿透如果去请求一条不存在的key，那么缓存和数据库都不存在这条记录，每次请求都会打到数据库上，这叫做缓存穿透（可以用来攻击）。 避免 缓存空值可以为这些key对应的值设置为null 丢到缓存里面去。后面再出现查询这个key 的请求的时候，直接返回null 。 BloomFilter在海量数据中，布隆过滤器里头可以选缓存数据库到底有什么key。在缓存之前在加一层 BloomFilt">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Assemble（系列二）java基础">
-<meta property="og:url" content="http://yoursite.com/2019/05/01/Assemble（系列二）java基础/index.html">
+<meta property="og:title" content="缓存介绍">
+<meta property="og:url" content="http://yoursite.com/2019/05/18/缓存介绍/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
+<meta property="og:description" content="简单缓存逻辑 缓存穿透如果去请求一条不存在的key，那么缓存和数据库都不存在这条记录，每次请求都会打到数据库上，这叫做缓存穿透（可以用来攻击）。 避免 缓存空值可以为这些key对应的值设置为null 丢到缓存里面去。后面再出现查询这个key 的请求的时候，直接返回null 。 BloomFilter在海量数据中，布隆过滤器里头可以选缓存数据库到底有什么key。在缓存之前在加一层 BloomFilt">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-05-01T03:41:04.242Z">
+<meta property="og:image" content="http://wx4.sinaimg.cn/large/8b2dfbcaly1g2nddmg0uxj20bh09kmy0.jpg">
+<meta property="og:updated_time" content="2019-05-18T02:03:12.235Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Assemble（系列二）java基础">
-<meta name="twitter:description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
+<meta name="twitter:title" content="缓存介绍">
+<meta name="twitter:description" content="简单缓存逻辑 缓存穿透如果去请求一条不存在的key，那么缓存和数据库都不存在这条记录，每次请求都会打到数据库上，这叫做缓存穿透（可以用来攻击）。 避免 缓存空值可以为这些key对应的值设置为null 丢到缓存里面去。后面再出现查询这个key 的请求的时候，直接返回null 。 BloomFilter在海量数据中，布隆过滤器里头可以选缓存数据库到底有什么key。在缓存之前在加一层 BloomFilt">
+<meta name="twitter:image" content="http://wx4.sinaimg.cn/large/8b2dfbcaly1g2nddmg0uxj20bh09kmy0.jpg">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/05/01/Assemble（系列二）java基础/">
+  <link rel="canonical" href="http://yoursite.com/2019/05/18/缓存介绍/">
 
 
 
@@ -125,7 +127,7 @@
   };
 </script>
 
-  <title>Assemble（系列二）java基础 | Pray</title>
+  <title>缓存介绍 | Pray</title>
   
 
 
@@ -311,7 +313,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/01/Assemble（系列二）java基础/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/缓存介绍/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +330,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">Assemble（系列二）java基础
+          <h1 class="post-title" itemprop="name headline">缓存介绍
 
               
             
@@ -354,7 +356,7 @@
                 
               
 
-              <time title="创建时间：2019-05-01 11:39:11 / 修改时间：11:41:04" itemprop="dateCreated datePublished" datetime="2019-05-01T11:39:11+08:00">2019-05-01</time>
+              <time title="创建时间：2019-05-18 10:02:46 / 修改时间：10:03:12" itemprop="dateCreated datePublished" datetime="2019-05-18T10:02:46+08:00">2019-05-18</time>
             
 
             
@@ -377,6 +379,13 @@
               
               
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Assemble/" itemprop="url" rel="index"><span itemprop="name">Assemble</span></a></span>
+
+                
+                
+                  ，
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Assemble/大数据/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a></span>
 
                 
                 
@@ -411,16 +420,20 @@
       
 
       
-        <h2 id="java-向上转型和向下转型"><a href="#java-向上转型和向下转型" class="headerlink" title="java 向上转型和向下转型"></a>java 向上转型和向下转型</h2><ul>
-<li>向上转型：子类对象转为父类，父类可以是接口。<br>公式：Father f = new Son();<br>Father是父类或接口，son是子类。</li>
-<li>向下转型：父类对象转为子类。公式：Son s = (Son)f;</li>
-</ul>
-<p>向上转型没有什么好说的，就是多态，看下向下转型。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Human</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sleep</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Human sleep.."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Human h = <span class="keyword">new</span> Male();<span class="comment">// 向上转型</span></span><br><span class="line">        Human h1 = <span class="keyword">new</span> Human();</span><br><span class="line">        <span class="comment">//h.speak();此时需要向下转型，否则不能调用speak方法。</span></span><br><span class="line">         Male m = (Male) h;</span><br><span class="line">         m.speak();</span><br><span class="line">         <span class="comment">/**Male m1 = (Male)h1;</span></span><br><span class="line"><span class="comment">         m1.speak();    此时会出现运行时错误，所以可以用instanceOF判断*/</span></span><br><span class="line">         <span class="keyword">if</span> (h1 <span class="keyword">instanceof</span> Male)&#123;</span><br><span class="line">             Male m1 = (Male)h1;</span><br><span class="line">             m1.speak();</span><br><span class="line">             </span><br><span class="line">         &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Male</span> <span class="keyword">extends</span> <span class="title">Human</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sleep</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Male sleep.."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">speak</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"I am Male"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
-<h5 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h5><p>向下转型需要考虑安全性，如果父类引用的对象是父类本身，那么在向下转型的过程中是不安全的，编译不会出错，但是运行时会出现java.lang.ClassCastException错误。它可以使用instanceof来避免出错此类错误即能否向下转型，只有先经过向上转型的对象才能继续向下转型。</p>
-<h2 id="String-StringBuffer-StringBuilder-的区别是什么？String为什么是不可变的？"><a href="#String-StringBuffer-StringBuilder-的区别是什么？String为什么是不可变的？" class="headerlink" title="String,StringBuffer, StringBuilder 的区别是什么？String为什么是不可变的？"></a>String,StringBuffer, StringBuilder 的区别是什么？String为什么是不可变的？</h2><ol>
-<li>String是字符串常亮，其余两个是字符串变量，后者内容可变，前者创建后内容不可变。</li>
-<li>String不可变是因为jdk中String类被声明成final</li>
-<li>StringBuffer是线程安全的，StringBulider是非线程安全的</li>
+        <p>简单缓存逻辑<br><img src="http://wx4.sinaimg.cn/large/8b2dfbcaly1g2nddmg0uxj20bh09kmy0.jpg" alt="image"></p>
+<h4 id="缓存穿透"><a href="#缓存穿透" class="headerlink" title="缓存穿透"></a>缓存穿透</h4><p>如果去请求一条不存在的key，那么缓存和数据库都不存在这条记录，每次请求都会打到数据库上，这叫做缓存穿透（可以用来攻击）。</p>
+<h5 id="避免"><a href="#避免" class="headerlink" title="避免"></a>避免</h5><ol>
+<li>缓存空值<br>可以为这些key对应的值设置为null 丢到缓存里面去。后面再出现查询这个key 的请求的时候，直接返回null 。</li>
+<li>BloomFilter<br>在海量数据中，布隆过滤器里头可以选缓存数据库到底有什么key。<br>在缓存之前在加一层 BloomFilter ，在查询的时候先去 BloomFilter 去查询 key 是否存在，如果不存在就直接返回，存在再走查缓存 -&gt; 查 DB</li>
+</ol>
+<h4 id="缓存击穿"><a href="#缓存击穿" class="headerlink" title="缓存击穿"></a>缓存击穿</h4><p>在高并发系统中，大量请求查询一个key，这个key又刚好失效，那么就会有大量的数据打到数据库中。</p>
+<h5 id="解决"><a href="#解决" class="headerlink" title="解决"></a>解决</h5><p>可以在第一个查询数据的请求上使用一个 互斥锁来锁住它。</p>
+<p>其他的线程走到这一步拿不到锁就等着，等第一个线程查询到了数据，然后做缓存。后面的线程进来发现已经有缓存了，就直接走缓存。（可以利用guava中的机制，第一个请求阻塞等待，其他请求先获取旧的数据，等新的数据获取到后更新）</p>
+<h4 id="缓存雪崩"><a href="#缓存雪崩" class="headerlink" title="缓存雪崩"></a>缓存雪崩</h4><p>当某一时刻发生大规模的缓存失效的情况，比如你的缓存服务宕机了，会有大量的请求进来直接打到DB上面。结果就是DB 扛不住，挂掉。</p>
+<h5 id="解决-1"><a href="#解决-1" class="headerlink" title="解决"></a>解决</h5><ol>
+<li>使用集群缓存，保证缓存服务的高可用</li>
+<li>Hystrix限流&amp;降级</li>
+<li>开启Redis持久化机制，尽快恢复缓存集群</li>
 </ol>
 
       
@@ -452,8 +465,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/05/01/Assemble（系列一）/" rel="next" title="Assemble（系列一）大数据">
-                <i class="fa fa-chevron-left"></i> Assemble（系列一）大数据
+              <a href="/2019/05/18/压缩算法/" rel="next" title="压缩算法">
+                <i class="fa fa-chevron-left"></i> 压缩算法
               </a>
             
           </div>
@@ -462,8 +475,8 @@
 
           <div class="post-nav-prev post-nav-item">
             
-              <a href="/2019/05/01/Flink-Process-Function/" rel="prev" title="Flink Process Function">
-                Flink Process Function <i class="fa fa-chevron-right"></i>
+              <a href="/2019/05/18/分库分表的数据库如何进行数据迁移/" rel="prev" title="分库分表的数据库如何进行数据迁移">
+                分库分表的数据库如何进行数据迁移 <i class="fa fa-chevron-right"></i>
               </a>
             
           </div>
@@ -535,7 +548,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">31</span>
+                    <span class="site-state-item-count">33</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
@@ -568,7 +581,11 @@
                     
                       
                     
-                    <span class="site-state-item-count">8</span>
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">10</span>
                     <span class="site-state-item-name">分类</span>
                   </a>
                 </div>
@@ -608,7 +625,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#java-向上转型和向下转型"><span class="nav-number">1.</span> <span class="nav-text">java 向上转型和向下转型</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#注意点"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">注意点</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#String-StringBuffer-StringBuilder-的区别是什么？String为什么是不可变的？"><span class="nav-number">2.</span> <span class="nav-text">String,StringBuffer, StringBuilder 的区别是什么？String为什么是不可变的？</span></a></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存穿透"><span class="nav-number">1.</span> <span class="nav-text">缓存穿透</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#避免"><span class="nav-number">1.1.</span> <span class="nav-text">避免</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存击穿"><span class="nav-number">2.</span> <span class="nav-text">缓存击穿</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决"><span class="nav-number">2.1.</span> <span class="nav-text">解决</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#缓存雪崩"><span class="nav-number">3.</span> <span class="nav-text">缓存雪崩</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#解决-1"><span class="nav-number">3.1.</span> <span class="nav-text">解决</span></a></li></ol></li></ol></div>
             
 
           </div>

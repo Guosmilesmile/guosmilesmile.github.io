@@ -98,26 +98,24 @@
 
 
 
-  <meta name="description" content="查消耗cpu最高的进程PID top -c 按P，进程按照cpu使用率排序  根据PID查出消耗cpu最高的线程号 top -Hp 进程号 按P，进程按照cpu使用率排序 将最高的十进制线程号转为十六进制  根据线程号查出对应的java线程，进行处理 jstack -l pid &amp;gt; pid.test cat pid.test | grep ‘十六进制线程号’ -C 8 或者直接less进去看">
+  <meta name="description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
 <meta property="og:type" content="article">
-<meta property="og:title" content="jstack排查cpu高">
-<meta property="og:url" content="http://yoursite.com/2019/05/03/jstack排查cpu高/index.html">
+<meta property="og:title" content="向上转型和向下转型">
+<meta property="og:url" content="http://yoursite.com/2019/05/18/向上转型和向下转型/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="查消耗cpu最高的进程PID top -c 按P，进程按照cpu使用率排序  根据PID查出消耗cpu最高的线程号 top -Hp 进程号 按P，进程按照cpu使用率排序 将最高的十进制线程号转为十六进制  根据线程号查出对应的java线程，进行处理 jstack -l pid &amp;gt; pid.test cat pid.test | grep ‘十六进制线程号’ -C 8 或者直接less进去看">
+<meta property="og:description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/3F1C24F735294029BD27EDFB5A692B1E?method=download&shareKey=106151c7135270ee93724431076b5061">
-<meta property="og:updated_time" content="2019-05-08T13:21:38.579Z">
+<meta property="og:updated_time" content="2019-05-18T02:05:29.188Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="jstack排查cpu高">
-<meta name="twitter:description" content="查消耗cpu最高的进程PID top -c 按P，进程按照cpu使用率排序  根据PID查出消耗cpu最高的线程号 top -Hp 进程号 按P，进程按照cpu使用率排序 将最高的十进制线程号转为十六进制  根据线程号查出对应的java线程，进行处理 jstack -l pid &amp;gt; pid.test cat pid.test | grep ‘十六进制线程号’ -C 8 或者直接less进去看">
-<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/3F1C24F735294029BD27EDFB5A692B1E?method=download&shareKey=106151c7135270ee93724431076b5061">
+<meta name="twitter:title" content="向上转型和向下转型">
+<meta name="twitter:description" content="java 向上转型和向下转型 向上转型：子类对象转为父类，父类可以是接口。公式：Father f = new Son();Father是父类或接口，son是子类。 向下转型：父类对象转为子类。公式：Son s = (Son)f;  向上转型没有什么好说的，就是多态，看下向下转型。12345678910111213141516171819202122232425262728293031public">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/05/03/jstack排查cpu高/">
+  <link rel="canonical" href="http://yoursite.com/2019/05/18/向上转型和向下转型/">
 
 
 
@@ -127,7 +125,7 @@
   };
 </script>
 
-  <title>jstack排查cpu高 | Pray</title>
+  <title>向上转型和向下转型 | Pray</title>
   
 
 
@@ -313,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/03/jstack排查cpu高/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/向上转型和向下转型/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -330,7 +328,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">jstack排查cpu高
+          <h1 class="post-title" itemprop="name headline">向上转型和向下转型
 
               
             
@@ -356,24 +354,12 @@
                 
               
 
-              <time title="创建时间：2019-05-03 13:08:07" itemprop="dateCreated datePublished" datetime="2019-05-03T13:08:07+08:00">2019-05-03</time>
+              <time title="创建时间：2019-05-18 10:05:04 / 修改时间：10:05:29" itemprop="dateCreated datePublished" datetime="2019-05-18T10:05:04+08:00">2019-05-18</time>
             
 
             
               
 
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2019-05-08 21:21:38" itemprop="dateModified" datetime="2019-05-08T21:21:38+08:00">2019-05-08</time>
               
             
           </span>
@@ -390,7 +376,14 @@
                 <span class="post-meta-item-text">分类于</span>
               
               
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Java/" itemprop="url" rel="index"><span itemprop="name">Java</span></a></span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Assemble/" itemprop="url" rel="index"><span itemprop="name">Assemble</span></a></span>
+
+                
+                
+                  ，
+                
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Assemble/Java/" itemprop="url" rel="index"><span itemprop="name">Java</span></a></span>
 
                 
                 
@@ -425,21 +418,12 @@
       
 
       
-        <h3 id="查消耗cpu最高的进程PID"><a href="#查消耗cpu最高的进程PID" class="headerlink" title="查消耗cpu最高的进程PID"></a>查消耗cpu最高的进程PID</h3><ol>
-<li>top -c</li>
-<li>按P，进程按照cpu使用率排序</li>
-</ol>
-<h3 id="根据PID查出消耗cpu最高的线程号"><a href="#根据PID查出消耗cpu最高的线程号" class="headerlink" title="根据PID查出消耗cpu最高的线程号"></a>根据PID查出消耗cpu最高的线程号</h3><ol>
-<li>top -Hp 进程号</li>
-<li>按P，进程按照cpu使用率排序</li>
-<li>将最高的十进制线程号转为十六进制</li>
-</ol>
-<h3 id="根据线程号查出对应的java线程，进行处理"><a href="#根据线程号查出对应的java线程，进行处理" class="headerlink" title="根据线程号查出对应的java线程，进行处理"></a>根据线程号查出对应的java线程，进行处理</h3><ol>
-<li>jstack -l pid &gt; pid.test</li>
-<li>cat pid.test | grep ‘十六进制线程号’ -C 8 或者直接less进去看</li>
-</ol>
-<p><img src="https://note.youdao.com/yws/api/personal/file/3F1C24F735294029BD27EDFB5A692B1E?method=download&amp;shareKey=106151c7135270ee93724431076b5061" alt="TIM截图20190503131026"></p>
-<p>可以看出，如果想要提高性能，可以从SimpleDateFormat性能上入手，换成DateTimeFormatter。</p>
+        <h2 id="java-向上转型和向下转型"><a href="#java-向上转型和向下转型" class="headerlink" title="java 向上转型和向下转型"></a>java 向上转型和向下转型</h2><ul>
+<li>向上转型：子类对象转为父类，父类可以是接口。<br>公式：Father f = new Son();<br>Father是父类或接口，son是子类。</li>
+<li>向下转型：父类对象转为子类。公式：Son s = (Son)f;</li>
+</ul>
+<p>向上转型没有什么好说的，就是多态，看下向下转型。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Human</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sleep</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Human sleep.."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Human h = <span class="keyword">new</span> Male();<span class="comment">// 向上转型</span></span><br><span class="line">        Human h1 = <span class="keyword">new</span> Human();</span><br><span class="line">        <span class="comment">//h.speak();此时需要向下转型，否则不能调用speak方法。</span></span><br><span class="line">         Male m = (Male) h;</span><br><span class="line">         m.speak();</span><br><span class="line">         <span class="comment">/**Male m1 = (Male)h1;</span></span><br><span class="line"><span class="comment">         m1.speak();    此时会出现运行时错误，所以可以用instanceOF判断*/</span></span><br><span class="line">         <span class="keyword">if</span> (h1 <span class="keyword">instanceof</span> Male)&#123;</span><br><span class="line">             Male m1 = (Male)h1;</span><br><span class="line">             m1.speak();</span><br><span class="line">             </span><br><span class="line">         &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Male</span> <span class="keyword">extends</span> <span class="title">Human</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">sleep</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"Male sleep.."</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">speak</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"I am Male"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h5 id="注意点"><a href="#注意点" class="headerlink" title="注意点"></a>注意点</h5><p>向下转型需要考虑安全性，如果父类引用的对象是父类本身，那么在向下转型的过程中是不安全的，编译不会出错，但是运行时会出现java.lang.ClassCastException错误。它可以使用instanceof来避免出错此类错误即能否向下转型，只有先经过向上转型的对象才能继续向下转型。</p>
 
       
     </div>
@@ -470,8 +454,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/05/01/Flink-Process-Function/" rel="next" title="Flink Process Function">
-                <i class="fa fa-chevron-left"></i> Flink Process Function
+              <a href="/2019/05/18/分库分表的数据库如何进行数据迁移/" rel="next" title="分库分表的数据库如何进行数据迁移">
+                <i class="fa fa-chevron-left"></i> 分库分表的数据库如何进行数据迁移
               </a>
             
           </div>
@@ -479,10 +463,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/05/10/BitMap和布隆过滤器-BloomFilter/" rel="prev" title="BitMap和布隆过滤器(BloomFilter)">
-                BitMap和布隆过滤器(BloomFilter) <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -630,7 +610,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#查消耗cpu最高的进程PID"><span class="nav-number">1.</span> <span class="nav-text">查消耗cpu最高的进程PID</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#根据PID查出消耗cpu最高的线程号"><span class="nav-number">2.</span> <span class="nav-text">根据PID查出消耗cpu最高的线程号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#根据线程号查出对应的java线程，进行处理"><span class="nav-number">3.</span> <span class="nav-text">根据线程号查出对应的java线程，进行处理</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#java-向上转型和向下转型"><span class="nav-number">1.</span> <span class="nav-text">java 向上转型和向下转型</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#注意点"><span class="nav-number">1.0.0.1.</span> <span class="nav-text">注意点</span></a></li></ol></li></ol></div>
             
 
           </div>
