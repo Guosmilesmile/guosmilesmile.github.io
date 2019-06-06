@@ -2,7 +2,9 @@
 title: Flink 异步io
 date: 2019-04-05 19:32:00
 tags:
-categories: Flink
+categories:
+    - 流式计算 
+    - Flink
 ---
 
 

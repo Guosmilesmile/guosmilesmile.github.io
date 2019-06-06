@@ -2,7 +2,9 @@
 title: Flink 的时间类型
 date: 2019-03-17 13:04:56
 tags:
-categories: Flink
+categories:
+	- 流式计算 
+	- Flink
 ---
 
 ### Event Time / Processing Time / Ingestion Time

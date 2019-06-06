@@ -2,7 +2,9 @@
 title: Flink-UDF
 date: 2019-03-17 21:24:32
 tags:
-categories: Flink
+categories:
+  - 流式计算 
+  - Flink
 ---
 
 

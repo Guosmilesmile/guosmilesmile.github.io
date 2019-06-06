@@ -2,7 +2,9 @@
 title: Flink 流处理简单引导
 date: 2019-03-17 12:52:10
 tags:
-categories: Flink
+categories:
+    - 流式计算 
+    - Flink
 ---
 
 

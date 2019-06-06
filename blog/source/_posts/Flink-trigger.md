@@ -2,7 +2,9 @@
 title: Flink trigger
 date: 2019-03-24 13:31:37
 tags:
-categories: Flink
+categories:
+    - 流式计算 
+    - Flink
 ---
 
 

@@ -2,6 +2,9 @@
 title: Flink Process Function
 date: 2019-05-01 12:12:29
 tags:
+categories:
+  - 流式计算 
+  - Flink
 ---
 
 ProcessFunction是一个低层次的流处理操作，可以认为是能够访问到keyed state和timers的FlatMapFunction，输入流中接收到的每个事件都会调用它来处理。    
