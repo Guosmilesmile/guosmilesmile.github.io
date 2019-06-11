@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2019/06/11/HDFS-File-Block-%E5%92%8C-Input-Split/</loc>
+    
+    <lastmod>2019-06-11T15:55:56.444Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2019/06/06/Flink-%E8%AF%BB%E5%8F%96HDFS%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E8%AF%BB%E5%8F%96/</loc>
     
     <lastmod>2019-06-06T13:25:01.841Z</lastmod>
