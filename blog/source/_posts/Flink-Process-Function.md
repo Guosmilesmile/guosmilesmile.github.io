@@ -3,7 +3,6 @@ title: Flink Process Function
 date: 2019-05-01 12:12:29
 tags:
 categories:
-  - 流式计算 
   - Flink
 ---
 

@@ -1,9 +1,8 @@
 ---
-title: Flink 读取HDFS中的数据源码解析读取HDFS中的数据源码解析
+title: Flink 读取HDFS中的数据源码解析
 date: 2019-06-06 21:13:35
 tags:
 categories:
-    - 流式计算 
     - Flink
 ---
 
@@ -20,7 +19,7 @@ categories:
 * 如果输入的是文件夹，获取文件夹下的所有文件，如果目标是文件，直接加入。并得到总的文件大小
 * 判断文件是否能切割读取
 
-```
+```java
 
 @Override
 	public FileInputSplit[] createInputSplits(int minNumSplits) throws IOException {
@@ -173,7 +172,7 @@ minSplitSize默认是0，maxSplitSize = 256 / 8 = 32M(总大小/并行度),block
 * gz
 * gzip
 * bz2
-```
+```java
 protected boolean testForUnsplittable(FileStatus pathFile) {
 		if(getInflaterInputStreamFactory(pathFile.getPath()) != null) {
 			unsplittable = true;

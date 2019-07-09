@@ -3,7 +3,6 @@ title: Flink 分布式缓存Distributed Cache
 date: 2019-03-21 22:48:41
 tags:
 categories:
-  - 流式计算 
   - Flink
 ---
 

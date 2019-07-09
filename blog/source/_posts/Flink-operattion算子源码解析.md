@@ -1,9 +1,8 @@
 ---
-title: Flink operattion算子源码解析operattion算子源码解析
+title: Flink operation算子源码解析
 date: 2019-06-06 21:14:14
 tags:
 categories:
-    - 流式计算 
     - Flink
 ---
 

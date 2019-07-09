@@ -3,7 +3,6 @@ title: Flink allowedLateness
 date: 2019-03-24 13:34:18
 tags: 
 categories:
-	- 流式计算 
 	- Flink
 ---
 

@@ -3,7 +3,6 @@ title: Flink WaterMark 水位线
 date: 2019-03-17 12:58:30
 tags:
 categories:
-    - 流式计算 
     - Flink
 ---
 

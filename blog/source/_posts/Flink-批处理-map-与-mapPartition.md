@@ -3,7 +3,6 @@ title: Flink 批处理  map 与 mapPartition
 date: 2019-03-21 22:49:52
 tags:
 categories:
-	- 流式计算 
 	- Flink
 ---
 
