@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2019/05/03/jstack%E6%8E%92%E6%9F%A5cpu%E9%AB%98/</loc>
+    
+    <lastmod>2019-07-18T15:13:29.663Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2019/07/09/%E4%B8%BA%E4%BB%80%E4%B9%88kafka%E8%BF%99%E4%B9%88%E5%BF%AB/</loc>
     
     <lastmod>2019-07-10T14:09:55.671Z</lastmod>
@@ -194,13 +201,6 @@
     <loc>http://yoursite.com/2019/05/10/BitMap%E5%92%8C%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8-BloomFilter/</loc>
     
     <lastmod>2019-05-17T12:16:26.158Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yoursite.com/2019/05/03/jstack%E6%8E%92%E6%9F%A5cpu%E9%AB%98/</loc>
-    
-    <lastmod>2019-05-08T13:21:38.579Z</lastmod>
     
   </url>
   
