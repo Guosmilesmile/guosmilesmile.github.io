@@ -17,7 +17,7 @@ categories:
 
 ### 日志格式
 
-https://mp.weixin.qq.com/s?__biz=MzU0MzQ5MDA0Mw==&mid=2247483983&idx=1&sn=1c2bd11df195f84e5433512f6b2695e8&chksm=fb0be8dbcc7c61cda63c599769b38a78c08e51ab8a2943985040014dcbcc1cbe1547d3f70ee6&scene=21#wechat_redirect
+https://guosmilesmile.github.io/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E5%BC%8F%E7%9A%84%E6%BC%94%E5%8F%98/
 
 
 ### 消息压缩
