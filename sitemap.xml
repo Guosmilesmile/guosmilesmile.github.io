@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2019/07/28/Flink-%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6%E5%92%8C%E8%83%8C%E5%8E%8B%E5%A4%84%E7%90%86/</loc>
+    
+    <lastmod>2019-08-08T13:35:33.062Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/27/Flink-%E4%BD%BF%E7%94%A8%E8%B0%83%E4%BC%98-%E4%BA%8C/</loc>
+    
+    <lastmod>2019-08-08T13:35:07.689Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2019/07/20/CLI%E6%8F%90%E4%BA%A4job%E5%88%B0JobManger%E5%88%B0TaskMnager%E8%BF%90%E8%A1%8Cjob/</loc>
     
     <lastmod>2019-08-04T08:43:45.757Z</lastmod>
@@ -12,20 +26,6 @@
     <loc>http://yoursite.com/2019/08/03/Flink-LocalAgg/</loc>
     
     <lastmod>2019-08-02T16:07:20.181Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yoursite.com/2019/07/28/Flink-%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6%E5%92%8C%E8%83%8C%E5%8E%8B%E5%A4%84%E7%90%86/</loc>
-    
-    <lastmod>2019-07-28T12:43:31.727Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yoursite.com/2019/07/27/Flink-%E4%BD%BF%E7%94%A8%E8%B0%83%E4%BC%98-%E4%BA%8C/</loc>
-    
-    <lastmod>2019-07-28T12:43:30.528Z</lastmod>
     
   </url>
   
