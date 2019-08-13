@@ -117,7 +117,8 @@
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/F4FBF9FDB7E644CCB270891DF8AD9415?method=download&shareKey=14ef4a48b8fcfcf6dbd5a521ffbbc343">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/50CED120A8D848FBA99FDEDEB7038546?method=download&shareKey=86148fc758742fb66dc035c5f81f6e37">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/4F6F3541D36244C181EB20E170F9AEA9?method=download&shareKey=9b766e0b06cb195588162670274a4d10">
-<meta property="og:updated_time" content="2019-08-10T15:21:56.719Z">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/369928E45EDF4C0AB7500302AE0B2303?method=download&shareKey=e98f93e47bdbb75dbbfd16eec9bd2b55">
+<meta property="og:updated_time" content="2019-08-13T13:50:48.463Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK">
 <meta name="twitter:description" content="有状态与无状态 无状态：数据的计算与上一次的计算结果无关。例如map,flatMap 有状态: 数据的计算与上一次的计算结果有关，例如时间窗口内的sum，需要累加求和。  无状态计算的例子  比如：我们只是进行一个字符串拼接，输入 a，输出 a_666,输入b，输出 b_666输出的结果跟之前的状态没关系，符合幂等性。  幂等性：就是用户对于同一操作发起的一次请求或者多次请求的结果是一致的，不会因">
@@ -367,12 +368,24 @@
                 
               
 
-              <time title="创建时间：2019-08-10 23:21:26 / 修改时间：23:21:56" itemprop="dateCreated datePublished" datetime="2019-08-10T23:21:26+08:00">2019-08-10</time>
+              <time title="创建时间：2019-08-10 23:21:26" itemprop="dateCreated datePublished" datetime="2019-08-10T23:21:26+08:00">2019-08-10</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-08-13 21:50:48" itemprop="dateModified" datetime="2019-08-13T21:50:48+08:00">2019-08-13</time>
               
             
           </span>
@@ -524,10 +537,10 @@
 <p>假设”D”元组和”E”元组是基于“C”元组产生的，那么下图描述了确认“C”元组成功处理后，元组树的变化。图中虚线框表示的元组代表已经在消息树上被删除了：</p>
 <p><img src="https://note.youdao.com/yws/api/personal/file/4F6F3541D36244C181EB20E170F9AEA9?method=download&amp;shareKey=9b766e0b06cb195588162670274a4d10" alt="image"></p>
 <p>由于在“C”从消息树中删除(通过acker函数确认成功处理)的同时，“D”和“E”也被添加到(通过emit函数来锚定的)元组树中，所以这棵树从来不会被提早处理完。</p>
-<h3 id="对比"><a href="#对比" class="headerlink" title="对比"></a>对比</h3><ul>
-<li><h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3></li>
-</ul>
-<p><a href="https://www.jianshu.com/p/8d6569361999" target="_blank" rel="noopener">https://www.jianshu.com/p/8d6569361999</a></p>
+<h3 id="对比"><a href="#对比" class="headerlink" title="对比"></a>对比</h3><p><img src="https://note.youdao.com/yws/api/personal/file/369928E45EDF4C0AB7500302AE0B2303?method=download&amp;shareKey=e98f93e47bdbb75dbbfd16eec9bd2b55" alt="image"></p>
+<p>左边的图展示的是Storm的Ack机制。Spout每发送一条数据到Bolt，就会产生一条ack的信息给acker，当Bolt处理完这条数据后也会发送ack信息给acker。当acker收到这条数据的所有ack信息时，会回复Spout一条ack信息。也就是说，对于一个只有两级（spout+bolt）的拓扑来说，每发送一条数据，就会传输3条ack信息。这3条ack信息则是为了保证可靠性所需要的开销。</p>
+<p>右边的图展示的是Flink的Checkpoint机制。Flink中Checkpoint信息的发起者是JobManager。它不像Storm中那样，每条信息都会有ack信息的开销，而且按时间来计算花销。用户可以设置做checkpoint的频率，比如10秒钟做一次checkpoint。每做一次checkpoint，花销只有从Source发往map的1条checkpoint信息（JobManager发出来的checkpoint信息走的是控制流，与数据流无关）。与storm相比，Flink的可靠性机制开销要低得多。这也就是为什么保证可靠性对Flink的性能影响较小，而storm的影响确很大的原因。</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.jianshu.com/p/8d6569361999" target="_blank" rel="noopener">https://www.jianshu.com/p/8d6569361999</a></p>
 <p><a href="https://zhoukaibo.com/2019/01/10/flink-kafka-exactly-once/" target="_blank" rel="noopener">https://zhoukaibo.com/2019/01/10/flink-kafka-exactly-once/</a></p>
 
       
