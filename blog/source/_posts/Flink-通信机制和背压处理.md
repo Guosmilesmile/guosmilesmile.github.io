@@ -87,8 +87,6 @@ channels * buffers-per-channel + floating-buffers-per-gate
 ![image](https://note.youdao.com/yws/api/personal/file/20A3A8689F2C433DA8B553D8D3EA5BE4?method=download&shareKey=0518c3a6cadf0478371daf1dff69d17b)
 
 
-个人感觉，这是一个消费的拉的模型。
-
 
 
 https://www.jianshu.com/p/5748df8428f9

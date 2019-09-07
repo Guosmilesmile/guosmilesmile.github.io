@@ -239,20 +239,20 @@ RestClusterClient.submitJob发送RPC请求到JobManager
 
 到这里，已经完成了通过CLI提交作业的过程，CLI通过RCP的方式与JobManger交互，实现job的提交。
 
-### TaskManger接收job submit请求
+### JobMaster接收job submit请求
 
 * 本地环境下，MiniCluster完成了大部分任务，直接把任务委派给了MiniDispatcher；
 * 远程环境下，启动了一个RestClusterClient，这个类会以HTTP Rest的方式把用户代码提交到集群上；
 * 远程环境下，请求发到集群上之后，必然有个handler去处理，在这里是JobSubmitHandler。这个类接手了请求后，委派StandaloneDispatcher启动job，到这里之后，本地提交和远程提交的逻辑往后又统一了；
 * Dispatcher接手job之后，会实例化一个JobManagerRunner，然后用这个runner启动job；
 * JobManagerRunner接下来把job交给了JobMaster去处理；
-* JobMaster使用ExecutionGraph的方法启动了整个执行图；整个任务就启动起来了。
+* JobMaster使用ExecutionGraph的方法启动了整个执行图，将Task天交给TaskManger，整个任务就启动起来了。
 
 #### attention
 
 JobManagerRunner负责作业的运行，和对JobMaster的管理。 不是集群级别的JobManager。这个是历史原因。JobManager是老的runtime框架，JobMaster是社区 flip-6引入的新的runtime框架。目前起作用的应该是JobMaster。因此这个类应该叫做和对JobMasterRunner比较合适。
 
-
+从 flip-6起，开始通过使用JobMaster，以Flink Dispatcher分发到JobManagerRunner将JobGraph发给JobMaster，JobMaster再将JobGraph实现万ExecutionGraph，传递给TaskManager工作。
 
 首先来看下Flink的四种图 
 

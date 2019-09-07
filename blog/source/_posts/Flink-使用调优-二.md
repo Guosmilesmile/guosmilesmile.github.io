@@ -62,7 +62,7 @@ https://guosmilesmile.github.io/2019/06/11/HDFS-File-Block-%E5%92%8C-Input-Split
 如果需要20个并行度，创建一个yarnSession，但是yarnSession上是创建一个TM，上面有20个slot
 
 ```
-/opt/flink/1.8-SNAPSHOT/bin/yarn-session.sh -nm unhealthCgLive -s 20 -jm 1024  -tm 40960 -qu r-qoss_data_caculate-QAW -nl realtime-flink_qaw   -D taskmanager.memory.preallocate=true -D taskmanager.memory.off-heap=true -D taskmanager.network.memory.fraction=0.4  -d
+/opt/flink/1.8-SNAPSHOT/bin/yarn-session.sh -nm unhealthCgLive -s 20 -jm 1024  -tm 40960 -qu r-data_caculate-QAW -nl realtime-flink_qaw   -D taskmanager.memory.preallocate=true -D taskmanager.memory.off-heap=true -D taskmanager.network.memory.fraction=0.4  -d
 
 ```
 
@@ -73,7 +73,7 @@ https://guosmilesmile.github.io/2019/06/11/HDFS-File-Block-%E5%92%8C-Input-Split
 
 ```
 
-/opt/flink/1.8-SNAPSHOT/bin/yarn-session.sh -nm unhealthCgLive -s 5 -jm 1024  -tm 10240 -qu r-qoss_data_caculate-QAW -nl realtime-flink_qaw   -D taskmanager.memory.preallocate=true -D taskmanager.memory.off-heap=true -D taskmanager.network.memory.fraction=0.4  -d
+/opt/flink/1.8-SNAPSHOT/bin/yarn-session.sh -nm unhealthCgLive -s 5 -jm 1024  -tm 10240 -qu r-data_caculate-QAW -nl realtime-flink_qaw   -D taskmanager.memory.preallocate=true -D taskmanager.memory.off-heap=true -D taskmanager.network.memory.fraction=0.4  -d
 ```
 
 
