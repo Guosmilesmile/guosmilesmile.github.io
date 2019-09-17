@@ -178,6 +178,9 @@ _collector.emit(tuple, new Values(word));
 _collector.emit(new Values(word));
 ```
 
+如果你不在意某个消息派生出来的子孙消息的可靠性，则此消息派生出来的子消息在发送时不要做锚定，即在emit方法中不指定输入消息。因为这些子孙消息没有被锚定在任何tuple tree中，因此他们的失败不会引起任何spout重新发送消息。
+
+
 ### 元组处理完后通知Storm
 
 
@@ -200,6 +203,9 @@ Storm需要占用内存来跟踪每个元组，所以每个被处理的元组都
 ![image](https://note.youdao.com/yws/api/personal/file/4F6F3541D36244C181EB20E170F9AEA9?method=download&shareKey=9b766e0b06cb195588162670274a4d10)
 
 由于在“C”从消息树中删除(通过acker函数确认成功处理)的同时，“D”和“E”也被添加到(通过emit函数来锚定的)元组树中，所以这棵树从来不会被提早处理完。
+
+
+![image](https://note.youdao.com/yws/api/personal/file/C1FD3C170A274409876E17780D2DCA61?method=download&shareKey=c54b4e51f221381dd3a376dac8c03cf1)
 
 
 ### 对比
