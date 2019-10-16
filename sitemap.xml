@@ -2,6 +2,20 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2019/10/16/java-%E9%80%83%E9%80%B8%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2019-10-16T13:14:09.055Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/</loc>
+    
+    <lastmod>2019-10-16T13:13:28.977Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2019/10/11/Flink%E8%BF%90%E8%A1%8C%E6%97%B6%E4%B9%8B%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E5%88%86%E6%9E%90/</loc>
     
     <lastmod>2019-10-11T14:06:56.456Z</lastmod>
