@@ -6,7 +6,6 @@ categories:
 	- Flink
 ---
 
-
 ### 有状态与无状态
 
 * 无状态：数据的计算与上一次的计算结果无关。例如map,flatMap
@@ -154,8 +153,37 @@ Exactly Once时必须barrier对齐，如果barrier不对齐就变成了At Least 
 
 ![image](https://note.youdao.com/yws/api/personal/file/F4FBF9FDB7E644CCB270891DF8AD9415?method=download&shareKey=14ef4a48b8fcfcf6dbd5a521ffbbc343)
 
+![image](https://note.youdao.com/yws/api/personal/file/3DF290A566CB458687E51539F0C07061?method=download&shareKey=7ba23b905d82733fdce6f5dcc6678f25)
+
+### CheckPoint 调优
+#### 超时原因
+
+超时的原因会是什么呢？主要是一下两种:
+
+* Barrier对齐
+* 异步状态遍历和写hdfs
 
 
+StreamTask收集到相应的inputChannel的barrier，收集齐之后就将barrier下发，并开始自己task的checkpoint逻辑，如果上下游是rescale或者forward的形式，下游只需要等待1个并发的barrier，因为是point-to-point的形式，如果是hash或者rebalance，下游的每一个task开始checkpoint的前提就是要收集齐上游所有并发的barrier。
+
+
+####   相邻Checkpoint的间隔时间设置
+在极大规模状态数据集下，应用每次的checkpoint时长都超过系统设定的最大时间（也就是checkpoint间隔时长），那么会发生什么样的事情
+
+答案是应用会一直在做checkpoint，因为当应用发现它刚刚做完一次checkpoint后，又已经到了下次checkpoint的时间了，由于需要对齐barrier，因此在极限的情况下，会停止消费数据，但是checkpoint每隔一段时间又会不停的向下发送，使得会有一堆checkpoint往下发，导致用户程序无法运行。
+
+#### Checkpoint的资源设置
+
+当我们对越多的状态数据集做checkpoint时，需要消耗越多的资源。因为Flink在checkpoint时是首先在每个task上做数据checkpoint，然后在外部存储中做checkpoint持久化。在这里的一个优化思路是：在总状态数据固定的情况下，当每个task平均所checkpoint的数据越少，那么相应地checkpoint的总时间也会变短。所以我们可以为每个task设置更多的并行度（即分配更多的资源）来加速checkpoint的执行过程。
+
+##### Checkpoint的task本地性恢复
+为了快速的状态恢复，每个task会同时写checkpoint数据到本地磁盘和远程分布式存储，也就是说，这是一份双拷贝。只要task本地的checkpoint数据没有被破坏，系统在应用恢复时会首先加载本地的checkpoint数据，这样就大大减少了远程拉取状态数据的过程。此过程如下图所示：
+
+![image](https://note.youdao.com/yws/api/personal/file/94984CC673A04EC288358F3316A09395?method=download&shareKey=36a3f508a92609bac47bebc409ac207d)
+
+#### 外部State的存储选择
+
+使用RocksDB来作为增量checkpoint的存储，并在其中不是持续增大，可以进行定期合并清楚历史状态。
 
 ### Jstorm 消息可靠性
 
@@ -180,7 +208,6 @@ _collector.emit(new Values(word));
 
 如果你不在意某个消息派生出来的子孙消息的可靠性，则此消息派生出来的子消息在发送时不要做锚定，即在emit方法中不指定输入消息。因为这些子孙消息没有被锚定在任何tuple tree中，因此他们的失败不会引起任何spout重新发送消息。
 
-
 ### 元组处理完后通知Storm
 
 
@@ -204,12 +231,27 @@ Storm需要占用内存来跟踪每个元组，所以每个被处理的元组都
 
 由于在“C”从消息树中删除(通过acker函数确认成功处理)的同时，“D”和“E”也被添加到(通过emit函数来锚定的)元组树中，所以这棵树从来不会被提早处理完。
 
+### 实现细节
+
+一个acker任务存储了从一个Spout元组message-id到一对值的映射关系。
+```
+spout-message-id--><spout-task-id, ack-val>
+```
+
+
+* 第一个值是创建了这个Spout元组的任务id，用来后续处理完成时通知到这个Spout任务
+* 第二个值是一个64比特的叫做“ack val”的数值。它是简单的把消息树中所有被创建或者被确认的元组message-id异或起来的值。每个消息创建和被确认处理后都会异或到"ack val"上，A xor A = 0，所以当一个“ack val”变成了0，说明整个元组树都完全被处理了。
+
+#### Storm如何避免数据丢失：
+* Bolt任务挂掉：导致一个元组没有被确认，这种场景下，这个元组所在的消息树中的根节点Spout元组会超时并被重新处理
+* acker任务挂掉：这种场景下，这个acker挂掉时正在跟踪的所有的Spout元组都会超时并被重新处理
+* Spout任务挂掉：这种场景下，需要应用自己实现检查点机制，记录当前Spout成功处理的进度，当Spout任务挂掉之后重启时，继续从当前检查点处理，这样就能重新处理失败的那些元组了
+
 
 ![image](https://note.youdao.com/yws/api/personal/file/C1FD3C170A274409876E17780D2DCA61?method=download&shareKey=c54b4e51f221381dd3a376dac8c03cf1)
 
 
 ### 对比
-
 
 ![image](https://note.youdao.com/yws/api/personal/file/369928E45EDF4C0AB7500302AE0B2303?method=download&shareKey=e98f93e47bdbb75dbbfd16eec9bd2b55)
 
@@ -225,3 +267,7 @@ Storm需要占用内存来跟踪每个元组，所以每个被处理的元组都
 https://www.jianshu.com/p/8d6569361999
 
 https://zhoukaibo.com/2019/01/10/flink-kafka-exactly-once/
+
+https://cloud.tencent.com/developer/article/1478170
+
+https://www.jianshu.com/p/dff71581b63b

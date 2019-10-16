@@ -252,6 +252,123 @@ public static String readString(DataInput in) throws IOException {
 	}
 ```
 
+##### PojoSerializer
+
+POJO多个一个字节的header，PojoSerializer只负责将header序列化进去，并委托每个字段对应的serializer对字段进行序列化。
+
+```java
+	// Flags for the header
+	private static byte IS_NULL = 1;
+	private static byte NO_SUBCLASS = 2;
+	private static byte IS_SUBCLASS = 4;
+	private static byte IS_TAGGED_SUBCLASS = 8;
+```
+
+序列化的时候，会先判断是否是null，是的话，置为IS_NULL.
+
+接着进行header的判断。
+如果Class<?> actualClass = value.getClass();等于构造函数的class，说明这个class不是一个subClass，置为IS_SUBCLASS。如果在registeredClasses可以获取到子类，说明这个类自身存在子类，他是一个父类，置为IS_TAGGED_SUBCLASS
+先将flag写入，target.writeByte(flags);
+如果是subclass，将类的全名写入序列化中，如果
+
+
+
+如果是NO_SUBCLASS，直接
+
+```
+header{
+    flag,
+    subFlag,(class tag id  or the full classname)
+}
+```
+写完header，再委托每个字段对应的serializer对字段进行序列化。
+```java
+public void serialize(T value, DataOutputView target) throws IOException {
+		int flags = 0;
+		// handle null values
+		if (value == null) {
+			flags |= IS_NULL;
+			target.writeByte(flags);
+			return;
+		}
+
+		Integer subclassTag = -1;
+		Class<?> actualClass = value.getClass();
+		TypeSerializer subclassSerializer = null;
+		if (clazz != actualClass) {
+			subclassTag = registeredClasses.get(actualClass);
+			if (subclassTag != null) {
+				flags |= IS_TAGGED_SUBCLASS;
+				subclassSerializer = registeredSerializers[subclassTag];
+			} else {
+				flags |= IS_SUBCLASS;
+				subclassSerializer = getSubclassSerializer(actualClass);
+			}
+		} else {
+			flags |= NO_SUBCLASS;
+		}
+
+		target.writeByte(flags);
+
+		// if its a registered subclass, write the class tag id, otherwise write the full classname
+		if ((flags & IS_SUBCLASS) != 0) {
+			target.writeUTF(actualClass.getName());
+		} else if ((flags & IS_TAGGED_SUBCLASS) != 0) {
+			target.writeByte(subclassTag);
+		}
+
+		// if its a subclass, use the corresponding subclass serializer,
+		// otherwise serialize each field with our field serializers
+		if ((flags & NO_SUBCLASS) != 0) {
+			try {
+				for (int i = 0; i < numFields; i++) {
+					Object o = (fields[i] != null) ? fields[i].get(value) : null;
+					if (o == null) {
+						target.writeBoolean(true); // null field handling
+					} else {
+						target.writeBoolean(false);
+						fieldSerializers[i].serialize(o, target);
+					}
+				}
+			} catch (IllegalAccessException e) {
+				throw new RuntimeException("Error during POJO copy, this should not happen since we check the fields before.", e);
+			}
+		} else {
+			// subclass
+			if (subclassSerializer != null) {
+				subclassSerializer.serialize(value, target);
+			}
+		}
+	}
+```
+
+
+![image](https://note.youdao.com/yws/api/personal/file/4FE22225B71B474A834F13F69B7C789E?method=download&shareKey=54f98b410bf649be112f69db79b4afc7)
+
+
+
+
+## Flink 如何直接操作二进制数据
+
+### 排序
+
+Flink 提供了如 group、sort、join 等操作，这些操作都需要访问海量数据。这里，我们以sort为例，这是一个在 Flink 中使用非常频繁的操作。
+
+首先，Flink 会从 MemoryManager 中申请一批 MemorySegment，我们把这批 MemorySegment 称作 sort buffer，用来存放排序的数据。
+
+将实际的数据和指针加定长key分开存放有两个目的。第一，交换定长块（key+pointer）更高效，不用交换真实的数据也不用移动其他key和pointer。第二，这样做是缓存友好的，因为key都是连续存储在内存中的，可以大大减少 cache miss（后面会详细解释）。
+
+排序的关键是比大小和交换。Flink 中，会先用 key 比大小，这样就可以直接用二进制的key比较而不需要反序列化出整个对象。因为key是定长的，所以如果key相同（或者没有提供二进制key），那就必须将真实的二进制数据反序列化出来，然后再做比较。之后，只需要交换key+pointer就可以达到排序的效果，真实的数据不用移动。
+
+最后，访问排序后的数据，可以沿着排好序的key+pointer区域顺序访问，通过pointer找到对应的真实数据，并写到内存或外部
+
+![image](https://note.youdao.com/yws/api/personal/file/11B1637FC25C4C3686FAD944DCA964FF?method=download&shareKey=d3c087ab46b1888a2002fc238598ef44)
+
+![image](https://note.youdao.com/yws/api/personal/file/86CB5AB7CCAE4DB8AB9F185D0860CA82?method=download&shareKey=a3527963a8da3fadb9da6cab519a985a)
+
+可见NormalizedKeySorter.java
+
+
 
 
 ### Reference
