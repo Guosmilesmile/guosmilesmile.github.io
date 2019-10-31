@@ -156,7 +156,7 @@ net.bridge.bridge-nf-call-iptables = 1
 ```
 # 在 master 节点和 worker 节点都要执行
 sysctl -p
-````
+```
 
 安装kubelet、kubeadm、kubectl
 
@@ -327,6 +327,21 @@ kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery
 ```
 # 只在 worker 节点执行
 kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303
+```
+如果出现如下的报错
+```
+error execution phase preflight: [preflight] Some fatal errors occurred:
+	[ERROR DirAvailable--etc-kubernetes-manifests]: /etc/kubernetes/manifests is not empty
+	[ERROR FileAvailable--etc-kubernetes-kubelet.conf]: /etc/kubernetes/kubelet.conf already exists
+	[ERROR Port-10250]: Port 10250 is in use
+	[ERROR FileAvailable--etc-kubernetes-pki-ca.crt]: /etc/kubernetes/pki/ca.crt already exists
+[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`
+
+```
+
+在节点上先执行如下命令，清理kubeadm的操作，然后再重新执行join 命令：
+```
+kubeadm reset
 ```
 
 ### 检查初始化结果
@@ -612,6 +627,11 @@ subjects:
 kubectl -n kube-system describe $(kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token
 
 ```
+### 坑
+ui可能会乱跑。。不一定在生成的证书的那台服务器
+
+需要修改yml，配置nodeSelector来指定pod落在指定的node上。
+
 
 ![image](https://note.youdao.com/yws/api/personal/file/D98E066CD35D47DA9F4778C9F57849DB?method=download&shareKey=c8a2b183a96d6262b48340b5beb2996d)
 
