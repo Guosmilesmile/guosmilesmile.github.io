@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2019/11/10/Flink-%E6%B5%85%E5%85%A5%E6%B5%85%E5%87%BA%EF%BC%88%E4%BA%8C%EF%BC%89/</loc>
+    
+    <lastmod>2019-11-10T01:47:25.604Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2019/11/08/Flink%E4%B8%8Espark-stream%E5%9C%A8%E8%B5%84%E6%BA%90%E4%BD%BF%E7%94%A8%E4%B8%8A%E7%9A%84%E5%AF%B9%E6%AF%94/</loc>
     
     <lastmod>2019-11-08T12:53:37.301Z</lastmod>
