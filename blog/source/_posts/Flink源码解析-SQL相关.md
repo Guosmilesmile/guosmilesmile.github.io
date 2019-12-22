@@ -146,17 +146,6 @@ Table result = tableEnv.sqlQuery(sqlQuery);
 ```
 
 
-![image](https://note.youdao.com/yws/api/personal/file/EEC39CE3D2894B62BA7F614D0279A9E5?method=download&shareKey=41e918eb95a7d9dbd3ba14d19a3336d7)
-
-
-* 关系代数（Relational algebra）：即关系表达式。它们通常以动词命名，例如 Sort, Join, Project, Filter, Scan, Sample.
-* 行表达式（Row expressions）：例如 RexLiteral (常量), RexVariable (变量), RexCall (调用) 等，例如投影列表（Project）、过滤规则列表（Filter）、JOIN 条件列表和 ORDER BY 列表、WINDOW 表达式、函数调用等。使用 RexBuilder 来构建行表达式。
-* 表达式有各种特征（Trait）：使用 Trait 的 satisfies() 方法来测试某个表达式是否符合某 Trait 或 Convention.
-转化特征（Convention）：属于 Trait 的子类，用于转化 RelNode 到具体平台实现（可以将下文提到的 Planner 注册到 Convention 中）. 例如 JdbcConvention，FlinkConventions.DATASTREAM 等。同一个关系表达式的输入必须来自单个数据源，各表达式之间通过 Converter 生成的 Bridge 来连接。
-* 规则（Rules）：用于将一个表达式转换（Transform）为另一个表达式。它有一个由 RelOptRuleOperand 组成的列表来决定是否可将规则应用于树的某部分。
-* 规划器（Planner） ：即请求优化器，它可以根据一系列规则和成本模型（例如基于成本的优化模型 VolcanoPlanner、启发式优化模型 HepPlanner）来将一个表达式转为语义等价（但效率更优）的另一个表达式。
-
-
 
 
 TableEnvironmentImpl.sqlQuery中List<Operation> operations = planner.parse(query);开始了对sql的转换。
@@ -215,7 +204,7 @@ public static Operation convert(FlinkPlannerImpl flinkPlanner, SqlNode sqlNode) 
 ```
 Flink 借助于 Calcite 完成 SQl 的解析和优化，而后续的优化部分其实都是直接基于 RelNode 来完成的，那么这里为什么又多出了一个 QueryOperation 的概念呢？这主要是因为，Flink SQL 是支持 SQL 语句和 Table Api 接口混合使用的，在 Table Api 接口中，主要的操作都是基于 Operation 接口来完成的。
 
-
+在校验这块，使用的是FlinkCalciteSqlValidator，继承了calcite的接口SqlValidatorImpl。所以才可以跟自己的schema串在一起。
 
 ### 怎么将schema注册到calcite中
 
@@ -258,26 +247,106 @@ public static CalciteSchema asRootSchema(Schema root) {
 3. 转换成 ExecNode
 4. 转换为底层的 Transformation 算子。
 
+
+
 ```scala
-override def translate(
+abstract class PlannerBase(
+    executor: Executor,
+    config: TableConfig,
+    val functionCatalog: FunctionCatalog,
+    catalogManager: CatalogManager,
+    isStreamingMode: Boolean)
+  extends Planner {
+  
+  override def translate(
       modifyOperations: util.List[ModifyOperation]): util.List[Transformation[_]] = {
     if (modifyOperations.isEmpty) {
       return List.empty[Transformation[_]]
     }
-    // prepare the execEnv before translating
     mergeParameters()
-    overrideEnvParallelism()
-
-    val relNodes = modifyOperations.map(translateToRel)// 1）将 Operation 转换为 RelNode
-    val optimizedRelNodes = optimize(relNodes)// 2）优化 RelNode
-    val execNodes = translateToExecNodePlan(optimizedRelNodes)// 3）转换成 ExecNode
-    translateToPlan(execNodes)// 4）转换为底层的 Transformation 算子
+    // 1）将 Operation 转换为 RelNode
+    val relNodes = modifyOperations.map(translateToRel)
+    // 2）优化 RelNode
+    val optimizedRelNodes = optimize(relNodes)
+    // 3）转换成 ExecNode
+    val execNodes = translateToExecNodePlan(optimizedRelNodes)
+    // 4）转换为底层的 Transformation 算子
+    translateToPlan(execNodes)
   }
+}
+```
+首先需要进行的操作是将 Operation 转换为 RelNode，这个转换操作借助 QueryOperationConverter 完成
 
 ```
-### todo
+LogicalSink#2
+  LogicalAggregate#1
+    LogicalTableScan#0
+```
 
-未完待续
+在得到 RelNode 后，就进入 Calcite 对 RelNode 的优化流程。例如谓词下推之类的操作就是在这边完成的。
+
+
+**在 Blink 中有一点特殊的地方在于，由于多个 RelNode 构成的树可能存在共同的“子树”（例如将相同的查询结果输出到不同的结果表中，那么两个 LogicalSink 的子树就可能是共用的），Blink 使用了一种 CommonSubGraphBasedOptimizer 优化器，将拥有共同子树的 RelNode 看作一个 DAG 结构，并将 DAG 划分成 RelNodeBlock，然后在RelNodeBlock 的基础上进行优化工作。每一个 RelNodeBlock 可以看作一个 RelNode 树进行优化，这和正常的 Calcite 处理流程还是保持一致的**(转载的，有待考究)
+
+
+CommonSubGraphBasedOptimizer有两个实现，流的StreamCommonSubGraphBasedOptimizer和批的BatchCommonSubGraphBasedOptimizer
+
+```scala
+abstract class CommonSubGraphBasedOptimizer extends Optimizer {
+
+  override def optimize(roots: Seq[RelNode]): Seq[RelNode] = {
+  
+    //以RelNodeBlock为单位进行优化，在子类中实现，StreamCommonSubGraphBasedOptimizer，BatchCommonSubGraphBasedOptimizer
+    val sinkBlocks = doOptimize(roots)
+    //获得优化后的逻辑计划
+    val optimizedPlan = sinkBlocks.map { block =>
+      val plan = block.getOptimizedPlan
+      require(plan != null)
+      plan
+    }
+    //将 RelNodeBlock 使用的中间表展开
+    expandIntermediateTableScan(optimizedPlan)
+    
+  }
+  
+}
+```
+
+Caclite 对逻辑计划的优化是一套基于规则的框架，用户可以通过添加规则进行扩展，Flink 就是基于自定义规则来实现整个的优化过程。Flink 构造了一个链式的优化程序，可以按顺序使用多套规则集合完成 RelNode 的优化过程。
+
+在 FlinkStreamProgram 和 FlinkBatchProgram 中定义了一系列扩展规则，用于构造逻辑计划的优化器。与此同时，Flink 扩展了 RelNode，增加了 FlinkLogicRel 和 FlinkPhysicRel 这两类 RelNode，对应的 Convention 分别为 FlinkConventions.LOGICAL 和 FlinkConventions.STREAM_PHYSICAL (或FlinkConventions.BATCH_PHYSICAL)。在优化器的处理过程中，RelNode 会从 Calcite 内部定义的节点转换为 FlinkLogicRel 节点（FlinkConventions.LOGICAL），并最终被转换为 FlinkPhysicRel 节点（FlinkConventions.STREAM_PHYSICAL）。这两类转换规则分别对应 FlinkStreamRuleSets.LOGICAL_OPT_RULES 和 FlinkStreamRuleSets.PHYSICAL_OPT_RULES。在不考虑其它更复杂的性能优化的情况下，如果要扩展 Flink SQL 的语法规则，可以参考这两类规则来增加节点和转换规则。
+
+
+例如LogicSink在StreamCommonSubGraphBasedOptimizer.doOptimize会经过FlinkStreamProgram经过FlinkStreamRuleSets转为FlinkLogicalSink在转为StreamExecSinkRule。
+
+![image](https://note.youdao.com/yws/api/personal/file/E5D9E234D91F42E2B8B8881315B2FD45?method=download&shareKey=ef4b3e8f4bdefd274b2686f0a03178a9)
+
+经过优化器处理后，得到的逻辑树中的所有节点都应该是 FlinkPhysicRel，这之后就可以用于生成物理执行计划了。首先要将 FlinkPhysicalRel 构成的 DAG 转换成 ExecNode 构成的 DAG，因为可能存在共用子树的情况，这里还会尝试共用相同的子逻辑计划。由于通常 FlinkPhysicalRel 的具体实现类通常也实现了 ExecNode 接口，所以这一步转换较为简单。
+
+在得到由 ExecNode 构成的 DAG 后，就可以尝试生成物理执行计划了，也就是将 ExecNode 节点转换为 Flink 内部的 Transformation 算子。不同的 ExecNode 按照各自的需求生成不同的 Transformation，基于这些 Transformation 构建 Flink 的 DAG。
+
+
+### SQL 执行
+
+
+
+
+
+
+
+
+### calcite相关
+
+
+![image](https://note.youdao.com/yws/api/personal/file/EEC39CE3D2894B62BA7F614D0279A9E5?method=download&shareKey=41e918eb95a7d9dbd3ba14d19a3336d7)
+
+
+* 关系代数（Relational algebra）：即关系表达式。它们通常以动词命名，例如 Sort, Join, Project, Filter, Scan, Sample.
+* 行表达式（Row expressions）：例如 RexLiteral (常量), RexVariable (变量), RexCall (调用) 等，例如投影列表（Project）、过滤规则列表（Filter）、JOIN 条件列表和 ORDER BY 列表、WINDOW 表达式、函数调用等。使用 RexBuilder 来构建行表达式。
+* 表达式有各种特征（Trait）：使用 Trait 的 satisfies() 方法来测试某个表达式是否符合某 Trait 或 Convention.
+转化特征（Convention）：属于 Trait 的子类，用于转化 RelNode 到具体平台实现（可以将下文提到的 Planner 注册到 Convention 中）. 例如 JdbcConvention，FlinkConventions.DATASTREAM 等。同一个关系表达式的输入必须来自单个数据源，各表达式之间通过 Converter 生成的 Bridge 来连接。
+* 规则（Rules）：用于将一个表达式转换（Transform）为另一个表达式。它有一个由 RelOptRuleOperand 组成的列表来决定是否可将规则应用于树的某部分。
+* 规划器（Planner） ：即请求优化器，它可以根据一系列规则和成本模型（例如基于成本的优化模型 VolcanoPlanner、启发式优化模型 HepPlanner）来将一个表达式转为语义等价（但效率更优）的另一个表达式。
 
 
 
@@ -302,4 +371,5 @@ https://www.jianshu.com/p/6ed368272916
 [Apache Calcite 功能简析及在 Flink 的应用](https://cloud.tencent.com/developer/article/1243475?fromSource=waitui)
 
 [Apache Calcite 处理流程详解](https://matt33.com/2019/03/07/apache-calcite-process-flow)
+
 

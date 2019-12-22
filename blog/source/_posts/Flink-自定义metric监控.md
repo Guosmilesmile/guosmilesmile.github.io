@@ -6,8 +6,7 @@ categories:
 	- Flink
 ---
 
-![image](https://note.youdao.com/yws/api/personal/file/DD292A38B49F4F0FB0876E7368127F50?method=download&shareKey=84db0811d09ae9fa49f087a3451c8312)
-
+![image](https://note.youdao.com/yws/api/personal/file/2276E0D9C1224D38A1B425332D1AA684?method=download&shareKey=9fe64a99acbc16490a3133997f2493e3)
 
 ### 直接上报es
 ```java
@@ -431,3 +430,158 @@ public interface MetricInfoProvider<MetricInfo> {
 ### todo
 
 当时在metric的程序依赖中打的是flink-kafka的依赖，如果将依赖只打kafkaClient呢？ 可以尝试一下。
+
+
+### 数据样例
+
+```
+ {
+"_index": "flink_metric_20191214",
+"_type": "flink_metric",
+"_id": "AW8BTzbSgRLaxQUd3R-V",
+"_score": 1,
+"_source": {
+"task_name": "Source: Custom Source -> Flat Map -> bundle function",
+"task_attempt_num": "0",
+"timeStamp": 1576274870000,
+"task_attempt_id": "25d6acd2a5460a6b7405ab2ea16f38e8",
+"metric_name": "taskmanager_job_task_buffers_outputQueueLength",
+"job_name": "PlayerCountFlink",
+"tm_id": "cab63a63a32f4ca107908b4a5445fb3c",
+"job_id": "0ad7f90fc5bba9ab4b08567e9e1cab12",
+"host": "flink-taskmanager-9457b74bb-562hx",
+"task_id": "cbc357ccb763df2852fee8c4fc7d55f2",
+"value": 90,
+"subtask_index": "2"
+}
+},
+```
+```
+{
+"_index": "flink_metric_20191214",
+"_type": "flink_metric",
+"_id": "AW8BTzbSgRLaxQUd3R-n",
+"_score": 1,
+"_source": {
+"task_name": "Source: Custom Source -> Flat Map -> bundle function",
+"task_attempt_id": "a3d864bda893be0a7f5027dfe72c53fb",
+"operator_id": "72ee2076ad4244f19e7388e24679c996",
+"task_id": "cbc357ccb763df2852fee8c4fc7d55f2",
+"task_attempt_num": "0",
+"timeStamp": 1576274870000,
+"operator_name": "Sink: Unnamed",
+"metric_name": "taskmanager_job_task_numRecordsOutPerSecond",
+"job_name": "PlayerCountFlink",
+"tm_id": "cab63a63a32f4ca107908b4a5445fb3c",
+"rate": 2657.8166666666666,
+"job_id": "0ad7f90fc5bba9ab4b08567e9e1cab12",
+"host": "flink-taskmanager-9457b74bb-562hx",
+"value": 355256995,
+"subtask_index": "8"
+}
+}
+```
+
+
+模板flink-metric,es版本 1.6（无奈）
+
+```
+ {
+"order": 0,
+"template": "flink_metric*",
+"settings": {
+"index.refresh_interval": "30s",
+"index.replication": "async",
+"index.translog.durability": "async",
+"index.translog.flush_threshold_size": "200mb",
+"index.number_of_replicas": "1",
+"index.routing.allocation.total_shards_per_node": "2",
+"index.routing.allocation.require.tag": "hot",
+"index.routing.allocation.include.group": "web1,web2,web3,web4",
+"index.number_of_shards": "6"
+},
+"mappings": {
+"flink_metric": {
+"_source": {
+"enabled": true
+},
+"properties": {
+"task_name": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"task_attempt_id": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"operator_id": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"task_id": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"task_attempt_num": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"timeStamp": {
+"format": "dateOptionalTime",
+"type": "date",
+"doc_values": true
+},
+"operator_name": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"metric_name": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"job_name": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"tm_id": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"rate": {
+"index": "no",
+"type": "double",
+"doc_values": true
+},
+"host": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+},
+"value": {
+"index": "no",
+"type": "double",
+"doc_values": true
+},
+"subtask_index": {
+"index": "not_analyzed",
+"type": "string",
+"doc_values": true
+}
+},
+"_all": {
+"enabled": false
+}
+}
+},
+"aliases": {}
+}
+```
