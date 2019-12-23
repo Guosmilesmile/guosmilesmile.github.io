@@ -288,7 +288,14 @@ cp -i /etc/kubernetes/admin.conf /root/.kube/config
 kubectl apply -f https://docs.projectcalico.org/v3.6/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
 ```
 
-等待calico安装就绪：
+等待calico安装就绪
+
+### 网络组建改用weave
+
+### Reference
+```
+ kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+```
 
 执行如下命令，等待 3-10 分钟，直到所有的容器组处于 Running 状态
 ```
