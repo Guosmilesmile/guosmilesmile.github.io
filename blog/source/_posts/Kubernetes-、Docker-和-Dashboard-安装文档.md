@@ -331,10 +331,21 @@ kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery
 #初始化worker
 针对所有的 worker 节点执行(执行上面那个从master得到的指令)
 
+
+
 ```
 # 只在 worker 节点执行
 kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303
 ```
+
+如果需要以ip的形式不是主机名
+
+```
+# 只在 worker 节点执行
+kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303 --node-name xxx.xxx.xx.xx
+```
+
+
 如果出现如下的报错
 ```
 error execution phase preflight: [preflight] Some fatal errors occurred:
@@ -643,6 +654,84 @@ ui可能会乱跑。。不一定在生成的证书的那台服务器
 ![image](https://note.youdao.com/yws/api/personal/file/D98E066CD35D47DA9F4778C9F57849DB?method=download&shareKey=c8a2b183a96d6262b48340b5beb2996d)
 
 
+
+
+### 一键安装脚本
+
+
+如需要自己添加仓库地址，join到集群需要自己操作
+
+```
+yum remove -y docker \
+docker-client \
+docker-client-latest \
+docker-common \
+docker-latest \
+docker-latest-logrotate \
+docker-logrotate \
+docker-selinux \
+docker-engine-selinux \
+docker-engine
+yum install -y yum-utils \
+device-mapper-persistent-data \
+lvm2
+
+yum-config-manager \
+--add-repo \
+https://download.docker.com/linux/centos/docker-ce.repo
+
+wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
+yum install -y epel-release container-selinux
+
+yum install -y docker-ce-18.09.7 docker-ce-cli-18.09.7 containerd.io
+systemctl enable docker
+systemctl start docker
+
+yum install -y nfs-utils
+
+cat <<EOF > /etc/yum.repos.d/kubernetes.repo
+[kubernetes]
+name=Kubernetes
+baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64
+enabled=1
+gpgcheck=0
+repo_gpgcheck=0
+gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg
+       http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg
+EOF
+
+setenforce 0
+sed -i "s/SELINUX=enforcing/SELINUX=disabled/g" /etc/selinux/config
+
+swapoff -a
+yes | cp /etc/fstab /etc/fstab_bak
+cat /etc/fstab_bak |grep -v swap > /etc/fstab
+
+echo "net.ipv4.ip_forward = 1
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1" >> /etc/sysctl.conf
+
+
+
+sysctl -p
+
+
+yum install -y kubelet-1.15.1 kubeadm-1.15.1 kubectl-1.15.1
+
+sed -i "s/--containerd=\/run\/containerd\/containerd.sock/--containerd=\/run\/containerd\/containerd.sock --exec-opt native.cgroupdriver=systemd/g" /usr/lib/systemd/system/docker.service
+
+
+echo '{
+"registry-mirrors": ["http://f1361db2.m.daocloud.io"],
+"insecure-registries":["私人仓库地址"]
+}
+' > /etc/docker/daemon.json
+
+systemctl daemon-reload
+systemctl restart docker
+systemctl enable kubelet && systemctl start kubelet
+
+```
 ### Reference
 
 

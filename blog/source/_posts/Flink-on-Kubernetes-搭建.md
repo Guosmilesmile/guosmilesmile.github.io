@@ -349,6 +349,31 @@ state.savepoints.dir: hdfs://hdfs-address/flink/flink-savepoints
 state.backend: rocksdb
 ```
 
+
+
+### 资源限制
+
+
+一般而言，我们会在资源上做限制，避免flink跑高互相影响，但是如果出现超过资源上限，是会被kill的，问题也不好查。
+
+```
+    resources: 
+         requests:
+          cpu: "5000m"
+          memory: "42720Mi"
+         limits: 
+          cpu: "5000m"
+          memory: "42720Mi"
+
+```
+
+如果我们限制cpu为5个核，内存为42720M，那么taskmanager.heap.size设置为42720m，那么在数据量大的时候，就会出问题，taskmanager会因为内存不够被kill。
+
+
+原因呢是因为我们设置内存为40G，上限也为40G，那么整个pod的内存和tm的内存一致，那么堆外内存要去哪里要呢？就会导致oom。因为网络的shuffer等等，都需要堆外内存，因此tm堆内存要比limit设置的小，30G即可。
+
+
+
 ### Reference 
 
 
