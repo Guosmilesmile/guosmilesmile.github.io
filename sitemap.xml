@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/</loc>
+    
+    <lastmod>2020-02-01T13:05:24.683Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/01/22/flink%E6%8C%87%E6%A0%87%E5%AF%B9%E6%8E%A5prometheus%E5%92%8Cgrafana/</loc>
     
     <lastmod>2020-01-22T05:20:33.494Z</lastmod>
@@ -26,13 +33,6 @@
     <loc>http://yoursite.com/2020/01/22/grafana%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B/</loc>
     
     <lastmod>2020-01-22T04:37:07.127Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yoursite.com/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/</loc>
-    
-    <lastmod>2020-01-10T12:48:47.890Z</lastmod>
     
   </url>
   
