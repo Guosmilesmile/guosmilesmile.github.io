@@ -107,7 +107,7 @@
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/77FAA4B774334108A5DB32F4270EB0FE?method=download&shareKey=0ffc47993e10884612f3ce3ffb9fec00">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6EE58799617148DB93B562D02D8DE049?method=download&shareKey=b0e00f8bc194046c595b4b385ff76b39">
-<meta property="og:updated_time" content="2020-02-01T14:19:10.459Z">
+<meta property="og:updated_time" content="2020-02-01T14:22:21.402Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="kubernetes 高可用搭建和负载均衡">
 <meta name="twitter:description" content="架构图  原理安装keepalive，vip对外，没有ng。那么其实对外提供服务的master只有一台，除非这台挂了才会切换到下一台 。 只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。 可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置">
@@ -357,7 +357,7 @@
                 
               
 
-              <time title="创建时间：2020-02-01 22:18:25 / 修改时间：22:19:10" itemprop="dateCreated datePublished" datetime="2020-02-01T22:18:25+08:00">2020-02-01</time>
+              <time title="创建时间：2020-02-01 22:18:25 / 修改时间：22:22:21" itemprop="dateCreated datePublished" datetime="2020-02-01T22:18:25+08:00">2020-02-01</time>
             
 
             
@@ -428,7 +428,7 @@
 <p>可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置，还是三台呀，还是会转发到挂的机器 </p>
 <p>加了ng岂不是更没办法做到高可用 ？</p>
 <p>除非ng或者haproxy可以做到，对后端的服务做探活，如果挂了就T掉服务。</p>
-<p>haproxy提供了线程的功能</p>
+<p>haproxy提供了现成的功能,如果使用ng的话，可以配合openresty实现</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">backend https_sri</span><br><span class="line">    balance      roundrobin</span><br><span class="line">    server s1 192.168.115.5:6443  check inter 10000 fall 2 rise 2 weight 1</span><br><span class="line">    server s2 192.168.115.6:6443  check inter 10000 fall 2 rise 2 weight 1</span><br></pre></td></tr></table></figure>
 <ul>
 <li>check：表示启用对此后端服务器执行健康状态检查。</li>
