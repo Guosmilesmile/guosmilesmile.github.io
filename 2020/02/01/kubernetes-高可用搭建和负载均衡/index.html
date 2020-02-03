@@ -107,7 +107,7 @@
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/77FAA4B774334108A5DB32F4270EB0FE?method=download&shareKey=0ffc47993e10884612f3ce3ffb9fec00">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6EE58799617148DB93B562D02D8DE049?method=download&shareKey=b0e00f8bc194046c595b4b385ff76b39">
-<meta property="og:updated_time" content="2020-02-01T14:23:12.484Z">
+<meta property="og:updated_time" content="2020-02-03T03:53:13.737Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="kubernetes 高可用搭建和负载均衡">
 <meta name="twitter:description" content="架构图  原理安装keepalive，vip对外，没有ng。那么其实对外提供服务的master只有一台，除非这台挂了才会切换到下一台 。 只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。 可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置">
@@ -357,12 +357,24 @@
                 
               
 
-              <time title="创建时间：2020-02-01 22:18:25 / 修改时间：22:23:12" itemprop="dateCreated datePublished" datetime="2020-02-01T22:18:25+08:00">2020-02-01</time>
+              <time title="创建时间：2020-02-01 22:18:25" itemprop="dateCreated datePublished" datetime="2020-02-01T22:18:25+08:00">2020-02-01</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-02-03 11:53:13" itemprop="dateModified" datetime="2020-02-03T11:53:13+08:00">2020-02-03</time>
               
             
           </span>
@@ -428,7 +440,7 @@
 <p>可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置，还是三台呀，还是会转发到挂的机器 </p>
 <p>加了ng岂不是更没办法做到高可用 ？</p>
 <p>除非ng或者haproxy可以做到，对后端的服务做探活，如果挂了就T掉服务。</p>
-<p>haproxy提供了现成的功能,如果使用ng的话，可以配合openresty实现</p>
+<p>haproxy提供了现成的功能，如果使用ng的话，可以配合openresty实现</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">backend https_sri</span><br><span class="line">    balance      roundrobin</span><br><span class="line">    server s1 192.168.115.5:6443  check inter 10000 fall 2 rise 2 weight 1</span><br><span class="line">    server s2 192.168.115.6:6443  check inter 10000 fall 2 rise 2 weight 1</span><br></pre></td></tr></table></figure>
 <ul>
 <li>check：表示启用对此后端服务器执行健康状态检查。</li>
@@ -446,15 +458,45 @@
 <p>/opt/keepalived-check/kube.sh</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">#!/bin/bash</span><br><span class="line"></span><br><span class="line">/usr/bin/killall -0 kube-apiserver 2&gt;/dev/null &amp;&amp; exit 0 || exit 1</span><br></pre></td></tr></table></figure>
 <p>如果是bak节点，需要修改state为BACKUP, priority为99 （priority值必须小于master节点配置值）</p>
-<h3 id="新master的添加"><a href="#新master的添加" class="headerlink" title="新master的添加"></a>新master的添加</h3><p>一、首先在master上生成新的token</p>
+<h3 id="haproxy的安装"><a href="#haproxy的安装" class="headerlink" title="haproxy的安装"></a>haproxy的安装</h3><p>只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum -y install haproxy</span><br></pre></td></tr></table></figure>
+<p>配置文件<br>/etc/haproxy/haproxy.cfg </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">global</span><br><span class="line">    # to have these messages end up in /var/log/haproxy.log you will</span><br><span class="line">    # need to:</span><br><span class="line">    #</span><br><span class="line">    # 1) configure syslog to accept network log events.  This is done</span><br><span class="line">    #    by adding the &apos;-r&apos; option to the SYSLOGD_OPTIONS in</span><br><span class="line">    #    /etc/sysconfig/syslog</span><br><span class="line">    #</span><br><span class="line">    # 2) configure local2 events to go to the /var/log/haproxy.log</span><br><span class="line">    #   file. A line like the following can be added to</span><br><span class="line">    #   /etc/sysconfig/syslog</span><br><span class="line">    #</span><br><span class="line">    #    local2.*                       /var/log/haproxy.log</span><br><span class="line">    #</span><br><span class="line">    #log         127.0.0.1 local2</span><br><span class="line">    log 127.0.0.1 local0 info</span><br><span class="line">    chroot      /var/lib/haproxy</span><br><span class="line">    pidfile     /var/run/haproxy.pid</span><br><span class="line">    maxconn     4000</span><br><span class="line">    user        haproxy</span><br><span class="line">    group       haproxy</span><br><span class="line">    daemon</span><br><span class="line">     # turn on stats unix socket</span><br><span class="line">    stats socket /var/lib/haproxy/stats</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    defaults</span><br><span class="line">        mode                    tcp</span><br><span class="line">        log                     global</span><br><span class="line">        retries                 3</span><br><span class="line">        timeout connect         10s</span><br><span class="line">        timeout client          1m</span><br><span class="line">        timeout server          1m</span><br><span class="line">    </span><br><span class="line">    frontend  kubernetes</span><br><span class="line">            bind *:8443</span><br><span class="line">            mode tcp</span><br><span class="line">            default_backend kubernetes_master</span><br><span class="line">    </span><br><span class="line">    backend kubernetes_master</span><br><span class="line">        balance     roundrobin</span><br><span class="line">        server master master_ip:6443 check maxconn 2000</span><br><span class="line">        server master1 master1_ip:6443 check maxconn 2000</span><br><span class="line">        server master2 master2_ip:6443 check maxconn 2000</span><br></pre></td></tr></table></figure>
+<h3 id="haproxy开启日志功能"><a href="#haproxy开启日志功能" class="headerlink" title="haproxy开启日志功能"></a>haproxy开启日志功能</h3><p>安装部署完Haproxy之后，默认是没有开启日志记录的，需要相应的手工配置使其日志功能开启。</p>
+<ul>
+<li>【创建日志记录文件夹】</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mkdir /var/log/haproxy</span><br><span class="line">chmod a+x /var/log/haproxy</span><br></pre></td></tr></table></figure>
+<p>*【开启rsyslog记录haproxy日志功能】</p>
+<p>vim /etc/rsyslog.conf</p>
+<p>修改：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># Provides UDP syslog reception</span><br><span class="line"></span><br><span class="line">$ModLoad imudp</span><br><span class="line"></span><br><span class="line">$UDPServerRun 514</span><br></pre></td></tr></table></figure></p>
+<p>开启514 UDP监听</p>
+<p>添加：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># Save haproxy log</span><br><span class="line"></span><br><span class="line">local0.* /var/log/haproxy/haproxy.log</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>【修改/etc/sysconfig/rsyslog】<br>vim /etc/sysconfig/rsyslog</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># Options for rsyslogd</span><br><span class="line"></span><br><span class="line"># Syslogd options are deprecated since rsyslog v3.</span><br><span class="line"></span><br><span class="line"># If you want to use them, switch to compatibility mode 2 by &quot;-c 2&quot;</span><br><span class="line"></span><br><span class="line"># See rsyslogd(8) for more details</span><br><span class="line"></span><br><span class="line">SYSLOGD_OPTIONS=&quot;-r -m 0 -c 2&quot;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>【haproxy配置】</li>
+</ul>
+<p>vim /etc/haproxy/haproxy.conf</p>
+<p>添加：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">global #在此上级目录下配置</span><br><span class="line"></span><br><span class="line">log 127.0.0.1 local0 info</span><br></pre></td></tr></table></figure></p>
+<p>配置local0事件</p>
+<ul>
+<li>【验证服务是否生效】</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">###重启服务</span><br><span class="line"></span><br><span class="line">systemctl restart haproxy</span><br><span class="line"></span><br><span class="line">systemctl restart rsyslog</span><br><span class="line"></span><br><span class="line">   </span><br><span class="line"></span><br><span class="line">###查看日志记录</span><br><span class="line"></span><br><span class="line">tailf /var/log/haproxy/haproxy.log</span><br></pre></td></tr></table></figure>
+<h3 id="新master的添加"><a href="#新master的添加" class="headerlink" title="新master的添加"></a>新master的添加</h3><p>高可用的安装方式就存在不一样的地方了。</p>
+<h4 id="一、-kubeadm-init的配置文件"><a href="#一、-kubeadm-init的配置文件" class="headerlink" title="一、 kubeadm init的配置文件"></a>一、 kubeadm init的配置文件</h4><p>kubeadm-config.yaml<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">cat &lt;&lt;EOF &gt; ./kubeadm-config.yaml</span><br><span class="line">apiVersion: kubeadm.k8s.io/v1beta1</span><br><span class="line">kind: ClusterConfiguration</span><br><span class="line">kubernetesVersion: v1.15.1</span><br><span class="line">imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line">controlPlaneEndpoint: &quot;填上机器的ip或者域名:8443(haproxy监听的端口)&quot;</span><br><span class="line">networking:</span><br><span class="line">  podSubnet: &quot;10.100.0.1/20&quot;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure></p>
+<p>其他的可以参考这篇文章<br><a href="https://guosmilesmile.github.io/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/" target="_blank" rel="noopener">Kubernetes 、Docker 和 Dashboard 安装文档</a></p>
+<p>一、首先在master上生成新的token</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kubeadm token create --print-join-command</span><br><span class="line"> [root@cn-hongkong nfs]# kubeadm token create --print-join-command</span><br><span class="line">kubeadm join 172.31.182.156:8443 --token ortvag.ra0654faci8y8903     --discovery-token-ca-cert-hash sha256:04755ff1aa88e7db283c85589bee31fabb7d32186612778e53a536a297fc9010</span><br></pre></td></tr></table></figure>
 <p>二、在master上生成用于新master加入的证书</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">kubeadm init phase upload-certs --upload-certs</span><br><span class="line">[root@cn-hongkong k8s_yaml]# kubeadm init phase upload-certs --experimental-upload-certs</span><br><span class="line">[upload-certs] Storing the certificates in ConfigMap &quot;kubeadm-certs&quot; in the &quot;kube-system&quot; Namespace</span><br><span class="line">[upload-certs] Using certificate key:</span><br><span class="line">f8d1c027c01baef6985ddf24266641b7c64f9fd922b15a32fce40b6b4b21e47d</span><br></pre></td></tr></table></figure>
 <p> 三、添加新master，把红色部分加到–experimental-control-plane –certificate-key后。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">kubeadm join 172.31.182.156:8443  --token ortvag.ra0654faci8y8903 \</span><br><span class="line">  --discovery-token-ca-cert-hash sha256:04755ff1aa88e7db283c85589bee31fabb7d32186612778e53a536a297fc9010 \</span><br><span class="line">  --control-plane --certificate-key f8d1c027c01baef6985ddf24266641b7c64f9fd922b15a32fce40b6b4b21e47d</span><br></pre></td></tr></table></figure></p>
 <p>四、初始化 root 用户的 kubectl 配置</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">rm -rf /root/.kube/</span><br><span class="line">mkdir /root/.kube/</span><br><span class="line">cp -i /etc/kubernetes/admin.conf /root/.kube/config</span><br></pre></td></tr></table></figure>
-<h3 id="haproxy的安装"><a href="#haproxy的安装" class="headerlink" title="haproxy的安装"></a>haproxy的安装</h3><p>只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。</p>
-<p>还在写~</p>
+<p>每台master都要操作<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">rm -rf /root/.kube/</span><br><span class="line">mkdir /root/.kube/</span><br><span class="line">cp -i /etc/kubernetes/admin.conf /root/.kube/config</span><br></pre></td></tr></table></figure></p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>kubernetes的高可用，是通过访问vip：haproxy监听端口，vip会飘逸到可用的服务器上。然后通过haproxy转发到真实的端口，可能是本机也可能是其他master。haproxy本身具有探活功能。整个高可用就串起来了。</p>
 
       
     </div>
@@ -645,7 +687,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#架构图"><span class="nav-number">1.</span> <span class="nav-text">架构图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原理"><span class="nav-number">2.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#注意"><span class="nav-number">3.</span> <span class="nav-text">注意</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装和配置keepalived"><span class="nav-number">4.</span> <span class="nav-text">安装和配置keepalived</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新master的添加"><span class="nav-number">5.</span> <span class="nav-text">新master的添加</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#haproxy的安装"><span class="nav-number">6.</span> <span class="nav-text">haproxy的安装</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#架构图"><span class="nav-number">1.</span> <span class="nav-text">架构图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原理"><span class="nav-number">2.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#注意"><span class="nav-number">3.</span> <span class="nav-text">注意</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装和配置keepalived"><span class="nav-number">4.</span> <span class="nav-text">安装和配置keepalived</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#haproxy的安装"><span class="nav-number">5.</span> <span class="nav-text">haproxy的安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#haproxy开启日志功能"><span class="nav-number">6.</span> <span class="nav-text">haproxy开启日志功能</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新master的添加"><span class="nav-number">7.</span> <span class="nav-text">新master的添加</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、-kubeadm-init的配置文件"><span class="nav-number">7.1.</span> <span class="nav-text">一、 kubeadm init的配置文件</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">8.</span> <span class="nav-text">总结</span></a></li></ol></div>
             
 
           </div>
