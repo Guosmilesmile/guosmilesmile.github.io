@@ -268,7 +268,7 @@ podSubnet 所使用的网段不能与节点所在的网段重叠
 初始化 apiserver
 ```
 # 只在 master 节点执行
-kubeadm init --config=kubeadm-config.yaml --upload-certs
+kubeadm init --config=kubeadm-config.yaml --upload-certs  --node-name xxx.xx.xx.xx
 ```
 根据您服务器网速的情况，您需要等候 1 – 10 分钟
 
