@@ -98,24 +98,30 @@
 
 
 
-  <meta name="description" content="批量处理生产者聚合了一批消息，然后再做2次rpc将消息存入broker（ack） 客户端优化采用了双线程：主线程和Sender线程。主线程负责将消息置入客户端缓存，Sender线程负责从缓存中发送消息，而这个缓存会聚合多个消息为一个批次 日志格式https://guosmilesmile.github.io/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E">
+  <meta name="description" content="传统文件IO操作的多次数据拷贝问题首先，假设我们有一个程序，这个程序需要对磁盘文件发起IO操作读取他里面的数据到自己这儿来，那么会经过以下一个顺序： 首先从磁盘上把数据读取到内核IO缓冲区里去，然后再从内核IO缓存区里读取到用户进程私有空间里去，然后我们才能拿到这个文件里的数据  为了读取磁盘文件里的数据，是不是发生了两次数据拷贝？ 没错，所以这个就是普通的IO操作的一个弊端，必然涉及到两次数据拷">
 <meta property="og:type" content="article">
-<meta property="og:title" content="为什么kafka这么快">
-<meta property="og:url" content="http://yoursite.com/2019/07/09/为什么kafka这么快/index.html">
+<meta property="og:title" content="kafka中使用的mmap和page cache">
+<meta property="og:url" content="http://yoursite.com/2020/02/11/kafka中使用的mmap和page-cache/index.html">
 <meta property="og:site_name" content="Pray">
-<meta property="og:description" content="批量处理生产者聚合了一批消息，然后再做2次rpc将消息存入broker（ack） 客户端优化采用了双线程：主线程和Sender线程。主线程负责将消息置入客户端缓存，Sender线程负责从缓存中发送消息，而这个缓存会聚合多个消息为一个批次 日志格式https://guosmilesmile.github.io/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E">
+<meta property="og:description" content="传统文件IO操作的多次数据拷贝问题首先，假设我们有一个程序，这个程序需要对磁盘文件发起IO操作读取他里面的数据到自己这儿来，那么会经过以下一个顺序： 首先从磁盘上把数据读取到内核IO缓冲区里去，然后再从内核IO缓存区里读取到用户进程私有空间里去，然后我们才能拿到这个文件里的数据  为了读取磁盘文件里的数据，是不是发生了两次数据拷贝？ 没错，所以这个就是普通的IO操作的一个弊端，必然涉及到两次数据拷">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2019-07-10T14:09:55.671Z">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/D02F5B041BF44E9DB3841E76BF5D7BDD?method=download&shareKey=3a7a82823302e54eb4ca1126c3bad64b">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B75D7781A04D496BBF29C8FC92094794?method=download&shareKey=0f8417c7a3eeb08d19bc51b861f537b2">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/A422A95D5B9C40E6B337EAF27FAC7D48?method=download&shareKey=c17ca215395a115fbc385d62bc487bc5">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/391FE4C329DD4425B7643AA63C7FC110?method=download&shareKey=f6be0ee3616c35be6cd8d383e197acc9">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/DFF98763013D48B58CCCE9C0A6A27F04?method=download&shareKey=8ab44aa2144ee1555968af8ff69e7264">
+<meta property="og:updated_time" content="2020-02-11T06:52:40.855Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="为什么kafka这么快">
-<meta name="twitter:description" content="批量处理生产者聚合了一批消息，然后再做2次rpc将消息存入broker（ack） 客户端优化采用了双线程：主线程和Sender线程。主线程负责将消息置入客户端缓存，Sender线程负责从缓存中发送消息，而这个缓存会聚合多个消息为一个批次 日志格式https://guosmilesmile.github.io/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E">
+<meta name="twitter:title" content="kafka中使用的mmap和page cache">
+<meta name="twitter:description" content="传统文件IO操作的多次数据拷贝问题首先，假设我们有一个程序，这个程序需要对磁盘文件发起IO操作读取他里面的数据到自己这儿来，那么会经过以下一个顺序： 首先从磁盘上把数据读取到内核IO缓冲区里去，然后再从内核IO缓存区里读取到用户进程私有空间里去，然后我们才能拿到这个文件里的数据  为了读取磁盘文件里的数据，是不是发生了两次数据拷贝？ 没错，所以这个就是普通的IO操作的一个弊端，必然涉及到两次数据拷">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/D02F5B041BF44E9DB3841E76BF5D7BDD?method=download&shareKey=3a7a82823302e54eb4ca1126c3bad64b">
 
 
 
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2019/07/09/为什么kafka这么快/">
+  <link rel="canonical" href="http://yoursite.com/2020/02/11/kafka中使用的mmap和page-cache/">
 
 
 
@@ -125,7 +131,7 @@
   };
 </script>
 
-  <title>为什么kafka这么快 | Pray</title>
+  <title>kafka中使用的mmap和page cache | Pray</title>
   
 
 
@@ -311,7 +317,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/07/09/为什么kafka这么快/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/11/kafka中使用的mmap和page-cache/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -328,7 +334,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">为什么kafka这么快
+          <h1 class="post-title" itemprop="name headline">kafka中使用的mmap和page cache
 
               
             
@@ -354,24 +360,12 @@
                 
               
 
-              <time title="创建时间：2019-07-09 21:51:29" itemprop="dateCreated datePublished" datetime="2019-07-09T21:51:29+08:00">2019-07-09</time>
+              <time title="创建时间：2020-02-11 14:51:33 / 修改时间：14:52:40" itemprop="dateCreated datePublished" datetime="2020-02-11T14:51:33+08:00">2020-02-11</time>
             
 
             
               
 
-              
-                
-                <span class="post-meta-divider">|</span>
-                
-
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-calendar-check-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">更新于</span>
-                
-                <time title="修改时间：2019-07-10 22:09:55" itemprop="dateModified" datetime="2019-07-10T22:09:55+08:00">2019-07-10</time>
               
             
           </span>
@@ -430,38 +424,35 @@
       
 
       
-        <h3 id="批量处理"><a href="#批量处理" class="headerlink" title="批量处理"></a>批量处理</h3><p>生产者聚合了一批消息，然后再做2次rpc将消息存入broker（ack）</p>
-<h3 id="客户端优化"><a href="#客户端优化" class="headerlink" title="客户端优化"></a>客户端优化</h3><p>采用了双线程：主线程和Sender线程。主线程负责将消息置入客户端缓存，Sender线程负责从缓存中发送消息，而这个缓存会聚合多个消息为一个批次</p>
-<h3 id="日志格式"><a href="#日志格式" class="headerlink" title="日志格式"></a>日志格式</h3><p><a href="https://guosmilesmile.github.io/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E5%BC%8F%E7%9A%84%E6%BC%94%E5%8F%98/" target="_blank" rel="noopener">https://guosmilesmile.github.io/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E5%BC%8F%E7%9A%84%E6%BC%94%E5%8F%98/</a></p>
-<h3 id="消息压缩"><a href="#消息压缩" class="headerlink" title="消息压缩"></a>消息压缩</h3><p>Kafka支持多种消息压缩方式（gzip、snappy、lz4）。对消息进行压缩可以极大地减少网络传输 量、降低网络 I/O，从而提高整体的性能。消息压缩是一种使用时间换空间的优化方式，如果对 时延有一定的要求，则不推荐对消息进行压缩。</p>
-<h3 id="建立索引，方便快速定位查询"><a href="#建立索引，方便快速定位查询" class="headerlink" title="建立索引，方便快速定位查询"></a>建立索引，方便快速定位查询</h3><p>每个日志分段文件对应了两个索引文件，主要用来提高查找消息的效率，这也是提升性能的一种方式。</p>
-<h3 id="分区"><a href="#分区" class="headerlink" title="分区"></a>分区</h3><p>增加分区数可以增加并行度增加吞吐量。</p>
-<h3 id="顺序IO"><a href="#顺序IO" class="headerlink" title="顺序IO"></a>顺序IO</h3><p>操作系统可以针对线性读写做深层次的优化，比如预读(read-ahead，提前将一个比较大的磁盘块读入内存) 和后写(write-behind，将很多小的逻辑写操作合并起来组成一个大的物理写操作)技术</p>
-<h3 id="零拷贝"><a href="#零拷贝" class="headerlink" title="零拷贝"></a>零拷贝</h3><p>Zero Copy技术提升了消费的效率。</p>
-<p><a href="https://guosmilesmile.github.io/2019/03/19/kafka-zero-copy/" target="_blank" rel="noopener">https://guosmilesmile.github.io/2019/03/19/kafka-zero-copy/</a></p>
-<h3 id="页缓存"><a href="#页缓存" class="headerlink" title="页缓存"></a>页缓存</h3><p>页缓存是操作系统实现的一种主要的磁盘缓存，以此用来减少对磁盘 I/O 的操作。</p>
-<ul>
-<li>读<br>当一个进程准备读取磁盘上的文件内容时，操作系统会先查看待读取的数据所在的页 (page)是否在页缓存(pagecache)中，如果存在(命中)则直接返回数据，从而避免了对物 理磁盘的 I/O 操作;如果没有命中，则操作系统会向磁盘发起读取请求并将读取的数据页存入 页缓存，之后再将数据返回给进程。</li>
-<li>写<br>如果一个进程需要将数据写入磁盘，那么操作系统也会检测数据对应的页是否在页缓存中，如果不存在，则会先在页缓存中添加相应的页，最后将数据写入对应的页。被修改过后的页也就变成了脏页，操作系统会在合适的时间把脏页中的 数据写入磁盘，以保持数据的一致性。</li>
-</ul>
-<p>Kafka 中大量使用了页缓存，这是 Kafka 实现高吞吐的重要因素之一。消息都是先被写入页缓存，然后由操作系统负责具体的刷盘任务的。</p>
-<p>如果Kafka写入到mmap之后就立即flush然后再返回Producer叫同步(sync)；写入mmap之后立即返回Producer不调用flush叫异步(async)。</p>
-<p>1、kafka一开始是把数据写到PageCache，也就是缓存，如果消费者一直在消费，而且速度大于等于kafka的生产者发送数据的速度，那么消费者会一直从PageCache读取数据，速度等同于内存的操作，不会因为kafka写入磁盘的操作影响吞吐量。</p>
-<p>2、当kafka的消费者消费速度不及生产者生产速度时，PageCache存的数据已经是最新的数据了，kafka消费端需要的数据已经被存储磁盘中，这时，kafka的消费速度会受到磁盘的读取速度影响。</p>
-<h5 id="Mmap（Memory-Mapped-Files，内存映射文件）"><a href="#Mmap（Memory-Mapped-Files，内存映射文件）" class="headerlink" title="Mmap（Memory Mapped Files，内存映射文件）"></a>Mmap（Memory Mapped Files，内存映射文件）</h5><p>Mmap 方法为我们提供了将文件的部分或全部映射到内存地址空间的能力，同当这块内存区域被写入数据之后[dirty]，操作系统会用一定的算法把这些数据写入到文件中</p>
+        <h2 id="传统文件IO操作的多次数据拷贝问题"><a href="#传统文件IO操作的多次数据拷贝问题" class="headerlink" title="传统文件IO操作的多次数据拷贝问题"></a>传统文件IO操作的多次数据拷贝问题</h2><p>首先，假设我们有一个程序，这个程序需要对磁盘文件发起IO操作读取他里面的数据到自己这儿来，那么会经过以下一个顺序：</p>
+<p>首先从磁盘上把数据读取到内核IO缓冲区里去，然后再从内核IO缓存区里读取到用户进程私有空间里去，然后我们才能拿到这个文件里的数据</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/D02F5B041BF44E9DB3841E76BF5D7BDD?method=download&amp;shareKey=3a7a82823302e54eb4ca1126c3bad64b" alt="image"></p>
+<p>为了读取磁盘文件里的数据，是不是发生了两次数据拷贝？</p>
+<p>没错，所以这个就是普通的IO操作的一个弊端，必然涉及到两次数据拷贝操作，对磁盘读写性能是有影响的。</p>
+<p>那么如果我们要将一些数据写入到磁盘文件里去呢？</p>
+<p>那这个就是一样的过程了，必须先把数据写入到用户进程私有空间里去，然后从这里再进入内核IO缓冲区，最后进入磁盘文件里去</p>
+<p>我们看下面的图</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/B75D7781A04D496BBF29C8FC92094794?method=download&amp;shareKey=0f8417c7a3eeb08d19bc51b861f537b2" alt="image"></p>
+<p>在数据进入磁盘文件的过程中，是不是再一次发生了两次数据拷贝？没错，所以这就是传统普通IO的问题，有两次数据拷贝问题。</p>
+<h2 id="mmap"><a href="#mmap" class="headerlink" title="mmap"></a>mmap</h2><p>Mmap（Memory Mapped Files，内存映射文件）</p>
+<p>Mmap 方法为我们提供了将文件的部分或全部映射到内存地址空间的能力，同当这块内存区域被写入数据之后[dirty]，操作系统会用一定的算法把这些数据写入到文件中</p>
+<p>其实有的人可能会误以为是直接把那些磁盘文件里的数据给读取到内存里来了，类似这个意思，但是并不完全是对的。</p>
+<p>因为刚开始你建立映射的时候，并没有任何的数据拷贝操作，其实磁盘文件还是停留在那里，只不过他把物理上的磁盘文件的一些地址和用户进程私有空间的一些虚拟内存地址进行了一个映射</p>
+<p><strong>这个mmap技术在进行文件映射的时候，一般有大小限制，在1.5GB~2GB之间</strong><br>所以在很多消息中间件，会限制文件的大小。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/A422A95D5B9C40E6B337EAF27FAC7D48?method=download&amp;shareKey=c17ca215395a115fbc385d62bc487bc5" alt="image"></p>
+<p><strong>PageCache，实际上在这里就是对应于虚拟内存</strong></p>
+<p>接下来就可以对这个已经映射到内存里的磁盘文件进行读写操作了，比如要写入消息到文件，你先把一文件通过MappedByteBuffer的map()函数映射其地址到你的虚拟内存地址。</p>
+<p>接着就可以对这个MappedByteBuffer执行写入操作了，写入的时候他会直接进入PageCache中，然后过一段时间之后，由os的线程异步刷入磁盘中，如下图我们可以看到这个示意。<br><img src="https://note.youdao.com/yws/api/personal/file/391FE4C329DD4425B7643AA63C7FC110?method=download&amp;shareKey=f6be0ee3616c35be6cd8d383e197acc9" alt="image"></p>
+<p>上面的图里，似乎只有一次数据拷贝的过程，他就是从PageCache里拷贝到磁盘文件里而已！这个就是你使用mmap技术之后，相比于传统磁盘IO的一个性能优化。</p>
+<p>而且PageCache技术在加载数据的时候，还会将你加载的数据块的临近的其他数据块也一起加载到PageCache里去。<br><img src="https://note.youdao.com/yws/api/personal/file/DFF98763013D48B58CCCE9C0A6A27F04?method=download&amp;shareKey=8ab44aa2144ee1555968af8ff69e7264" alt="image"></p>
+<p>所以kafka的顺序多谢，在pageCache中可以有很好的利用。在写实时数据和消费实时数据，都可以从内存中直接消费，性能会提高（消费历史数据就不得不从磁盘重新加载到page cache，而且会污染掉实时数据的page cache）</p>
+<p>具体事例</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">(<span class="number">1</span>)RandomAccessFile raf = <span class="keyword">new</span> RandomAccessFile (File, <span class="string">"rw"</span>);</span><br><span class="line"></span><br><span class="line">(<span class="number">2</span>)FileChannel channel = raf.getChannel();</span><br><span class="line"></span><br><span class="line">(<span class="number">3</span>)MappedByteBuffer buff = channel.map(FileChannel.MapMode.READ_WRITE,startAddr,SIZE);</span><br><span class="line"></span><br><span class="line">(<span class="number">4</span>)buf.put((<span class="keyword">byte</span>)<span class="number">255</span>);</span><br><span class="line"></span><br><span class="line">(<span class="number">5</span>)buf.write(<span class="keyword">byte</span>[] data)</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 使用直接内存映射读取文件</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> file</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">fileReadWithMmap</span><span class="params">(File file)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">long</span> begin = System.currentTimeMillis();</span><br><span class="line">    <span class="keyword">byte</span>[] b = <span class="keyword">new</span> <span class="keyword">byte</span>[BUFFER_SIZE];</span><br><span class="line">    <span class="keyword">int</span> len = (<span class="keyword">int</span>) file.length();</span><br><span class="line">    MappedByteBuffer buff;</span><br><span class="line">    <span class="keyword">try</span> (FileChannel channel = <span class="keyword">new</span> FileInputStream(file).getChannel()) &#123;</span><br><span class="line">        <span class="comment">// 将文件所有字节映射到内存中。返回MappedByteBuffer</span></span><br><span class="line">        buff = channel.map(FileChannel.MapMode.READ_ONLY, <span class="number">0</span>, channel.size());</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> offset = <span class="number">0</span>; offset &lt; len; offset += BUFFER_SIZE) &#123;</span><br><span class="line">            <span class="keyword">if</span> (len - offset &gt; BUFFER_SIZE) &#123;</span><br><span class="line">                buff.get(b);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                buff.get(<span class="keyword">new</span> <span class="keyword">byte</span>[len - offset]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">long</span> end = System.currentTimeMillis();</span><br><span class="line">    System.out.println(<span class="string">"time is:"</span> + (end - begin));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>其中最重要的就是那个buff，它是文件在内存中映射的标的物，通过对buff的read/write我们就可以间接实现对于文件的读写操作，当然写操作是操作系统帮忙完成的。</p>
-<h5 id="Tip"><a href="#Tip" class="headerlink" title="Tip"></a>Tip</h5><ol>
-<li>Kafka官方并不建议通过Broker端的log.flush.interval.messages和log.flush.interval.ms来强制写盘，认为数据的可靠性应该通过Replica来保证，而强制Flush数据到磁盘会对整体性能产生影响。</li>
-<li>可以通过调整/proc/sys/vm/dirty_background_ratio和/proc/sys/vm/dirty_ratio来调优性能。</li>
-</ol>
-<ul>
-<li>脏页率超过第一个指标会启动pdflush开始Flush Dirty PageCache。</li>
-<li>脏页率超过第二个指标会阻塞所有的写操作来进行Flush。</li>
-</ul>
-<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.2cto.com/kf/201705/638958.html" target="_blank" rel="noopener">https://www.2cto.com/kf/201705/638958.html</a></p>
-<p><a href="https://mp.weixin.qq.com/s/G5nfLpPOr80pk1sHzrLuOA" target="_blank" rel="noopener">https://mp.weixin.qq.com/s/G5nfLpPOr80pk1sHzrLuOA</a></p>
-<p><a href="https://www.xuebuyuan.com/1691696.html" target="_blank" rel="noopener">https://www.xuebuyuan.com/1691696.html</a></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>mmap带来的最大的好处是虚拟内存的映射，较少一次io操作，但是本身也有局限，一般有大小限制，在1.5GB~2GB之间。</p>
+<p>对虚拟内存进行读写的时候，会引入page cache的功能。</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://mp.weixin.qq.com/s?__biz=MzU0OTk3ODQ3Ng==&amp;mid=2247487013&amp;idx=1&amp;sn=1d05ed6d7aefe2a76fe024b34050343d&amp;chksm=fba6e626ccd16f30dc19dc66323c39995a9e76e5ca897dbb2a3f97e725ed3faf37eb52e41888&amp;scene=0&amp;xtrack=1#rd" target="_blank" rel="noopener">RocketMQ 如何基于mmap+page cache实现磁盘文件的高性能读写</a></p>
 
       
     </div>
@@ -492,8 +483,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2019/07/06/Trie树/" rel="next" title="Trie树">
-                <i class="fa fa-chevron-left"></i> Trie树
+              <a href="/2020/02/06/Flink中如何在流式计算中实现定时任务/" rel="next" title="Flink中如何在流式计算中实现定时任务">
+                <i class="fa fa-chevron-left"></i> Flink中如何在流式计算中实现定时任务
               </a>
             
           </div>
@@ -501,10 +492,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2019/07/10/Kafka消息格式的演变/" rel="prev" title="Kafka消息格式的演变">
-                Kafka消息格式的演变 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
@@ -656,7 +643,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#批量处理"><span class="nav-number">1.</span> <span class="nav-text">批量处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#客户端优化"><span class="nav-number">2.</span> <span class="nav-text">客户端优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#日志格式"><span class="nav-number">3.</span> <span class="nav-text">日志格式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#消息压缩"><span class="nav-number">4.</span> <span class="nav-text">消息压缩</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#建立索引，方便快速定位查询"><span class="nav-number">5.</span> <span class="nav-text">建立索引，方便快速定位查询</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分区"><span class="nav-number">6.</span> <span class="nav-text">分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#顺序IO"><span class="nav-number">7.</span> <span class="nav-text">顺序IO</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#零拷贝"><span class="nav-number">8.</span> <span class="nav-text">零拷贝</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#页缓存"><span class="nav-number">9.</span> <span class="nav-text">页缓存</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Mmap（Memory-Mapped-Files，内存映射文件）"><span class="nav-number">9.0.1.</span> <span class="nav-text">Mmap（Memory Mapped Files，内存映射文件）</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Tip"><span class="nav-number">9.0.2.</span> <span class="nav-text">Tip</span></a></li></ol></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">10.</span> <span class="nav-text">Reference</span></a></li></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#传统文件IO操作的多次数据拷贝问题"><span class="nav-number">1.</span> <span class="nav-text">传统文件IO操作的多次数据拷贝问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#mmap"><span class="nav-number">2.</span> <span class="nav-text">mmap</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">3.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
             
 
           </div>
