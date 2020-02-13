@@ -2,9 +2,16 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/02/13/Flink-1-10-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E5%92%8C%E9%85%8D%E7%BD%AE%EF%BC%88%E7%BF%BB%E8%AF%91%EF%BC%89/</loc>
+    
+    <lastmod>2020-02-13T07:31:47.536Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/02/11/kafka%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84mmap%E5%92%8Cpage-cache/</loc>
     
-    <lastmod>2020-02-11T06:52:40.855Z</lastmod>
+    <lastmod>2020-02-11T07:47:57.800Z</lastmod>
     
   </url>
   

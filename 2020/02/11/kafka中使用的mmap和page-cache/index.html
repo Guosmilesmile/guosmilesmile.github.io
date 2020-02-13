@@ -110,7 +110,7 @@
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/A422A95D5B9C40E6B337EAF27FAC7D48?method=download&shareKey=c17ca215395a115fbc385d62bc487bc5">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/391FE4C329DD4425B7643AA63C7FC110?method=download&shareKey=f6be0ee3616c35be6cd8d383e197acc9">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/DFF98763013D48B58CCCE9C0A6A27F04?method=download&shareKey=8ab44aa2144ee1555968af8ff69e7264">
-<meta property="og:updated_time" content="2020-02-11T06:52:40.855Z">
+<meta property="og:updated_time" content="2020-02-11T07:47:57.800Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="kafka中使用的mmap和page cache">
 <meta name="twitter:description" content="传统文件IO操作的多次数据拷贝问题首先，假设我们有一个程序，这个程序需要对磁盘文件发起IO操作读取他里面的数据到自己这儿来，那么会经过以下一个顺序： 首先从磁盘上把数据读取到内核IO缓冲区里去，然后再从内核IO缓存区里读取到用户进程私有空间里去，然后我们才能拿到这个文件里的数据  为了读取磁盘文件里的数据，是不是发生了两次数据拷贝？ 没错，所以这个就是普通的IO操作的一个弊端，必然涉及到两次数据拷">
@@ -360,7 +360,7 @@
                 
               
 
-              <time title="创建时间：2020-02-11 14:51:33 / 修改时间：14:52:40" itemprop="dateCreated datePublished" datetime="2020-02-11T14:51:33+08:00">2020-02-11</time>
+              <time title="创建时间：2020-02-11 14:51:33 / 修改时间：15:47:57" itemprop="dateCreated datePublished" datetime="2020-02-11T14:51:33+08:00">2020-02-11</time>
             
 
             
@@ -445,9 +445,9 @@
 <p>接着就可以对这个MappedByteBuffer执行写入操作了，写入的时候他会直接进入PageCache中，然后过一段时间之后，由os的线程异步刷入磁盘中，如下图我们可以看到这个示意。<br><img src="https://note.youdao.com/yws/api/personal/file/391FE4C329DD4425B7643AA63C7FC110?method=download&amp;shareKey=f6be0ee3616c35be6cd8d383e197acc9" alt="image"></p>
 <p>上面的图里，似乎只有一次数据拷贝的过程，他就是从PageCache里拷贝到磁盘文件里而已！这个就是你使用mmap技术之后，相比于传统磁盘IO的一个性能优化。</p>
 <p>而且PageCache技术在加载数据的时候，还会将你加载的数据块的临近的其他数据块也一起加载到PageCache里去。<br><img src="https://note.youdao.com/yws/api/personal/file/DFF98763013D48B58CCCE9C0A6A27F04?method=download&amp;shareKey=8ab44aa2144ee1555968af8ff69e7264" alt="image"></p>
-<p>所以kafka的顺序多谢，在pageCache中可以有很好的利用。在写实时数据和消费实时数据，都可以从内存中直接消费，性能会提高（消费历史数据就不得不从磁盘重新加载到page cache，而且会污染掉实时数据的page cache）</p>
+<p>所以kafka的顺序读写，在pageCache中可以有很好的利用。在写实时数据和消费实时数据，都可以从内存中直接消费，性能会提高（消费历史数据就不得不从磁盘重新加载到page cache，而且会污染掉实时数据的page cache）</p>
 <p>具体事例</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">(<span class="number">1</span>)RandomAccessFile raf = <span class="keyword">new</span> RandomAccessFile (File, <span class="string">"rw"</span>);</span><br><span class="line"></span><br><span class="line">(<span class="number">2</span>)FileChannel channel = raf.getChannel();</span><br><span class="line"></span><br><span class="line">(<span class="number">3</span>)MappedByteBuffer buff = channel.map(FileChannel.MapMode.READ_WRITE,startAddr,SIZE);</span><br><span class="line"></span><br><span class="line">(<span class="number">4</span>)buf.put((<span class="keyword">byte</span>)<span class="number">255</span>);</span><br><span class="line"></span><br><span class="line">(<span class="number">5</span>)buf.write(<span class="keyword">byte</span>[] data)</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line">(<span class="number">1</span>)RandomAccessFile raf = <span class="keyword">new</span> RandomAccessFile (File, <span class="string">"rw"</span>);</span><br><span class="line"></span><br><span class="line">(<span class="number">2</span>)FileChannel channel = raf.getChannel();</span><br><span class="line"></span><br><span class="line">(<span class="number">3</span>)MappedByteBuffer buff = channel.map(FileChannel.MapMode.READ_WRITE,startAddr,SIZE);</span><br><span class="line"></span><br><span class="line">(<span class="number">4</span>)buff .put((<span class="keyword">byte</span>)<span class="number">255</span>);</span><br><span class="line"></span><br><span class="line">(<span class="number">5</span>)buff.write(<span class="keyword">byte</span>[] data)</span><br></pre></td></tr></table></figure>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 使用直接内存映射读取文件</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> file</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">fileReadWithMmap</span><span class="params">(File file)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">long</span> begin = System.currentTimeMillis();</span><br><span class="line">    <span class="keyword">byte</span>[] b = <span class="keyword">new</span> <span class="keyword">byte</span>[BUFFER_SIZE];</span><br><span class="line">    <span class="keyword">int</span> len = (<span class="keyword">int</span>) file.length();</span><br><span class="line">    MappedByteBuffer buff;</span><br><span class="line">    <span class="keyword">try</span> (FileChannel channel = <span class="keyword">new</span> FileInputStream(file).getChannel()) &#123;</span><br><span class="line">        <span class="comment">// 将文件所有字节映射到内存中。返回MappedByteBuffer</span></span><br><span class="line">        buff = channel.map(FileChannel.MapMode.READ_ONLY, <span class="number">0</span>, channel.size());</span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">int</span> offset = <span class="number">0</span>; offset &lt; len; offset += BUFFER_SIZE) &#123;</span><br><span class="line">            <span class="keyword">if</span> (len - offset &gt; BUFFER_SIZE) &#123;</span><br><span class="line">                buff.get(b);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                buff.get(<span class="keyword">new</span> <span class="keyword">byte</span>[len - offset]);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">        e.printStackTrace();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">long</span> end = System.currentTimeMillis();</span><br><span class="line">    System.out.println(<span class="string">"time is:"</span> + (end - begin));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <p>其中最重要的就是那个buff，它是文件在内存中映射的标的物，通过对buff的read/write我们就可以间接实现对于文件的读写操作，当然写操作是操作系统帮忙完成的。</p>
 <h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>mmap带来的最大的好处是虚拟内存的映射，较少一次io操作，但是本身也有局限，一般有大小限制，在1.5GB~2GB之间。</p>
@@ -492,6 +492,10 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/02/13/Flink-1-10-内存模型和配置（翻译）/" rel="prev" title="Flink 1.10 内存模型和配置（翻译）">
+                Flink 1.10 内存模型和配置（翻译） <i class="fa fa-chevron-right"></i>
+              </a>
             
           </div>
         </div>
@@ -562,7 +566,7 @@
                 
                   <a href="/archives/">
                 
-                    <span class="site-state-item-count">82</span>
+                    <span class="site-state-item-count">83</span>
                     <span class="site-state-item-name">日志</span>
                   </a>
                 </div>
