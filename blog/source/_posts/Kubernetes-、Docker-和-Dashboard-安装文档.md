@@ -646,6 +646,8 @@ kubectl -n kube-system describe $(kubectl -n kube-system get secret -n kube-syst
 
 ```
 ### 坑
+
+#### UI
 ui可能会乱跑。。不一定在生成的证书的那台服务器
 
 需要修改yml，配置nodeSelector来指定pod落在指定的node上。
@@ -653,6 +655,50 @@ ui可能会乱跑。。不一定在生成的证书的那台服务器
 
 ![image](https://note.youdao.com/yws/api/personal/file/D98E066CD35D47DA9F4778C9F57849DB?method=download&shareKey=c8a2b183a96d6262b48340b5beb2996d)
 
+#### vxlan
+
+使用weave作为网络组件时，正常使用 ifconfig会出现vxlan,如下图
+
+![image](https://note.youdao.com/yws/api/personal/file/1884A04AF4654E4098F5C355075E536A?method=download&shareKey=393c63946edf362518bdf54209c362da)
+
+可是在某些情况，可能会没有，没有的情况在某些时候会出现网络堵塞或者容器网络有问题，导致程序假死。定时炸弹，很可怕
+
+
+笔主在搭建时候，20台机器，其中有7台机器没有vxlan，flink集群在高峰期的时候，吞吐死活上不去，重构集群到另一批机器就上去了。。
+
+
+
+这个时候需要观察一下内核版本
+
+```
+uname -a
+
+```
+
+一开始的版本是
+
+```
+3.10.0-327.36.2.el7.x86_64 #1 SMP Mon Jul 9 17:25:01 CST 2016 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+正常的版本是
+
+```
+3.10.0-1062.12.1.el7 #3 SMP Mon Jul 9 17:25:01 CST 2018 x86_64 x86_64 x86_64 GNU/Linux
+```
+
+更新下内核版本即可。
+
+
+```
+yum update kernel
+```
+
+然后重启服务器
+
+```
+shutdown -r now 
+```
 
 
 
