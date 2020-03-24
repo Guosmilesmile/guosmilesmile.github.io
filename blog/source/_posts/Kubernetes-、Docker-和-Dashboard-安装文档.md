@@ -1,10 +1,20 @@
 ---
-title: Kubernetes 、Docker  和 Dashboard 安装文档
+title: Kubernetes 、Docker环境搭建
 date: 2019-10-16 21:13:06
 tags:
 categories:
 	- Kubernetes
 ---
+
+
+## Version
+
+
+compont | version
+---|---
+docker | 19.03.8
+kubernetes | 1.17.4
+
 
 
 ## 安装docker
@@ -40,7 +50,7 @@ https://download.docker.com/linux/centos/docker-ce.repo
 安装并启动 docker
 ```
 # 在 master 节点和 worker 节点都要执行
-yum install -y docker-ce-18.09.7 docker-ce-cli-18.09.7 containerd.io
+yum install -y docker-ce-19.03.8 docker-ce-cli-19.03.8 containerd.io
 systemctl enable docker
 systemctl start docker
 ```
@@ -59,8 +69,7 @@ docker version
 
 ```
 wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
-yum install epel-release   #阿里云上的epel源
-yum install container-selinux
+yum install -y epel-release   container-selinux #阿里云上的epel源
 ```
 
 ### 安装 nfs-utils
@@ -162,7 +171,7 @@ sysctl -p
 
 ```
 # 在 master 节点和 worker 节点都要执行
-yum install -y kubelet-1.15.1 kubeadm-1.15.1 kubectl-1.15.1
+yum install -y kubelet-1.17.4 kubeadm-1.17.4 kubectl-1.17.4
 ```
 
 修改docker Cgroup Driver为systemd
@@ -268,7 +277,7 @@ podSubnet 所使用的网段不能与节点所在的网段重叠
 初始化 apiserver
 ```
 # 只在 master 节点执行
-kubeadm init --config=kubeadm-config.yaml --upload-certs  --node-name xxx.xx.xx.xx
+kubeadm init --config=kubeadm-config.yaml --upload-certs --node-name xxx.xx.xx.xx
 ```
 根据您服务器网速的情况，您需要等候 1 – 10 分钟
 
@@ -281,14 +290,15 @@ mkdir /root/.kube/
 cp -i /etc/kubernetes/admin.conf /root/.kube/config
 ```
 
-安装 calico
+安装 calico or weave(用calico出问题，换用weave)
+[好像需要系统内核在4.0以上]
 
 ```
 # 只在 master 节点执行
 kubectl apply -f https://docs.projectcalico.org/v3.6/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml
 ```
 
-等待calico安装就绪
+等待calico安装就绪.
 
 ### 网络组建改用weave
 
@@ -331,8 +341,6 @@ kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery
 #初始化worker
 针对所有的 worker 节点执行(执行上面那个从master得到的指令)
 
-
-
 ```
 # 只在 worker 节点执行
 kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303
@@ -344,8 +352,6 @@ kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery
 # 只在 worker 节点执行
 kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303 --node-name xxx.xxx.xx.xx
 ```
-
-
 如果出现如下的报错
 ```
 error execution phase preflight: [preflight] Some fatal errors occurred:
@@ -369,10 +375,11 @@ kubeadm reset
 # 只在 master 节点执行
 kubectl get nodes
 ```
+
 ```
 NAME      STATUS   ROLES    AGE   VERSION
-zhshx90   Ready    master   37m   v1.15.1
-zhshx91   Ready    <none>   35    v1.15.1
+zhshx90   Ready    master   37m   v1.17.4
+zhshx91   Ready    <none>   35    v1.17.4
 ```
 
 ### 移除 worker 节点
@@ -385,6 +392,7 @@ zhshx91   Ready    <none>   35    v1.15.1
 # 只在 worker 节点执行
 kubeadm reset
 ```
+
 在 master 节点 demo-master-a-1 上执行
 
 ```
@@ -403,14 +411,25 @@ worker 节点的名字可以通过在节点 demo-master-a-1 上执行 kubectl ge
 
 Kubernetes 默认没有部署 Dashboard，可通过如下命令安装：
 
+可以到Git上获取对应的部署文件
+
 ```
-wget http://mirror.faasx.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml
+https://github.com/kubernetes/dashboard/releases
 ```
+dashboard需要跟kubernetes的版本对应。
+
+
+获取对应的部署文档
+
+
+```
+https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-rc6/aio/deploy/recommended.yaml
+```
+
 
 #### 证书的制作，如果不需要的可以跳过
 
 生成证书通过openssl生成自签名证书即可，不再赘述，参考如下所示：
-
 
 
 ```
@@ -422,7 +441,7 @@ Generating RSA private key, 2048 bit long modulus
 .+++
 .................................................+++
 e is 65537 (0x10001)
-[root@master keys]# openssl req -new -out dashboard.csr -key dashboard.key -subj '/CN=本机的ip'
+[root@master keys]# openssl req -new -out dashboard.csr -key dashboard.key -subj '/CN=本机的ip or 域名'
 [root@master keys]# ls
 dashboard.csr  dashboard.key
 [root@master keys]# 
@@ -489,22 +508,7 @@ Certificate:
 
 这样就有了证书文件dashboard.crt 和 私钥 dashboad.key
 
-将该配置文件中创建secret的配置文件信息去掉，将以下内容 从配置文件中去掉：
 
-```
-# ------------------- Dashboard Secret ------------------- #
-
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    k8s-app: kubernetes-dashboard
-  name: kubernetes-dashboard-certs
-  namespace: kube-system
-type: Opaque
-
----
-```
 可以在配置文件中，修改service 为nodeport类型，固定访问端口
 修改前：
 
@@ -540,7 +544,7 @@ spec:
   type: NodePort
   ports:
     - port: 443
-      nodePort:30001
+      nodePort: 30001
       targetPort: 8443
   selector:
     k8s-app: kubernetes-dashboard
@@ -702,6 +706,7 @@ shutdown -r now
 
 
 
+
 ### 一键安装脚本
 
 
@@ -729,7 +734,7 @@ https://download.docker.com/linux/centos/docker-ce.repo
 wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo
 yum install -y epel-release container-selinux
 
-yum install -y docker-ce-18.09.7 docker-ce-cli-18.09.7 containerd.io
+yum install -y docker-ce-19.03.8 docker-ce-cli-19.03.8 containerd.io
 systemctl enable docker
 systemctl start docker
 
@@ -762,7 +767,7 @@ net.bridge.bridge-nf-call-iptables = 1" >> /etc/sysctl.conf
 sysctl -p
 
 
-yum install -y kubelet-1.15.1 kubeadm-1.15.1 kubectl-1.15.1
+yum install -y kubelet-1.17.4 kubeadm-1.17.4 kubectl-1.17.4
 
 sed -i "s/--containerd=\/run\/containerd\/containerd.sock/--containerd=\/run\/containerd\/containerd.sock --exec-opt native.cgroupdriver=systemd/g" /usr/lib/systemd/system/docker.service
 

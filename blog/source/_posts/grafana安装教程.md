@@ -7,6 +7,7 @@ categories:
 ---
 
 
+
 ### 配置文件
 
 grafana-deploy.yaml
@@ -140,7 +141,12 @@ spec:
 
 ```
 
+### 对外服务的暴露
+
 最后，我们需要对外暴露 grafana 这个服务，所以我们需要一个对应的 Service 对象，当然用 NodePort 或者再建立一个 ingress 对象都是可行的：(grafana-svc.yaml)
+
+#### nodePort
+
 
 ```yaml
 
@@ -238,8 +244,95 @@ grafana      NodePort    10.97.46.27     <none>        3000:30105/TCP           
 
 现在我们就可以在浏览器中使用http://<任意节点IP:30000>来访问 grafana 这个服务了.
 
+
+
+
 ![image](https://note.youdao.com/yws/api/personal/file/1696F72387D64E5B96D39C8D7EAED328?method=download&shareKey=e95b41f49ecb0fc9dcfa3f5025b01b5b)
 
+
+### ingress的方式
+
+我们想实现的是通过访问 域名/grafana/的形式，实现域名的复用，以重定向的形式来达成。
+
+grafana-ingress.yaml
+
+```
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: grafana-ingress
+  namespace: grafana
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: /$2
+spec:
+  rules:
+  - host: grafana.host.local
+    http:
+      paths:
+      - backend:
+          serviceName: grafana
+          servicePort: 3000
+        path: /grafana(/|$)(.*)
+
+```
+
+但是重定向会有一个问题，跳转的时候不一定会是加上重定向的链接。
+
+例如 host/grafana/  会跳转到 host/grafana/login，但是只会跳转到
+host/login，这样就会有问题。
+
+grafana提供了重定向的配置。需要增加grafana.ini来操作
+
+参考这个
+https://github.com/helm/charts/issues/12416
+或者
+https://stackoverflow.com/questions/48410293/kubernetes-ingress-not-adding-the-application-url-for-grafana-dashboard
+
+
+先将grafana.ini变成confMap配置
+
+grafana-cm.yaml
+
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: grafana
+  name: grafana-cm
+  namespace: grafana
+data:
+  grafana.ini: |
+    [server]
+    serve_from_sub_path = true
+    root_url=http://host.grafana.local/grafana/
+```
+
+deploy.yaml对应增加
+
+```
+ volumeMounts:
+        - mountPath: /var/lib/grafana
+          subPath: grafana
+          name: storage
+        - name: config
+          mountPath: /etc/grafana/
+      securityContext:
+        fsGroup: 472
+        runAsUser: 472
+      volumes:
+      - name: storage
+        persistentVolumeClaim:
+          claimName: grafana
+      - name: config
+        configMap:
+          name: grafana-cm
+
+```
+
+可以通过https://host.grafana.local/grafana/的方式访问grafana了。
 
 ### Reference
 https://www.qikqiak.com/k8s-book/docs/56.Grafana%E7%9A%84%E5%AE%89%E8%A3%85%E4%BD%BF%E7%94%A8.html
