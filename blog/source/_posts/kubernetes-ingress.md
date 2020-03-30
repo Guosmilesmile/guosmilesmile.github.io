@@ -22,10 +22,10 @@ Ingress 是 k8s 资源对象，用于对外暴露服务，该资源对象定义�
 
 
 
-![在这里插入图片描述](https://img-blog.csdnimg.cn/20190812232401601.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3FpYW5naGFvaGFv,size_16,color_FFFFFF,t_70)
+![在这里插入图片描述](https://note.youdao.com/yws/api/personal/file/2A670FBDC2BA491D9251C9EC0024C667?method=download&shareKey=13d9029aa04d77e94574cbfba66613bc)
 
 
-![img](https://img2018.cnblogs.com/blog/1216496/201901/1216496-20190129105538443-1113599925.png)
+![img](https://note.youdao.com/yws/api/personal/file/6881D9BB2E5A4F45AE162184106177C2?method=download&shareKey=5f38c0818dd2a19b70ae6e4e0670a48a)
 
 
 

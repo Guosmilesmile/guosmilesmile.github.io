@@ -1,29 +1,27 @@
 ---
-title: Flink  1.9.1 on Kubernetes 搭建
-date: 2019-12-23 21:42:04
+title: Flink 1.10.0 on Kubernetes 搭建
+date: 2020-03-30 16:32:05
 tags:
 categories:
 	- Flink
 ---
-
 依赖镜像制作
 
 ```
-FROM  flink:1.9.1-scala_2.12
-ADD ./flink-shaded-hadoop-2-uber-2.8.3-7.0.jar /opt/flink/lib/
+FROM  flink:1.10.0-scala_2.11
+ADD ./lib/* /opt/flink/lib/
 RUN /bin/cp /usr/share/zoneinfo/Asia/Shanghai /etc/localtime && echo 'Asia/Shanghai' >/etc/timezone
-
 ```
 
 制作镜像
 ```
-docker build -t='study/flink:1.9-2.8' .
-docker tag study/flink:1.9-2.8 k8stest.net:8876/study/flink
+docker build -t='k8stest.net:8876/study/flink:1.10.0' .
+
 ```
 
 提交镜像到仓库
 ```
-docker push k8stest.net:8876/study/flink
+docker push k8stest.net:8876/study/flink:1.10.0
 ```
 
 密码
@@ -81,7 +79,7 @@ data:
     jobmanager.rpc.port: 6123
     taskmanager.rpc.port: 6122
     jobmanager.heap.size: 1024m
-    taskmanager.heap.size: 1024m
+    taskmanager.memory.process.size: 1024m
   log4j.properties: |+
     log4j.rootLogger=INFO, file
     log4j.logger.akka=INFO
@@ -113,7 +111,7 @@ spec:
     spec:
       containers:
       - name: jobmanager
-        image: flink:latest
+        image: k8stest.net:8876/study/flink:1.10.0
         workingDir: /opt/flink
         command: ["/bin/bash", "-c", "$FLINK_HOME/bin/jobmanager.sh start;\
           while :;
@@ -206,7 +204,7 @@ spec:
     spec:
       containers:
       - name: taskmanager
-        image: flink:latest
+        image: k8stest.net:8876/study/flink:1.10.0
         workingDir: /opt/flink
         command: ["/bin/bash", "-c", "$FLINK_HOME/bin/taskmanager.sh start; \
           while :;
@@ -237,66 +235,6 @@ spec:
             path: log4j.properties
 ```
 
-
-
-### 固定jm在具体机器
-
-
-如果jobmanger随便飘，提交会有问题。
-
-包含nodeSelector的jobmanager-deployment.yaml
-```yaml
-apiVersion: extensions/v1beta1
-kind: Deployment
-metadata:
-  name: flink-jobmanager
-spec:
-  replicas: 1
-  template:
-    metadata:
-      labels:
-        app: flink
-        component: jobmanager
-    spec:
-      nodeSelector:
-        flink: jm
-      containers:
-      - name: jobmanager
-        image: flink:latest
-        workingDir: /opt/flink
-        command: ["/bin/bash", "-c", "$FLINK_HOME/bin/jobmanager.sh start;\
-          while :;
-          do
-            if [[ -f $(find log -name '*jobmanager*.log' -print -quit) ]];
-              then tail -f -n +1 log/*jobmanager*.log;
-            fi;
-          done"]
-        ports:
-        - containerPort: 6123
-          name: rpc
-        - containerPort: 6124
-          name: blob
-        - containerPort: 8081
-          name: ui
-        livenessProbe:
-          tcpSocket:
-            port: 6123
-          initialDelaySeconds: 30
-          periodSeconds: 60
-        volumeMounts:
-        - name: flink-config-volume
-          mountPath: /opt/flink/conf
-      volumes:
-      - name: flink-config-volume
-        configMap:
-          name: flink-config
-          items:
-          - key: flink-conf.yaml
-            path: flink-conf.yaml
-          - key: log4j.properties
-            path: log4j.properties
-
-```
 
 ### 固定flink ui的端口
 
@@ -349,7 +287,68 @@ state.savepoints.dir: hdfs://hdfs-address/flink/flink-savepoints
 state.backend: rocksdb
 ```
 
+### config比较完整的配置
+```
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flink-config
+  labels:
+    app: flink
+data:
+  flink-conf.yaml: |+
+    jobmanager.rpc.address: flink-jobmanager
+    taskmanager.numberOfTaskSlots: 3
+    blob.server.port: 6124
+    jobmanager.rpc.port: 6123
+    taskmanager.rpc.port: 6122
+    taskmanager.memory.process.size: 12000m
+    jobmanager.heap.size: 1024m
+    jobmanager.execution.failover-strategy: full
+    jobstore.expiration-time: 172800
+    taskmanager.memory.managed.fraction: 0.2
+    taskmanager.network.memory.min: 2gb
+    taskmanager.network.memory.max: 3gb
+    taskmanager.memory.task.off-heap.size: 1024m
+    taskmanager.network.memory.floating-buffers-per-gate: 16
+    taskmanager.network.memory.buffers-per-channel: 4
+    taskmanager.memory.jvm-metaspace.size: 256m
+    akka.ask.timeout: 30s
+    akka.framesize: 104857600b
+    restart-strategy: failure-rate
+    restart-strategy.failure-rate.max-failures-per-interval: 300
+    restart-strategy.failure-rate.failure-rate-interval: 5 min
+    restart-strategy.failure-rate.delay: 10 s
+    state.checkpoints.dir: hdfs://hdp.host.local:9000/flink/flink-checkpoints
+    state.savepoints.dir: hdfs://hdp.host.local:9000/flink/flink-savepoints
+    state.backend: rocksdb
+    state.backend.incremental: true
+    high-availability: zookeeper
+    high-availability.storageDir: hdfs://hdp.host.local:9000/flink/recovery
+    high-availability.zookeeper.quorum: zk.host.local:7072
+    high-availability.zookeeper.path.root: /flink
+    high-availability.jobmanager.port: 6123
+    high-availability.cluster-id: my-project
+    metrics.reporter.promgateway.class: org.apache.flink.metrics.prometheus.PrometheusPushGatewayReporter
+    metrics.reporter.promgateway.host: pushgateway.host.local
+    metrics.reporter.promgateway.port: 30002
+    metrics.reporter.promgateway.jobName: my-project
+    metrics.reporter.promgateway.randomJobNameSuffix: true
+    metrics.reporter.promgateway.deleteOnShutdown: true
+  log4j.properties: |+
+    log4j.rootLogger=INFO, file
+    log4j.logger.akka=INFO
+    log4j.logger.org.apache.kafka=INFO
+    log4j.logger.org.apache.hadoop=INFO
+    log4j.logger.org.apache.zookeeper=INFO
+    log4j.appender.file=org.apache.log4j.FileAppender
+    log4j.appender.file.file=${log.file}
+    log4j.appender.file.layout=org.apache.log4j.PatternLayout
+    log4j.appender.file.layout.ConversionPattern=%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p %-60c %x - %m%n
+    log4j.logger.org.apache.flink.shaded.akka.org.jboss.netty.channel.DefaultChannelPipeline=ERROR, file
 
+
+```
 
 ### 资源限制
 
@@ -366,12 +365,6 @@ state.backend: rocksdb
           memory: "42720Mi"
 
 ```
-
-如果我们限制cpu为5个核，内存为42720M，那么taskmanager.heap.size设置为42720m，那么在数据量大的时候，就会出问题，taskmanager会因为内存不够被kill。
-
-
-原因呢是因为我们设置内存为40G，上限也为40G，那么整个pod的内存和tm的内存一致，那么堆外内存要去哪里要呢？就会导致oom。因为网络的shuffer、rocksdb状态后台等等，都需要堆外内存，因此tm堆内存要比limit设置的小，30G即可。
-
 
 
 ### 通过ingress暴露服务
@@ -449,8 +442,6 @@ options timeout:2
 /usr/local/flink/flink-1.10.0/bin/flink run -p  30 -m flink-jobmanager-rest.flink-project.svc.cluster.local:8081 -d -c test.startClass  Porject.jar
 ```
 提交jar包
-
-
 
 ### Reference 
 

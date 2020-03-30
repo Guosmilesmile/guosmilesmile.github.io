@@ -335,7 +335,449 @@ guoy1=s,s
 1. LocalAggOperation里关于count触发计算可以抽出一个抽象类叫做CountLocalTrigger，将触发相关的交给用户来实现。
 2. 可以实现count和time一起避免数据没到一直不下发的情况。（不过会用到localAgg说明数据量不小了，应该不会出现这种，实现价值不高）
 
+
+
+
+### 参考code
+
+```java
+package study.flink.bundle;
+
+import org.apache.flink.annotation.Internal;
+import org.apache.flink.streaming.api.operators.Output;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.util.Collector;
+
+/**
+ * Wrapper around an {@link Output} for wrap {@code T} to {@link StreamRecord}.
+ *
+ * @param <T> The type of the elements that can be emitted.
+ */
+@Internal
+public class StreamRecordCollector<T> implements Collector<T> {
+
+    private final StreamRecord<T> element = new StreamRecord<>(null);
+
+    private final Output<StreamRecord<T>> underlyingOutput;
+
+    public StreamRecordCollector(Output<StreamRecord<T>> output) {
+        this.underlyingOutput = output;
+    }
+
+    @Override
+    public void collect(T record) {
+        underlyingOutput.collect(element.replace(record));
+    }
+
+    @Override
+    public void close() {
+        underlyingOutput.close();
+    }
+}
+```
+
+
+```java
+package study.flink.bundle;
+
+import study.flink.bundle.trigger.BundleTrigger;
+import org.apache.flink.api.java.functions.KeySelector;
+
+/**
+ * The {@link MapBundleOperator} uses a {@link KeySelector} to extract bundle key, thus can be
+ * used with non-keyed-stream.
+ */
+public class MapBundleOperator<K, V, IN, OUT> extends AbstractMapBundleOperator<K, V, IN, OUT> {
+
+    private static final long serialVersionUID = 1L;
+
+    /**
+     * KeySelector is used to extract key for bundle map.
+     */
+    private final KeySelector<IN, K> keySelector;
+
+    public MapBundleOperator(
+            MapBundleFunction<K, V, IN, OUT> function,
+            BundleTrigger<IN> bundleTrigger,
+            KeySelector<IN, K> keySelector) {
+        super(function, bundleTrigger);
+        this.keySelector = keySelector;
+    }
+
+    @Override
+    protected K getKey(IN input) throws Exception {
+        return this.keySelector.getKey(input);
+    }
+}
+
+```
+
+```java
+package study.flink.bundle;
+
+import org.apache.flink.api.common.functions.Function;
+import org.apache.flink.util.Collector;
+
+import javax.annotation.Nullable;
+import java.util.Map;
+
+/**
+ * Basic interface for map bundle processing.
+ *
+ * @param <K>   The type of the key in the bundle map
+ * @param <V>   The type of the value in the bundle map
+ * @param <IN>  Type of the input elements.
+ * @param <OUT> Type of the returned elements.
+ */
+public abstract class MapBundleFunction<K, V, IN, OUT> implements Function {
+
+    private static final long serialVersionUID = -6672219582127325882L;
+/*
+    protected transient ExecutionContext ctx;
+
+    public void open(ExecutionContext ctx) throws Exception {
+        this.ctx = Preconditions.checkNotNull(ctx);
+    }*/
+
+    /**
+     * Adds the given input to the given value, returning the new bundle value.
+     *
+     * @param value the existing bundle value, maybe null
+     * @param input the given input, not null
+     */
+    public abstract V addInput(@Nullable V value, IN input) throws Exception;
+
+    /**
+     * Called when a bundle is finished. Transform a bundle to zero, one, or more output elements.
+     */
+    public abstract void finishBundle(Map<K, V> buffer, Collector<OUT> out) throws Exception;
+
+    public void close() throws Exception {}
+}
+```
+
+```java
+package study.flink.bundle;
+
+import study.flink.bundle.trigger.BundleTrigger;
+import org.apache.flink.api.common.functions.Function;
+import org.apache.flink.api.common.typeinfo.TypeInformation;
+import org.apache.flink.api.java.Utils;
+import org.apache.flink.api.java.functions.KeySelector;
+import org.apache.flink.api.java.typeutils.TypeExtractor;
+import org.apache.flink.streaming.api.datastream.DataStream;
+import org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;
+
+/**
+ * creater of bundler operation
+ */
+public class BundlerBuilder {
+
+    public static <K, V, IN, OUT> SingleOutputStreamOperator<OUT> bundle(MapBundleFunction<K, V, IN, OUT> mapBundleFunction,
+                                                                         BundleTrigger<IN> bundleTrigger,
+                                                                         KeySelector<IN, K> keySelector,
+                                                                         DataStream dataStream,
+                                                                         int parallelism) {
+
+        TypeInformation<OUT> outType = TypeExtractor.getUnaryOperatorReturnType(
+                (Function) mapBundleFunction,
+                MapBundleFunction.class,
+                2,
+                3,
+                new int[]{},
+                dataStream.getType(),
+                Utils.getCallLocationName(),
+                true);
+
+        return dataStream.transform(
+                "bundle function",
+                outType,
+                new MapBundleOperator(mapBundleFunction, bundleTrigger, keySelector)
+        ).setParallelism(parallelism);
+
+    }
+
+    public static <K, V, IN, OUT> SingleOutputStreamOperator<OUT> bundle(MapBundleFunction<K, V, IN, OUT> mapBundleFunction,
+                                                                         BundleTrigger<IN> bundleTrigger,
+                                                                         KeySelector<IN, K> keySelector,
+                                                                         DataStream dataStream
+                                                                         ) {
+
+        TypeInformation<OUT> outType = TypeExtractor.getUnaryOperatorReturnType(
+                (Function) mapBundleFunction,
+                MapBundleFunction.class,
+                2,
+                3,
+                new int[]{},
+                dataStream.getType(),
+                Utils.getCallLocationName(),
+                true);
+
+        return dataStream.transform(
+                "bundle function",
+                outType,
+                new MapBundleOperator(mapBundleFunction, bundleTrigger, keySelector)
+        );
+
+    }
+}
+
+```
+
+```java
+package study.flink.bundle;
+
+import study.flink.bundle.trigger.BundleTrigger;
+import study.flink.bundle.trigger.BundleTriggerCallback;
+import org.apache.flink.api.common.functions.util.FunctionUtils;
+import org.apache.flink.metrics.Gauge;
+import org.apache.flink.streaming.api.operators.AbstractStreamOperator;
+import org.apache.flink.streaming.api.operators.ChainingStrategy;
+import org.apache.flink.streaming.api.operators.OneInputStreamOperator;
+import org.apache.flink.streaming.api.watermark.Watermark;
+import org.apache.flink.streaming.runtime.streamrecord.StreamRecord;
+import org.apache.flink.util.Collector;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static org.apache.flink.util.Preconditions.checkNotNull;
+
+public abstract class AbstractMapBundleOperator<K, V, IN, OUT> extends AbstractStreamOperator<OUT>
+        implements OneInputStreamOperator<IN, OUT>, BundleTriggerCallback {
+
+    /**
+     * The map in heap to store elements.
+     */
+    private transient Map<K, V> bundle;
+
+    /**
+     * The trigger that determines how many elements should be put into a bundle.
+     */
+    private final BundleTrigger<IN> bundleTrigger;
+
+    /**
+     * The function used to process when receiving element.
+     */
+    private final MapBundleFunction<K, V, IN, OUT> function;
+
+    /**
+     * Output for stream records.
+     */
+    private transient Collector<OUT> collector;
+
+    private transient int numOfElements = 0;
+
+    AbstractMapBundleOperator(
+            MapBundleFunction<K, V, IN, OUT> function,
+            BundleTrigger<IN> bundleTrigger) {
+        chainingStrategy = ChainingStrategy.ALWAYS;
+        this.function = checkNotNull(function, "function is null");
+        this.bundleTrigger = checkNotNull(bundleTrigger, "bundleTrigger is null");
+    }
+
+    @Override
+    public void open() throws Exception {
+        super.open();
+        this.numOfElements = 0;
+        this.collector = new StreamRecordCollector<>(output);
+        this.bundle = new HashMap<>();
+        bundleTrigger.registerCallback(this);
+        // reset trigger
+        bundleTrigger.reset();
+
+        LOG.info("BundleOperator's trigger info: " + bundleTrigger.explain());
+
+        // counter metric to get the size of bundle
+        getRuntimeContext().getMetricGroup().gauge("bundleSize", (Gauge<Integer>) () -> numOfElements);
+
+        getRuntimeContext().getMetricGroup().gauge("bundleRatio", (Gauge<Double>) () -> {
+            int numOfKeys = bundle.size();
+            if (numOfKeys == 0) {
+                return 0.0;
+            } else {
+                return 1.0 * numOfElements / numOfKeys;
+            }
+        });
+    }
+
+    @Override
+    public void processElement(StreamRecord<IN> element) throws Exception {
+        // get the key and value for the map bundle
+        final IN input = element.getValue();
+
+        final K bundleKey = getKey(input);
+
+        final V bundleValue = bundle.get(bundleKey);
+
+        // get a new value after adding this element to bundle
+        final V newBundleValue = function.addInput(bundleValue, input);
+
+        // update to map bundle
+        bundle.put(bundleKey, newBundleValue);
+
+        numOfElements++;
+        bundleTrigger.onElement(input);
+
+
+    }
+
+    @Override
+    public void finishBundle() throws Exception {
+        if (!bundle.isEmpty()) {
+            numOfElements = 0;
+            function.finishBundle(bundle, collector);
+            bundle.clear();
+        }
+        bundleTrigger.reset();
+    }
+
+    @Override
+    public void processWatermark(Watermark mark) throws Exception {
+        finishBundle();
+        super.processWatermark(mark);
+    }
+
+    @Override
+    public void prepareSnapshotPreBarrier(long checkpointId) throws Exception {
+        finishBundle();
+    }
+
+    @Override
+    public void close() throws Exception {
+        try {
+            finishBundle();
+        } finally {
+            Exception exception = null;
+
+            try {
+                super.close();
+                if (function != null) {
+                    FunctionUtils.closeFunction(function);//执行用户函数的close方法
+                }
+            } catch (InterruptedException interrupted) {
+                exception = interrupted;
+
+                Thread.currentThread().interrupt();
+            } catch (Exception e) {
+                exception = e;
+            }
+
+            if (exception != null) {
+                LOG.warn("Errors occurred while closing the BundleOperator.", exception);
+            }
+        }
+    }
+
+    /**
+     * Get the key for current processing element, which will be used as the map bundle's key.
+     */
+    protected abstract K getKey(final IN input) throws Exception;
+
+}
+
+```
+```java
+package study.flink.bundle.trigger;
+
+import org.apache.flink.annotation.Internal;
+
+import java.io.Serializable;
+
+/**
+ * A {@link BundleTrigger} determines when a bundle of input elements should be evaluated and
+ * trigger the callback which registered previously.
+ *
+ * @param <T> The input element type.
+ */
+@Internal
+public interface BundleTrigger<T> extends Serializable {
+
+    /**
+     * Register a callback which will be called once this trigger decides to finish this bundle.
+     */
+    void registerCallback(BundleTriggerCallback callback);
+
+    /**
+     * Called for every element that gets added to the bundle. If the trigger decides to start
+     * evaluate the input, {@link BundleTriggerCallback#finishBundle()} should be invoked.
+     *
+     * @param element The element that arrived.
+     */
+    void onElement(final T element) throws Exception;
+
+    /**
+     * Reset the trigger to its initiate status.
+     */
+    void reset();
+
+    String explain();
+}
+```
+```java
+package study.flink.bundle.trigger;
+
+import org.apache.flink.annotation.Internal;
+
+/**
+ * Interface for bundle trigger callbacks that can be registered to a {@link BundleTrigger}.
+ */
+@Internal
+public interface BundleTriggerCallback {
+
+    /**
+     * This method is invoked to finish current bundle and start a new one when the trigger was fired.
+     *
+     * @throws Exception This method may throw exceptions. Throwing an exception will cause the operation
+     * to fail and may trigger recovery.
+     */
+    void finishBundle() throws Exception;
+}
+```
+```java
+package study.flink.bundle.trigger;
+
+import org.apache.flink.annotation.Internal;
+
+import java.io.Serializable;
+
+/**
+ * A {@link BundleTrigger} determines when a bundle of input elements should be evaluated and
+ * trigger the callback which registered previously.
+ *
+ * @param <T> The input element type.
+ */
+@Internal
+public interface BundleTrigger<T> extends Serializable {
+
+    /**
+     * Register a callback which will be called once this trigger decides to finish this bundle.
+     */
+    void registerCallback(BundleTriggerCallback callback);
+
+    /**
+     * Called for every element that gets added to the bundle. If the trigger decides to start
+     * evaluate the input, {@link BundleTriggerCallback#finishBundle()} should be invoked.
+     *
+     * @param element The element that arrived.
+     */
+    void onElement(final T element) throws Exception;
+
+    /**
+     * Reset the trigger to its initiate status.
+     */
+    void reset();
+
+    String explain();
+}
+```
+
+
+
 ### Reference
+
+
+
 
 
 https://mp.weixin.qq.com/s?__biz=MzI0NTIxNzE1Ng==&mid=2651217184&idx=1&sn=65da0d5eb9a8f6495c7e53d8fc1e11f9&chksm=f2a31fcbc5d496dd13a6bca6169398d733b62b3980833e170793bde621d3876ae37637853f6b&mpshare=1&scene=1&srcid=0802JsqNqF81zenG78BCNI3i&sharer_sharetime=1564757862875&sharer_shareid=797dbcdd3a4e624875c639b16a4ef5d9&key=6cd3c34421b09586e61385eb3b6f3b9cfdd05b739bfeed6fc1e4fa68ca2a5aac712193b4d850a44facb6eaf6565d321066f90eeda6e466cb5da193e9f0ab82c45e7b5ef23e75c66a7bf850734d6ca5cb&ascene=1&uin=MjU3NDYyMjA0Mw%3D%3D&devicetype=Windows+7&version=62060833&lang=zh_CN&pass_ticket=gV0s9pD7VKBTVznGaxHDu4CFeto3SssDnyhskiwLmml7tHl5ipJiMG%2BZktlqrVEi

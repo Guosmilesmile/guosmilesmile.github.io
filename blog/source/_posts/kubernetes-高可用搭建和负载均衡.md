@@ -7,6 +7,7 @@ categories:
 
 ---
 
+
 ### 架构图
 ![image](https://note.youdao.com/yws/api/personal/file/77FAA4B774334108A5DB32F4270EB0FE?method=download&shareKey=0ffc47993e10884612f3ce3ffb9fec00)
 
@@ -64,7 +65,7 @@ global_defs {
 }
 
 vrrp_script check_kube {
-    script '/opt/keepalived-check/kube.sh'
+    script "/opt/keepalived-check/kube.sh"
     interval 3
     weight 2
 }
@@ -99,8 +100,8 @@ global_defs {
     router_id LVS
 }
 
-vrrp_script check_k8s {
-    script '/opt/keepalived-check/kube.sh'
+vrrp_script check_kube {
+    script "/opt/keepalived-check/kube.sh"
     interval 3
     weight 2
 }
@@ -120,7 +121,7 @@ vrrp_instance VI_1 {
     }
 
     track_script {   
-        check_k8s
+        check_kube
     }
 }
 
@@ -136,6 +137,17 @@ vrrp_instance VI_1 {
 #!/bin/bash
 
 /usr/bin/killall -0 kube-apiserver 2>/dev/null && exit 0 || exit 1
+
+```
+
+如果前面是架haproxy，那么用如下脚本。因为keepalive探测haproxy的死活，haproxy探测kube-apiserver的死活。
+
+/opt/keepalived-check/haproxy.sh
+
+```
+#!/bin/bash
+
+/usr/bin/killall -0 haproxy 2>/dev/null && exit 0 || exit 1
 
 ```
 
@@ -341,4 +353,3 @@ cp -i /etc/kubernetes/admin.conf /root/.kube/config
 ### 总结
 
 kubernetes的高可用，是通过访问vip：haproxy监听端口，vip会飘逸到可用的服务器上。然后通过haproxy转发到真实的端口，可能是本机也可能是其他master。haproxy本身具有探活功能。整个高可用就串起来了。
-
