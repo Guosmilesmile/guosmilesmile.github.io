@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/03/30/Flink-1-10-0-on-Kubernetes-%E6%90%AD%E5%BB%BA/</loc>
+    
+    <lastmod>2020-04-02T13:09:53.504Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/04/01/Reset-Weave/</loc>
     
     <lastmod>2020-04-01T12:03:55.490Z</lastmod>
@@ -19,13 +26,6 @@
     <loc>http://yoursite.com/2019/08/03/Flink-LocalAgg/</loc>
     
     <lastmod>2020-03-30T08:55:50.463Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yoursite.com/2020/03/30/Flink-1-10-0-on-Kubernetes-%E6%90%AD%E5%BB%BA/</loc>
-    
-    <lastmod>2020-03-30T08:36:35.187Z</lastmod>
     
   </url>
   
