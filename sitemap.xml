@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/04/26/clickhouse%E6%8C%87%E6%A0%87%E4%B8%8A%E6%8A%A5prometheus%E5%AF%B9%E6%8E%A5grafana/</loc>
+    
+    <lastmod>2020-04-26T13:08:44.035Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/01/22/flink%E6%8C%87%E6%A0%87%E5%AF%B9%E6%8E%A5prometheus%E5%92%8Cgrafana/</loc>
     
     <lastmod>2020-04-26T12:40:00.481Z</lastmod>
