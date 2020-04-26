@@ -204,7 +204,7 @@ curl -k '10.44.0.4:9091'
 
 ### grafana
 
-```yaml
+```json
 {
   "annotations": {
     "list": [
@@ -224,7 +224,7 @@ curl -k '10.44.0.4:9091'
   "gnetId": 11049,
   "graphTooltip": 0,
   "id": 2,
-  "iteration": 1584192110931,
+  "iteration": 1587904582481,
   "links": [],
   "panels": [
     {
@@ -525,7 +525,7 @@ curl -k '10.44.0.4:9091'
       },
       "gridPos": {
         "h": 6,
-        "w": 3,
+        "w": 4,
         "x": 12,
         "y": 1
       },
@@ -602,8 +602,8 @@ curl -k '10.44.0.4:9091'
       "fillGradient": 0,
       "gridPos": {
         "h": 6,
-        "w": 9,
-        "x": 15,
+        "w": 8,
+        "x": 16,
         "y": 1
       },
       "hiddenSeries": false,
@@ -635,7 +635,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_jobmanager_job_fullRestarts{job_name=~\"$job_name\"}",
+          "expr": "flink_jobmanager_job_fullRestarts{reportName=~\"$reportName\"}\r",
           "intervalFactor": 2,
           "legendFormat": "{{job_name}}",
           "refId": "A"
@@ -645,7 +645,7 @@ curl -k '10.44.0.4:9091'
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "job restart count TOP $topN",
+      "title": "job restart count ",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -717,14 +717,16 @@ curl -k '10.44.0.4:9091'
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
-        "max": false,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": false,
+        "max": true,
         "min": false,
         "rightSide": true,
         "show": true,
-        "sideWidth": 250,
+        "sideWidth": null,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -744,13 +746,13 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (flink_taskmanager_job_task_operator_numRecordsOutPerSecond{job_name=~\"$job_name\"})  by (operator_name) ",
+          "expr": "sum (flink_taskmanager_job_task_operator_numRecordsOutPerSecond{reportName=~\"$reportName\"})  by (operator_name) ",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
           "legendFormat": "{{operator_name}}",
           "metric": "flink_jobmanager_Status_JVM_Memory_Direct_MemoryUsed",
-          "refId": "A",
+          "refId": "B",
           "step": 20
         }
       ],
@@ -758,7 +760,7 @@ curl -k '10.44.0.4:9091'
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "numRecordsOutPerSecond",
+      "title": "Task Out TPS",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -774,7 +776,7 @@ curl -k '10.44.0.4:9091'
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "cps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -802,11 +804,11 @@ curl -k '10.44.0.4:9091'
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
-      "description": "umRecordsInPerSecond",
+      "description": "numRecordsInPerSecond",
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
+        "h": 8,
         "w": 24,
         "x": 0,
         "y": 17
@@ -816,14 +818,14 @@ curl -k '10.44.0.4:9091'
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
-        "max": false,
+        "current": true,
+        "max": true,
         "min": false,
         "rightSide": true,
         "show": true,
-        "sideWidth": 250,
+        "sideWidth": null,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -843,7 +845,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum (flink_taskmanager_job_task_operator_numRecordsInPerSecond{job_name=~\"$job_name\"})  by (operator_name) ",
+          "expr": "sum (flink_taskmanager_job_task_operator_numRecordsInPerSecond{reportName=~\"$reportName\"})  by (operator_name) ",
           "format": "time_series",
           "hide": false,
           "instant": false,
@@ -858,7 +860,7 @@ curl -k '10.44.0.4:9091'
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "numRecordsInPerSecond",
+      "title": "Task In TPS",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -874,7 +876,7 @@ curl -k '10.44.0.4:9091'
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "cps",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -887,7 +889,7 @@ curl -k '10.44.0.4:9091'
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -907,21 +909,21 @@ curl -k '10.44.0.4:9091'
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 24
+        "y": 25
       },
       "hiddenSeries": false,
       "id": 69,
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
-        "max": false,
+        "current": true,
+        "max": true,
         "min": false,
         "rightSide": true,
         "show": true,
-        "sideWidth": 250,
+        "sideWidth": null,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -939,7 +941,8 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "time() -  ( max(flink_taskmanager_job_task_currentInputWatermark{job_name=~\"$job_name\"}) by (task_name)/1000)",
+          "expr": "time() -  ( max(flink_taskmanager_job_task_currentInputWatermark{reportName=~\"$reportName\"}) by (task_name)/1000)",
+          "hide": false,
           "legendFormat": "{{task_name}}",
           "refId": "A"
         }
@@ -964,7 +967,7 @@ curl -k '10.44.0.4:9091'
       },
       "yaxes": [
         {
-          "format": "short",
+          "format": "dtdurations",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -977,7 +980,7 @@ curl -k '10.44.0.4:9091'
           "logBase": 1,
           "max": null,
           "min": null,
-          "show": true
+          "show": false
         }
       ],
       "yaxis": {
@@ -999,7 +1002,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 31
+        "y": 32
       },
       "hiddenSeries": false,
       "id": 56,
@@ -1032,7 +1035,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_taskmanager_job_task_Shuffle_Netty_Output_Buffers_outPoolUsage{job_name=~\"$job_name\"} *100 >50",
+          "expr": "flink_taskmanager_job_task_Shuffle_Netty_Output_Buffers_outPoolUsage{reportName=~\"$reportName\"} *100 >50",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 5,
@@ -1097,7 +1100,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 37
+        "y": 38
       },
       "hiddenSeries": false,
       "id": 62,
@@ -1130,7 +1133,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_taskmanager_job_task_Shuffle_Netty_Input_Buffers_inPoolUsage{job_name=~\"$job_name\"} *100  > 50",
+          "expr": "flink_taskmanager_job_task_Shuffle_Netty_Input_Buffers_inPoolUsage{reportName=~\"$reportName\"} *100  > 50",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 4,
@@ -1192,21 +1195,25 @@ curl -k '10.44.0.4:9091'
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 11,
+        "h": 8,
+        "w": 24,
         "x": 0,
-        "y": 43
+        "y": 44
       },
       "hiddenSeries": false,
       "id": 63,
       "legend": {
-        "avg": false,
-        "current": false,
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": false,
         "max": false,
-        "min": false,
-        "show": false,
+        "min": true,
+        "rightSide": true,
+        "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1226,11 +1233,11 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(flink_taskmanager_job_task_Shuffle_Netty_Input_Buffers_inputQueueLength{job_name=~\"$job_name\"}) by (host)",
+          "expr": "sum(flink_taskmanager_job_task_Shuffle_Netty_Input_Buffers_inputQueueLength{reportName=~\"$reportName\"}) by (host)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{host}}_{{subtask_index}}",
+          "legendFormat": "{{host}}",
           "metric": "flink_jobmanager_Status_JVM_Memory_Direct_MemoryUsed",
           "refId": "A",
           "step": 20
@@ -1288,21 +1295,23 @@ curl -k '10.44.0.4:9091'
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 7,
-        "w": 13,
-        "x": 11,
-        "y": 43
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 52
       },
       "hiddenSeries": false,
       "id": 60,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
-        "current": false,
-        "max": false,
+        "current": true,
+        "max": true,
         "min": false,
-        "show": false,
+        "rightSide": true,
+        "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1322,7 +1331,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(flink_taskmanager_job_task_Shuffle_Netty_Input_Buffers_inputQueueLength{job_name=~\"$job_name\"}) by (host)",
+          "expr": "sum(flink_taskmanager_job_task_Shuffle_Netty_Input_Buffers_inputQueueLength{reportName=~\"$reportName\"}) by (host)",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 4,
@@ -1385,7 +1394,7 @@ curl -k '10.44.0.4:9091'
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 50
+        "y": 60
       },
       "hiddenSeries": false,
       "id": 71,
@@ -1414,12 +1423,12 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "max (flink_taskmanager_job_task_operator_fetch_latency_avg{job_name=~\"$job_name\"}) by (task_name)",
+          "expr": "max (flink_taskmanager_job_task_operator_fetch_latency_avg{reportName=~\"$reportName\"}) by (task_name)",
           "legendFormat": "fetch_{{task_name}}",
           "refId": "A"
         },
         {
-          "expr": "max (flink_taskmanager_job_task_operator_commit_latency_avg{job_name=~\"$job_name\"}) by (task_name)",
+          "expr": "max (flink_taskmanager_job_task_operator_commit_latency_avg{reportName=~\"$reportName\"}) by (task_name)",
           "legendFormat": "commit_{{task_name}}",
           "refId": "B"
         }
@@ -1472,7 +1481,7 @@ curl -k '10.44.0.4:9091'
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 58
+        "y": 68
       },
       "id": 18,
       "panels": [],
@@ -1492,7 +1501,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 24,
         "x": 0,
-        "y": 59
+        "y": 69
       },
       "hiddenSeries": false,
       "id": 10,
@@ -1500,13 +1509,17 @@ curl -k '10.44.0.4:9091'
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
-        "max": false,
+        "current": true,
+        "hideEmpty": false,
+        "hideZero": true,
+        "max": true,
         "min": false,
         "rightSide": true,
         "show": true,
+        "sort": "max",
+        "sortDesc": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1525,23 +1538,24 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Old_Generation_Count[30s]) > 50",
+          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Old_Generation_Count{reportName=~\"$reportName\"}[30s]) ",
           "format": "time_series",
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{host}}_{{tm_id}}_老年代gc count",
+          "legendFormat": "{{host}}_老年代gc count",
           "metric": "flink_jobmanager_Status_JVM_GarbageCollector_Copy_Time",
           "refId": "A",
           "step": 2
         },
         {
-          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Young_Generation_Count[30s]) > 50",
+          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Young_Generation_Count{reportName=~\"$reportName\"}[30s]) ",
           "format": "time_series",
+          "hide": false,
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{host}}_{{tm_id}}_年轻代gc count",
+          "legendFormat": "{{host}}_年轻代gc count",
           "refId": "B"
         }
       ],
@@ -1599,20 +1613,24 @@ curl -k '10.44.0.4:9091'
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 65
+        "y": 75
       },
       "hiddenSeries": false,
       "id": 9,
       "legend": {
         "alignAsTable": true,
         "avg": false,
-        "current": false,
-        "max": false,
+        "current": true,
+        "hideEmpty": true,
+        "hideZero": true,
+        "max": true,
         "min": false,
         "rightSide": true,
         "show": true,
+        "sort": "max",
+        "sortDesc": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1631,23 +1649,23 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Young_Generation_Time[30s]) > 1000",
+          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Young_Generation_Time{reportName=~\"$reportName\"}[30s]) ",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{host}}_{{tm_id}}_年轻代gc时间",
+          "legendFormat": "{{host}}_年轻代gc时间",
           "metric": "flink_taskmanager_Status_JVM_GarbageCollector_G1_Young_Generation_Count",
           "refId": "B",
           "step": 2
         },
         {
-          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Old_Generation_Time[30s]) > 1000",
+          "expr": "delta(flink_taskmanager_Status_JVM_GarbageCollector_G1_Old_Generation_Time{reportName=~\"$reportName\"}[30s]) ",
           "format": "time_series",
           "hide": false,
           "instant": false,
           "interval": "",
           "intervalFactor": 1,
-          "legendFormat": "{{host}}_{{tm_id}}_老年代gc时间",
+          "legendFormat": "{{host}}_老年代gc时间",
           "refId": "A"
         }
       ],
@@ -1704,7 +1722,7 @@ curl -k '10.44.0.4:9091'
         "h": 7,
         "w": 24,
         "x": 0,
-        "y": 73
+        "y": 83
       },
       "hiddenSeries": false,
       "id": 26,
@@ -1734,7 +1752,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "sum(delta(flink_taskmanager_job_task_operator_numLateRecordsDropped{job_name=~\"$job_name\"}[30s]))",
+          "expr": "sum(delta(flink_taskmanager_job_task_operator_numLateRecordsDropped{reportName=~\"$reportName\"}[30s]))",
           "format": "time_series",
           "intervalFactor": 3,
           "legendFormat": "{{host}}_{{job_name}}_{{tm_id}}",
@@ -1789,7 +1807,7 @@ curl -k '10.44.0.4:9091'
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 80
+        "y": 90
       },
       "id": 24,
       "panels": [],
@@ -1806,21 +1824,25 @@ curl -k '10.44.0.4:9091'
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 12,
+        "h": 8,
+        "w": 23,
         "x": 0,
-        "y": 81
+        "y": 91
       },
       "hiddenSeries": false,
       "id": 41,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
-        "current": false,
+        "current": true,
+        "hideEmpty": true,
+        "hideZero": true,
         "max": false,
-        "min": false,
-        "show": false,
+        "min": true,
+        "rightSide": true,
+        "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1839,10 +1861,10 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_taskmanager_Status_JVM_Memory_NonHeap_Committed-flink_taskmanager_Status_JVM_Memory_NonHeap_Used  < 2000000",
+          "expr": "flink_taskmanager_Status_JVM_Memory_NonHeap_Committed-flink_taskmanager_Status_JVM_Memory_NonHeap_Used {reportName=~\"$reportName\"}",
           "format": "time_series",
           "intervalFactor": 2,
-          "legendFormat": "{{host}}:{{tm_id}}",
+          "legendFormat": "{{host}}",
           "metric": "flink_jobmanager_Status_JVM_Memory_Direct_MemoryUsed",
           "refId": "A",
           "step": 20
@@ -1852,7 +1874,7 @@ curl -k '10.44.0.4:9091'
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "TaskManger NonHeap Memory Available < 2m",
+      "title": "TaskManger NonHeap Memory Available ",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1899,24 +1921,25 @@ curl -k '10.44.0.4:9091'
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 81
+        "h": 9,
+        "w": 23,
+        "x": 0,
+        "y": 99
       },
       "hiddenSeries": false,
       "id": 6,
       "legend": {
+        "alignAsTable": true,
         "avg": false,
-        "current": false,
+        "current": true,
         "hideEmpty": false,
         "hideZero": false,
         "max": false,
-        "min": false,
-        "rightSide": false,
-        "show": false,
+        "min": true,
+        "rightSide": true,
+        "show": true,
         "total": false,
-        "values": false
+        "values": true
       },
       "lines": true,
       "linewidth": 1,
@@ -1935,11 +1958,11 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_taskmanager_Status_JVM_Memory_Heap_Max-flink_taskmanager_Status_JVM_Memory_Heap_Used < 1000000000",
+          "expr": "flink_taskmanager_Status_JVM_Memory_Heap_Max-flink_taskmanager_Status_JVM_Memory_Heap_Used{reportName=~\"$reportName\"}",
           "format": "time_series",
           "hide": false,
           "intervalFactor": 2,
-          "legendFormat": "{{host}}:{{tm_id}}",
+          "legendFormat": "{{host}}",
           "metric": "flink_taskmanager_Status_JVM_Memory_Direct_MemoryUsed",
           "refId": "A",
           "step": 4
@@ -1949,7 +1972,296 @@ curl -k '10.44.0.4:9091'
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "TaskManager Memory Available < 1G",
+      "title": "TaskManager Memory Available ",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$datasource",
+      "description": "TaskManager CPU USE",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 108
+      },
+      "hiddenSeries": false,
+      "id": 72,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.1.3",
+      "pointradius": 0.5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum ( rate(flink_taskmanager_Status_JVM_CPU_Time{reportName=~\"$reportName\"}[1m])) by (host) / 10000000",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TaskManager CPU USE TIME",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "cacheTimeout": null,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$datasource",
+      "description": "TaskManager CPU USE",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 116
+      },
+      "hiddenSeries": false,
+      "id": 49,
+      "legend": {
+        "alignAsTable": true,
+        "avg": false,
+        "current": true,
+        "max": true,
+        "min": false,
+        "rightSide": true,
+        "show": true,
+        "total": false,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pluginVersion": "6.1.3",
+      "pointradius": 0.5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "sum(flink_taskmanager_Status_JVM_CPU_Load{reportName=~\"$reportName\"}) by (host) *100",
+          "format": "time_series",
+          "hide": false,
+          "instant": false,
+          "interval": "",
+          "intervalFactor": 2,
+          "legendFormat": "{{host}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "TaskManager CPU USE",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percent",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "$datasource",
+      "description": "JobManager NonHeap Memory Available",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 23,
+        "x": 0,
+        "y": 124
+      },
+      "hiddenSeries": false,
+      "id": 40,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "connected",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "flink_jobmanager_Status_JVM_Memory_NonHeap_Committed{reportName=~\"$reportName\"}-flink_jobmanager_Status_JVM_Memory_NonHeap_Used{reportName=~\"$reportName\"}",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{host}}",
+          "metric": "flink_jobmanager_Status_JVM_Memory_Direct_MemoryUsed",
+          "refId": "A",
+          "step": 20
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "JobManager NonHeap Memory Available",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1995,10 +2307,10 @@ curl -k '10.44.0.4:9091'
       "fill": 0,
       "fillGradient": 0,
       "gridPos": {
-        "h": 6,
-        "w": 12,
+        "h": 9,
+        "w": 23,
         "x": 0,
-        "y": 87
+        "y": 133
       },
       "hiddenSeries": false,
       "id": 5,
@@ -2028,7 +2340,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_jobmanager_Status_JVM_Memory_Heap_Max-flink_jobmanager_Status_JVM_Memory_Heap_Used",
+          "expr": "flink_jobmanager_Status_JVM_Memory_Heap_Max-flink_jobmanager_Status_JVM_Memory_Heap_Used{reportName=~\"$reportName\"}",
           "format": "time_series",
           "interval": "",
           "intervalFactor": 1,
@@ -2080,106 +2392,13 @@ curl -k '10.44.0.4:9091'
       }
     },
     {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$datasource",
-      "description": "JobManager NonHeap Memory Available",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 12,
-        "x": 12,
-        "y": 87
-      },
-      "hiddenSeries": false,
-      "id": 40,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "connected",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pointradius": 5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "flink_jobmanager_Status_JVM_Memory_NonHeap_Committed-flink_jobmanager_Status_JVM_Memory_NonHeap_Used",
-          "format": "time_series",
-          "intervalFactor": 2,
-          "legendFormat": "{{host}}",
-          "metric": "flink_jobmanager_Status_JVM_Memory_Direct_MemoryUsed",
-          "refId": "A",
-          "step": 20
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "JobManager NonHeap Memory Available",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "bytes",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
       "collapsed": false,
       "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 93
+        "y": 142
       },
       "id": 67,
       "panels": [],
@@ -2196,10 +2415,10 @@ curl -k '10.44.0.4:9091'
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 8,
+        "h": 10,
+        "w": 23,
         "x": 0,
-        "y": 94
+        "y": 143
       },
       "hiddenSeries": false,
       "id": 42,
@@ -2229,7 +2448,7 @@ curl -k '10.44.0.4:9091'
       "steppedLine": false,
       "targets": [
         {
-          "expr": "flink_jobmanager_Status_JVM_Threads_Count",
+          "expr": "flink_jobmanager_Status_JVM_Threads_Count{reportName=~\"$reportName\"}",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{host}} jobManager live Thread counts",
@@ -2238,7 +2457,7 @@ curl -k '10.44.0.4:9091'
           "step": 2
         },
         {
-          "expr": "rate(flink_taskmanager_Status_JVM_Threads_Count[5m]) > 1",
+          "expr": "rate(flink_taskmanager_Status_JVM_Threads_Count{reportName=~\"$reportName\"}[5m]) > 1",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "{{host}} taskManger live Thread counts",
@@ -2295,7 +2514,7 @@ curl -k '10.44.0.4:9091'
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 102
+        "y": 153
       },
       "id": 37,
       "panels": [],
@@ -2315,7 +2534,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 103
+        "y": 154
       },
       "hiddenSeries": false,
       "id": 38,
@@ -2400,7 +2619,7 @@ curl -k '10.44.0.4:9091'
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "$datasource",
       "description": "Last CheckPoint Size",
       "fill": 1,
       "fillGradient": 0,
@@ -2408,7 +2627,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 103
+        "y": 154
       },
       "hiddenSeries": false,
       "id": 39,
@@ -2496,7 +2715,7 @@ curl -k '10.44.0.4:9091'
       "cacheTimeout": null,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "$datasource",
       "description": "numberOfFailedCheckpoints",
       "fill": 0,
       "fillGradient": 0,
@@ -2504,7 +2723,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 103
+        "y": 154
       },
       "hiddenSeries": false,
       "id": 35,
@@ -2592,7 +2811,7 @@ curl -k '10.44.0.4:9091'
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 109
+        "y": 160
       },
       "id": 20,
       "panels": [],
@@ -2604,7 +2823,7 @@ curl -k '10.44.0.4:9091'
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "$datasource",
       "description": "offset commit failures to Kafka",
       "fill": 1,
       "fillGradient": 0,
@@ -2612,7 +2831,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 110
+        "y": 161
       },
       "hiddenSeries": false,
       "id": 22,
@@ -2696,7 +2915,7 @@ curl -k '10.44.0.4:9091'
       "cacheTimeout": null,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "$datasource",
       "description": "job-downtime",
       "fill": 1,
       "fillGradient": 0,
@@ -2704,7 +2923,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 110
+        "y": 161
       },
       "hiddenSeries": false,
       "id": 43,
@@ -2790,7 +3009,7 @@ curl -k '10.44.0.4:9091'
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 116
+        "y": 167
       },
       "id": 52,
       "panels": [],
@@ -2810,7 +3029,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 117
+        "y": 168
       },
       "hiddenSeries": false,
       "id": 50,
@@ -2903,7 +3122,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 117
+        "y": 168
       },
       "hiddenSeries": false,
       "id": 53,
@@ -3005,7 +3224,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 16,
-        "y": 117
+        "y": 168
       },
       "hiddenSeries": false,
       "id": 54,
@@ -3098,7 +3317,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 123
+        "y": 174
       },
       "hiddenSeries": false,
       "id": 55,
@@ -3185,7 +3404,7 @@ curl -k '10.44.0.4:9091'
         "h": 1,
         "w": 24,
         "x": 0,
-        "y": 129
+        "y": 180
       },
       "id": 45,
       "panels": [],
@@ -3205,7 +3424,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 130
+        "y": 181
       },
       "hiddenSeries": false,
       "id": 31,
@@ -3307,7 +3526,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 8,
-        "y": 130
+        "y": 181
       },
       "hiddenSeries": false,
       "id": 33,
@@ -3406,102 +3625,6 @@ curl -k '10.44.0.4:9091'
       "dashLength": 10,
       "dashes": false,
       "datasource": "$datasource",
-      "description": "TaskManager CPU USE",
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 6,
-        "w": 8,
-        "x": 16,
-        "y": 130
-      },
-      "hiddenSeries": false,
-      "id": 49,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": false,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "links": [],
-      "nullPointMode": "connected",
-      "options": {
-        "dataLinks": []
-      },
-      "percentage": false,
-      "pluginVersion": "6.1.3",
-      "pointradius": 0.5,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "flink_taskmanager_System_CPU_Usage",
-          "format": "time_series",
-          "hide": false,
-          "instant": false,
-          "interval": "",
-          "intervalFactor": 2,
-          "legendFormat": "{{host}}_{{tm_id}}",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "TaskManager CPU USE",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "percent",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "cacheTimeout": null,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": "$datasource",
       "description": "JobManager CPU USE",
       "fill": 1,
       "fillGradient": 0,
@@ -3509,7 +3632,7 @@ curl -k '10.44.0.4:9091'
         "h": 6,
         "w": 8,
         "x": 0,
-        "y": 136
+        "y": 187
       },
       "hiddenSeries": false,
       "id": 48,
@@ -3592,7 +3715,7 @@ curl -k '10.44.0.4:9091'
       }
     }
   ],
-  "refresh": "",
+  "refresh": false,
   "schemaVersion": 21,
   "style": "dark",
   "tags": [
@@ -3602,7 +3725,6 @@ curl -k '10.44.0.4:9091'
     "list": [
       {
         "current": {
-          "selected": true,
           "text": "Prometheus",
           "value": "Prometheus"
         },
@@ -3621,21 +3743,22 @@ curl -k '10.44.0.4:9091'
       {
         "allValue": null,
         "current": {
-          "text": "LiveLinkAnalyseFlink",
+          "tags": [],
+          "text": "linkAnalyse",
           "value": [
-            "LiveLinkAnalyseFlink"
+            "linkAnalyse"
           ]
         },
         "datasource": "$datasource",
-        "definition": "label_values(job_name)",
+        "definition": "label_values(reportName)",
         "hide": 0,
         "includeAll": true,
         "label": "作业名称",
         "multi": true,
-        "name": "job_name",
+        "name": "reportName",
         "options": [],
-        "query": "label_values(job_name)",
-        "refresh": 1,
+        "query": "label_values(reportName)",
+        "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
         "sort": 0,
@@ -3648,7 +3771,7 @@ curl -k '10.44.0.4:9091'
     ]
   },
   "time": {
-    "from": "now-30m",
+    "from": "now-15m",
     "to": "now"
   },
   "timepicker": {
@@ -3679,7 +3802,7 @@ curl -k '10.44.0.4:9091'
   "timezone": "browser",
   "title": "Flink Dashboard",
   "uid": "-0rFuzoZk",
-  "version": 58
+  "version": 61
 }
 ```
 ### Reference

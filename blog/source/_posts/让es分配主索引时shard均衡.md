@@ -13,6 +13,15 @@ categories:
 
 由于es在分配shard的时候，会根据磁盘容量分配shard，导致会出现shard会集中在某一台机器上，出现很严重的倾斜
 
+
+
+node | shard
+---|---
+node1 | one main， two main，three main ， four main
+node2 | 
+node3 | one rep, two rep，three rep, four rep
+node4 | 
+
 ### 初始解决方法
 
 采用
@@ -27,6 +36,18 @@ index.routing.allocation.total_shards_per_node
 采用上面的方法，如果没有副本，会先填充磁盘使用低的机器，再填充其他机器。如果shard数量和机器数量没有调整好，会出现问题。
 
 如果有副本，由于es是先创建主shard，在生成副本，会出现磁盘使用率低的机器全是主shard，在高峰期写入会扛不住。
+
+
+node | shard
+---|---
+node1 | one main， two main
+node2 | three main ， four main
+node3 | one rep, two rep
+node4 | three rep, four rep
+
+
+主shard都落在同一台或者机器
+
 
 ### 解决方法
 
@@ -50,6 +71,10 @@ index.routing.allocation.total_shards_per_node
 cluster.routing.allocation.balance.shard = 0.01
 cluster.routing.allocation.balance.index = 0.99
 ```
+
+### Reference
+
+[高可用 Elasticsearch 集群的分片管理 （Shard）](https://www.jianshu.com/p/210465322e18)
 
 ### Reference
 
