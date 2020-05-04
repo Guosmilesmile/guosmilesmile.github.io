@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/05/04/Flink-sql-client-%E5%B0%9D%E8%AF%95%E5%92%8C%E5%A2%9E%E5%8A%A0%E6%8F%90%E4%BA%A4%E6%8C%87%E5%AE%9A%E9%9B%86%E7%BE%A4%E5%8A%9F%E8%83%BD/</loc>
+    
+    <lastmod>2020-05-04T10:20:18.324Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/04/26/clickhouse%E6%8C%87%E6%A0%87%E4%B8%8A%E6%8A%A5prometheus%E5%AF%B9%E6%8E%A5grafana/</loc>
     
     <lastmod>2020-04-26T13:08:44.035Z</lastmod>
