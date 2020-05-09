@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/05/09/Kubernetes-%E6%97%A5%E5%BF%97%E9%87%87%E9%9B%86-EFK/</loc>
+    
+    <lastmod>2020-05-09T12:44:56.587Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/</loc>
     
     <lastmod>2020-05-07T12:43:42.850Z</lastmod>
