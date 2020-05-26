@@ -2,16 +2,23 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
-    <loc>http://yoursite.com/2020/05/09/Kubernetes-%E6%97%A5%E5%BF%97%E9%87%87%E9%9B%86-EFK/</loc>
+    <loc>http://yoursite.com/2020/05/26/Harbor%E7%89%88%E6%9C%AC%E6%97%A0%E7%BC%9D%E5%8D%87%E7%BA%A7/</loc>
     
-    <lastmod>2020-05-09T12:48:49.047Z</lastmod>
+    <lastmod>2020-05-26T11:49:14.535Z</lastmod>
     
   </url>
   
   <url>
     <loc>http://yoursite.com/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/</loc>
     
-    <lastmod>2020-05-07T12:43:42.850Z</lastmod>
+    <lastmod>2020-05-26T11:47:50.896Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/05/09/Kubernetes-%E6%97%A5%E5%BF%97%E9%87%87%E9%9B%86-EFK/</loc>
+    
+    <lastmod>2020-05-09T12:48:49.047Z</lastmod>
     
   </url>
   
