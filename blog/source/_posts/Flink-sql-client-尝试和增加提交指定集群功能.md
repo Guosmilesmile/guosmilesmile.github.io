@@ -45,7 +45,7 @@ jobmanager.rpc.port: 6123
 
 sql-client-defaults.yaml
 
-```
+```yaml
 ################################################################################
 #  Licensed to the Apache Software Foundation (ASF) under one
 #  or more contributor license agreements.  See the NOTICE file

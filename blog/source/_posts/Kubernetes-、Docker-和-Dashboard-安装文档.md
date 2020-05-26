@@ -174,76 +174,17 @@ sysctl -p
 yum install -y kubelet-1.17.4 kubeadm-1.17.4 kubectl-1.17.4
 ```
 
-修改docker Cgroup Driver为systemd
+修改docker Cgroup Driver为systemd,并设置 docker 镜像
+/etc/docker/daemon.json
 
 ```
-# 在 master 节点和 worker 节点都要执行
-vim /usr/lib/systemd/system/docker.service
-```
-向其中添加
-
-```
---exec-opt native.cgroupdriver=systemd
-```
-```
-[Unit]
-Description=Docker Application Container Engine
-Documentation=https://docs.docker.com
-BindsTo=containerd.service
-After=network-online.target firewalld.service containerd.service
-Wants=network-online.target
-Requires=docker.socket
-
-[Service]
-Type=notify
-# the default is not to use systemd for cgroups because the delegate issues still
-# exists and systemd currently does not support the cgroup feature set required
-# for containers run by docker
-ExecStart=/usr/bin/dockerd -H fd:// --containerd=/run/containerd/containerd.sock --exec-opt native.cgroupdriver=systemd
-ExecReload=/bin/kill -s HUP $MAINPID
-TimeoutSec=0
-RestartSec=2
-Restart=always
-
-# Note that StartLimit* options were moved from "Service" to "Unit" in systemd 229.
-# Both the old, and new location are accepted by systemd 229 and up, so using the old location
-# to make them work for either version of systemd.
-StartLimitBurst=3
-
-# Note that StartLimitInterval was renamed to StartLimitIntervalSec in systemd 230.
-# Both the old, and new name are accepted by systemd 230 and up, so using the old name to make
-# this option work for either version of systemd.
-StartLimitInterval=60s
-
-# Having non-zero Limit*s causes performance problems due to accounting overhead
-# in the kernel. We recommend using cgroups to do container-local accounting.
-LimitNOFILE=infinity
-LimitNPROC=infinity
-LimitCORE=infinity
-
-# Comment TasksMax if your systemd version does not supports it.
-# Only systemd 226 and above support this option.
-TasksMax=infinity
-
-# set delegate yes so that systemd does not reset the cgroups of docker containers
-Delegate=yes
-
-# kill only the docker process, not all processes in the cgroup
-KillMode=process
-
-[Install]
-WantedBy=multi-user.target
-
+{
+"registry-mirrors": ["http://f1361db2.m.daocloud.io"],
+"exec-opts": ["native.cgroupdriver=systemd"]
+}
 ```
 
-设置 docker 镜像
 
-执行以下命令使用 docker 国内镜像，提高 docker 镜像下载速度和稳定性.如果您访问 https://hub.docker.io 速度非常稳定，亦可以跳过这个步骤
-
-```
-# 在 master 节点和 worker 节点都要执行
-curl -sSL https://get.daocloud.io/daotools/set_mirror.sh | sh -s http://f1361db2.m.daocloud.io
-```
 
 重启 docker，并启动 kubelet
 ```
@@ -304,8 +245,17 @@ kubectl apply -f https://docs.projectcalico.org/v3.6/getting-started/kubernetes/
 
 ### Reference
 ```
- kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')&disable-npc=true"
 ```
+
+### 网络组件用flannel 
+
+https://github.com/coreos/flannel
+
+```
+kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml
+```
+
 
 执行如下命令，等待 3-10 分钟，直到所有的容器组处于 Running 状态
 ```
