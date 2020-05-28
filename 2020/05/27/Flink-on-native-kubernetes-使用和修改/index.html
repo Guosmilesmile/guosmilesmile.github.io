@@ -105,7 +105,7 @@
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="背景目前flink on kubernetes的版本是standalone，资源释放的问题是一个比较头大的问题，如果作业cancel，程序开了别的线程或者内存出现泄漏，都会导致TM有问题。 native kubernetes的seesion模式可以比较好的解决，跟yarn模式一样，可以较好的解决该问题。 版本   组件 版本     flink 1.10.1   kubernetes 1.17.4">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-05-27T13:03:32.519Z">
+<meta property="og:updated_time" content="2020-05-28T14:15:10.355Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink on native kubernetes 使用和修改">
 <meta name="twitter:description" content="背景目前flink on kubernetes的版本是standalone，资源释放的问题是一个比较头大的问题，如果作业cancel，程序开了别的线程或者内存出现泄漏，都会导致TM有问题。 native kubernetes的seesion模式可以比较好的解决，跟yarn模式一样，可以较好的解决该问题。 版本   组件 版本     flink 1.10.1   kubernetes 1.17.4">
@@ -354,12 +354,24 @@
                 
               
 
-              <time title="创建时间：2020-05-27 21:00:26 / 修改时间：21:03:32" itemprop="dateCreated datePublished" datetime="2020-05-27T21:00:26+08:00">2020-05-27</time>
+              <time title="创建时间：2020-05-27 21:00:26" itemprop="dateCreated datePublished" datetime="2020-05-27T21:00:26+08:00">2020-05-27</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-05-28 22:15:10" itemprop="dateModified" datetime="2020-05-28T22:15:10+08:00">2020-05-28</time>
               
             
           </span>
@@ -482,7 +494,7 @@
 <h4 id="取消集群"><a href="#取消集群" class="headerlink" title="取消集群"></a>取消集群</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo &apos;stop&apos; | /usr/local/flink/flink-1.10.1/bin/kubernetes-session.sh -Dkubernetes.cluster-id=ipcode  -Dkubernetes.namespace=flink-ipcode  -Dexecution.attached=true</span><br></pre></td></tr></table></figure>
 <h3 id="flink-1-10-1-和kubernetes-1-17-4的冲突"><a href="#flink-1-10-1-和kubernetes-1-17-4的冲突" class="headerlink" title="flink 1.10.1 和kubernetes 1.17.4的冲突"></a>flink 1.10.1 和kubernetes 1.17.4的冲突</h3><p>镜像的jdk版本是java 8u252，目前Flink on K8s不能和java 8u252一起工作，<br>解法是使用8u252以下的jdk版本或者升级到jdk11</p>
 <p><a href="http://apache-flink.147419.n8.nabble.com/native-kubernetes-kubernetes-td3360.html" target="_blank" rel="noopener">http://apache-flink.147419.n8.nabble.com/native-kubernetes-kubernetes-td3360.html</a></p>
-<h3 id="flink-降低jdk版本，构建自己的镜像"><a href="#flink-降低jdk版本，构建自己的镜像" class="headerlink" title="flink 降低jdk版本，构建自己的镜像"></a>flink 降低jdk版本，构建自己的镜像</h3><p>从<a href="https://github.com/apache/flink-docker/tree/master/1.10/scala_2.11-debian上获取Dockerfile和docker-entrypoint.sh，放于同级目录。" target="_blank" rel="noopener">https://github.com/apache/flink-docker/tree/master/1.10/scala_2.11-debian上获取Dockerfile和docker-entrypoint.sh，放于同级目录。</a></p>
+<h3 id="flink-降低jdk版本，构建自己的镜像"><a href="#flink-降低jdk版本，构建自己的镜像" class="headerlink" title="flink 降低jdk版本，构建自己的镜像"></a>flink 降低jdk版本，构建自己的镜像</h3><p>从<a href="https://github.com/apache/flink-docker/tree/master/1.10/scala_2.11-debian" target="_blank" rel="noopener">https://github.com/apache/flink-docker/tree/master/1.10/scala_2.11-debian</a><br>上获取Dockerfile和docker-entrypoint.sh，放于同级目录。</p>
 <p>将jdk改为</p>
 <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FROM adoptopenjdk/openjdk8:jdk8u242-b08</span><br></pre></td></tr></table></figure>
 <p>apt-get多下载wget和gnupg，可以多下载需要的工具，例如vim等等</p>
