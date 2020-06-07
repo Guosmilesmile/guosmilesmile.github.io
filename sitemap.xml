@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/06/07/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-Timer/</loc>
+    
+    <lastmod>2020-06-07T08:29:33.465Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/06/03/Flink%E5%9F%BA%E4%BA%8Emailbox%E5%AE%9E%E7%8E%B0%E7%9A%84streamTask%E6%A8%A1%E5%9E%8B/</loc>
     
     <lastmod>2020-06-03T12:39:28.655Z</lastmod>

@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析-Timer">
+<meta property="og:url" content="http://yoursite.com/2020/06/07/Flink源码解析-Timer/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&shareKey=8ac8a0de69cbddd4233cd6706889388d">
+<meta property="og:updated_time" content="2020-06-07T08:29:33.465Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析-Timer">
+<meta name="twitter:description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&shareKey=8ac8a0de69cbddd4233cd6706889388d">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/06/07/Flink源码解析-Timer/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析-Timer | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/07/Flink源码解析-Timer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析-Timer
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-06-07 16:28:48 / 修改时间：16:29:33" itemprop="dateCreated datePublished" datetime="2020-06-07T16:28:48+08:00">2020-06-07</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&amp;shareKey=8ac8a0de69cbddd4233cd6706889388d" alt="image"></p>
+<p>来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onElement</span><span class="params">(Object element, <span class="keyword">long</span> timestamp, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (window.maxTimestamp() &lt;= ctx.getCurrentWatermark()) &#123;</span><br><span class="line">			<span class="comment">// if the watermark is already past the window fire immediately</span></span><br><span class="line">			<span class="comment">// allowedLateness的存在，会出现来的数据比水位线小，那么就直接出发计算</span></span><br><span class="line">			<span class="keyword">return</span> TriggerResult.FIRE;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			ctx.registerEventTimeTimer(window.maxTimestamp());</span><br><span class="line">			<span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onEventTime</span><span class="params">(<span class="keyword">long</span> time, TimeWindow window, TriggerContext ctx)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> time == window.maxTimestamp() ?</span><br><span class="line">			TriggerResult.FIRE :</span><br><span class="line">			TriggerResult.CONTINUE;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>ctx.registerEventTimeTimer(window.maxTimestamp());的内部调用了internalTimerService.registerEventTimeTimer(window, time);</p>
+<p>internalTimerService是一个接口</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">InternalTimerService</span>&lt;<span class="title">N</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">currentProcessingTime</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">currentWatermark</span><span class="params">()</span></span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">deleteProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">deleteEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line"> </span><br><span class="line">    <span class="comment">// ...</span></span><br></pre></td></tr></table></figure>
+<p>对应的实现类InternalTimerServiceImpl</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> ProcessingTimeService processingTimeService;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">final</span> KeyGroupedInternalPriorityQueue&lt;TimerHeapInternalTimer&lt;K, N&gt;&gt; processingTimeTimersQueue;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">final</span> KeyGroupedInternalPriorityQueue&lt;TimerHeapInternalTimer&lt;K, N&gt;&gt; eventTimeTimersQueue;</span><br><span class="line">   <span class="keyword">private</span> ScheduledFuture&lt;?&gt; nextTimer;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       InternalTimer&lt;K, N&gt; oldHead = processingTimeTimersQueue.peek();</span><br><span class="line">       <span class="keyword">if</span> (processingTimeTimersQueue.add(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace))) &#123;</span><br><span class="line">           <span class="keyword">long</span> nextTriggerTime = oldHead != <span class="keyword">null</span> ? oldHead.getTimestamp() : Long.MAX_VALUE;</span><br><span class="line">           <span class="keyword">if</span> (time &lt; nextTriggerTime) &#123;</span><br><span class="line">               <span class="keyword">if</span> (nextTimer != <span class="keyword">null</span>) &#123;</span><br><span class="line">                   nextTimer.cancel(<span class="keyword">false</span>);</span><br><span class="line">               &#125;</span><br><span class="line">               nextTimer = processingTimeService.registerTimer(time, <span class="keyword">this</span>);</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       eventTimeTimersQueue.add(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace));</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deleteProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       processingTimeTimersQueue.remove(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace));</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deleteEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       eventTimeTimersQueue.remove(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace));</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>注册Timer实际上就是为它们赋予对应的时间戳、key和命名空间，并将它们加入对应的优先队列。</p>
+<p>特别地，当注册基于处理时间的Timer时，会先检查要注册的Timer时间戳与当前在最小堆堆顶的Timer的时间戳的大小关系。如果前者比后者要早，就会用前者替代掉后者，因为处理时间是永远线性增长的，得先处理时间比较靠前的。</p>
+<h3 id="Timer注册好了之后是如何触发的呢？"><a href="#Timer注册好了之后是如何触发的呢？" class="headerlink" title="Timer注册好了之后是如何触发的呢？"></a>Timer注册好了之后是如何触发的呢？</h3><h4 id="eventTime"><a href="#eventTime" class="headerlink" title="eventTime"></a>eventTime</h4><p>事件时间与内部时间戳无关，而与水印有关.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">advanceWatermark</span><span class="params">(<span class="keyword">long</span> time)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		currentWatermark = time;</span><br><span class="line"></span><br><span class="line">		InternalTimer&lt;K, N&gt; timer;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">while</span> ((timer = eventTimeTimersQueue.peek()) != <span class="keyword">null</span> &amp;&amp; timer.getTimestamp() &lt;= time) &#123;</span><br><span class="line">			eventTimeTimersQueue.poll();</span><br><span class="line">			keyContext.setCurrentKey(timer.getKey());</span><br><span class="line">			triggerTarget.onEventTime(timer);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>从队列头一个个取，如果获取的时间小于水位线，该任务需要处理，那就poll出来，调用trigger的onEvnetTime函数，执行方法。</p>
+<p>向上追溯，回到InternalTimeServiceManager的同名方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">advanceWatermark</span><span class="params">(Watermark watermark)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (InternalTimerServiceImpl&lt;?, ?&gt; service : timerServices.values()) &#123;</span><br><span class="line">            service.advanceWatermark(watermark.getTimestamp());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>继续向上追溯，到达终点：算子基类AbstractStreamOperator中处理水印的方法processWatermark()。当水印到来时，就会按着上述调用链流转到InternalTimerServiceImpl中，并触发所有早于水印时间戳的Timer了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processWatermark</span><span class="params">(Watermark mark)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (timeServiceManager != <span class="keyword">null</span>) &#123;</span><br><span class="line">            timeServiceManager.advanceWatermark(mark);</span><br><span class="line">        &#125;</span><br><span class="line">        output.emitWatermark(mark);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h4 id="processTime"><a href="#processTime" class="headerlink" title="processTime"></a>processTime</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> time)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="comment">// null out the timer in case the Triggerable calls registerProcessingTimeTimer()</span></span><br><span class="line">		<span class="comment">// inside the callback.</span></span><br><span class="line">		nextTimer = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">		InternalTimer&lt;K, N&gt; timer;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">while</span> ((timer = processingTimeTimersQueue.peek()) != <span class="keyword">null</span> &amp;&amp; timer.getTimestamp() &lt;= time) &#123;</span><br><span class="line">			processingTimeTimersQueue.poll();</span><br><span class="line">			keyContext.setCurrentKey(timer.getKey());</span><br><span class="line">			triggerTarget.onProcessingTime(timer);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (timer != <span class="keyword">null</span> &amp;&amp; nextTimer == <span class="keyword">null</span>) &#123;</span><br><span class="line">			nextTimer = processingTimeService.registerTimer(timer.getTimestamp(), <span class="keyword">this</span>::onProcessingTime);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>当onProcessingTime()方法被触发回调时，就会按顺序从队列中获取到比时间戳time小的所有Timer，并挨个执行Triggerable.onProcessingTime()方法</p>
+<p>然后从获取的最新的赋值给nextTimer。</p>
+<p>这个方法用于构造函数的时候</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">processingTimeService.registerTimer(headTimer.getTimestamp(), <span class="keyword">this</span>::onProcessingTime);</span><br></pre></td></tr></table></figure>
+<p>来到ProcessingTimeService的实现类SystemProcessingTimeService，它是用调度线程池实现回调的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> ScheduledFuture&lt;?&gt; registerTimer(<span class="keyword">long</span> timestamp, ProcessingTimeCallback callback) &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// delay the firing of the timer by 1 ms to align the semantics with watermark. A watermark</span></span><br><span class="line">	<span class="comment">// T says we won't see elements in the future with a timestamp smaller or equal to T.</span></span><br><span class="line">	<span class="comment">// With processing time, we therefore need to delay firing the timer by one ms.</span></span><br><span class="line">	<span class="keyword">long</span> delay = Math.max(timestamp - getCurrentProcessingTime(), <span class="number">0</span>) + <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// we directly try to register the timer and only react to the status on exception</span></span><br><span class="line">	<span class="comment">// that way we save unnecessary volatile accesses for each timer</span></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> timerService.schedule(wrapOnTimerCallback(callback, timestamp), delay, TimeUnit.MILLISECONDS);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (RejectedExecutionException e) &#123;</span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">int</span> status = <span class="keyword">this</span>.status.get();</span><br><span class="line">		<span class="keyword">if</span> (status == STATUS_QUIESCED) &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">new</span> NeverCompleteFuture(delay);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (status == STATUS_SHUTDOWN) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Timer service is shut down"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// something else happened, so propagate the exception</span></span><br><span class="line">			<span class="keyword">throw</span> e;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ScheduledTask</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">      <span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (serviceStatus.get() != STATUS_ALIVE) &#123;</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		callback.onProcessingTime(nextTimestamp);</span><br><span class="line">	&#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">		exceptionHandler.handleException(ex);</span><br><span class="line">	&#125;</span><br><span class="line">	nextTimestamp += period;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>onProcessingTime()在TriggerTask线程中被回调，而TriggerTask线程按照Timer的时间戳来调度。到这里，处理时间Timer的情况就讲述完毕了。</p>
+<p>两个模式，其实主要是有一个TimersQueue的队列，将对应的window加入队列中，如果是processTime，就会在ScheduledThreadPoolExecutor中调度一个又一个线程，每个线程的以延迟时间作为调度的条件。event不需要调度线程，根据watermark来调度，新的watermark到来就会触发。</p>
+<p>如果出现timer的取消，就会删除TimersQueue的队列中的数据，但是ScheduledThreadPoolExecutor不会调出对应的数据，触发了找不到合适的数据而已。</p>
+<h3 id="HeapPriorityQueueSet"><a href="#HeapPriorityQueueSet" class="headerlink" title="HeapPriorityQueueSet"></a>HeapPriorityQueueSet</h3><p>doing</p>
+<h3 id="Referenece"><a href="#Referenece" class="headerlink" title="Referenece"></a>Referenece</h3><p><a href="https://blog.csdn.net/nazeniwaresakini/article/details/104220113" target="_blank" rel="noopener">https://blog.csdn.net/nazeniwaresakini/article/details/104220113</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/03/Flink基于mailbox实现的streamTask模型/" rel="next" title="Flink源码解析-基于mailbox实现的streamTask模型">
+                <i class="fa fa-chevron-left"></i> Flink源码解析-基于mailbox实现的streamTask模型
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">102</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">13</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Timer注册好了之后是如何触发的呢？"><span class="nav-number">1.</span> <span class="nav-text">Timer注册好了之后是如何触发的呢？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#eventTime"><span class="nav-number">1.1.</span> <span class="nav-text">eventTime</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#processTime"><span class="nav-number">1.2.</span> <span class="nav-text">processTime</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HeapPriorityQueueSet"><span class="nav-number">2.</span> <span class="nav-text">HeapPriorityQueueSet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Referenece"><span class="nav-number">3.</span> <span class="nav-text">Referenece</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2020</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
