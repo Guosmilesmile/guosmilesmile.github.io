@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/05/27/Flink-on-native-kubernetes-%E4%BD%BF%E7%94%A8%E5%92%8C%E4%BF%AE%E6%94%B9/</loc>
+    
+    <lastmod>2020-06-08T13:51:45.550Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/06/07/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-Timer/</loc>
     
     <lastmod>2020-06-07T08:29:33.465Z</lastmod>
@@ -19,13 +26,6 @@
     <loc>http://yoursite.com/2020/05/31/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-join%E5%8F%8C%E6%B5%81%E6%93%8D%E4%BD%9C%E7%9A%84%E5%AE%9E%E7%8E%B0/</loc>
     
     <lastmod>2020-05-31T12:26:07.387Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://yoursite.com/2020/05/27/Flink-on-native-kubernetes-%E4%BD%BF%E7%94%A8%E5%92%8C%E4%BF%AE%E6%94%B9/</loc>
-    
-    <lastmod>2020-05-28T14:15:10.355Z</lastmod>
     
   </url>
   
