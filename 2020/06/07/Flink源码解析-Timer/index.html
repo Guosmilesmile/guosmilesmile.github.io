@@ -106,7 +106,7 @@
 <meta property="og:description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&shareKey=8ac8a0de69cbddd4233cd6706889388d">
-<meta property="og:updated_time" content="2020-06-07T08:29:33.465Z">
+<meta property="og:updated_time" content="2020-06-09T14:02:41.051Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink源码解析-Timer">
 <meta name="twitter:description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
@@ -356,12 +356,24 @@
                 
               
 
-              <time title="创建时间：2020-06-07 16:28:48 / 修改时间：16:29:33" itemprop="dateCreated datePublished" datetime="2020-06-07T16:28:48+08:00">2020-06-07</time>
+              <time title="创建时间：2020-06-07 16:28:48" itemprop="dateCreated datePublished" datetime="2020-06-07T16:28:48+08:00">2020-06-07</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-06-09 22:02:41" itemprop="dateModified" datetime="2020-06-09T22:02:41+08:00">2020-06-09</time>
               
             
           </span>
@@ -450,8 +462,25 @@
 <p>onProcessingTime()在TriggerTask线程中被回调，而TriggerTask线程按照Timer的时间戳来调度。到这里，处理时间Timer的情况就讲述完毕了。</p>
 <p>两个模式，其实主要是有一个TimersQueue的队列，将对应的window加入队列中，如果是processTime，就会在ScheduledThreadPoolExecutor中调度一个又一个线程，每个线程的以延迟时间作为调度的条件。event不需要调度线程，根据watermark来调度，新的watermark到来就会触发。</p>
 <p>如果出现timer的取消，就会删除TimersQueue的队列中的数据，但是ScheduledThreadPoolExecutor不会调出对应的数据，触发了找不到合适的数据而已。</p>
-<h3 id="HeapPriorityQueueSet"><a href="#HeapPriorityQueueSet" class="headerlink" title="HeapPriorityQueueSet"></a>HeapPriorityQueueSet</h3><p>doing</p>
+<h3 id="TimerHeapInternalTimer"><a href="#TimerHeapInternalTimer" class="headerlink" title="TimerHeapInternalTimer"></a>TimerHeapInternalTimer</h3><p>在InternalTimerServiceImpl中有这么一个类TimerHeapInternalTimer。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** The key for which the timer is scoped. */</span></span><br><span class="line">	<span class="meta">@Nonnull</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> K key;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** The namespace for which the timer is scoped. */</span></span><br><span class="line">	<span class="meta">@Nonnull</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> N namespace;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** The expiration timestamp. */</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">long</span> timestamp;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * This field holds the current physical index of this timer when it is managed by a timer heap so that we can</span></span><br><span class="line"><span class="comment">	 * support fast deletes.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">transient</span> <span class="keyword">int</span> timerHeapIndex;</span><br></pre></td></tr></table></figure>
+<p>可见，Timer的scope有两个，一是数据的key，二是命名空间。但是用户不会感知到命名空间的存在，所以我们可以简单地认为Timer是以key级别注册的（Timer四大特点之1）。正确估计key的量可以帮助我们控制Timer的量。</p>
+<p>timerHeapIndex是这个Timer在优先队列里存储的下标。优先队列通常用二叉堆实现，而二叉堆可以直接用数组存储（科普文见这里<a href="https://www.jianshu.com/p/7e8ff8675639），所以让Timer持有其对应的下标可以较快地从队列里删除它。" target="_blank" rel="noopener">https://www.jianshu.com/p/7e8ff8675639），所以让Timer持有其对应的下标可以较快地从队列里删除它。</a></p>
+<p>comparePriorityTo()方法则用于确定Timer的优先级，显然Timer的优先队列是一个按Timer时间戳为关键字排序的最小堆。下面粗略看看该最小堆的实现。</p>
+<h3 id="HeapPriorityQueueSet"><a href="#HeapPriorityQueueSet" class="headerlink" title="HeapPriorityQueueSet"></a>HeapPriorityQueueSet</h3><p>在InternalTimeServiceManager用于管理各个InternalTimeService。</p>
+<p>有一个工厂用于创建各种Timer队列，根据设置的状态后台而定。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> &lt;N&gt; KeyGroupedInternalPriorityQueue&lt;TimerHeapInternalTimer&lt;K, N&gt;&gt; createTimerPriorityQueue(</span><br><span class="line">		String name,</span><br><span class="line">		TimerSerializer&lt;K, N&gt; timerSerializer) &#123;</span><br><span class="line">		<span class="keyword">return</span> priorityQueueSetFactory.create(</span><br><span class="line">			name,</span><br><span class="line">			timerSerializer);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>PriorityQueueSetFactory目前有heap和rockersdb，主要看heap的。</p>
+<p>要搞懂它，必须解释一下KeyGroup和KeyGroupRange。KeyGroup是Flink内部KeyedState的原子单位，亦即一些key的组合。一个Flink App的KeyGroup数量与最大并行度相同，将key分配到KeyGroup的操作则是经典的取hashCode+取模。而KeyGroupRange则是一些连续KeyGroup的范围，每个Flink sub-task都只包含一个KeyGroupRange。也就是说，KeyGroupRange可以看做当前sub-task在本地维护的所有key。</p>
+<p>解释完毕。容易得知，上述代码中的那个HashMap&lt;T, T&gt;[]数组就是在KeyGroup级别对key进行去重的容器，数组中每个元素对应一个KeyGroup。以插入一个Timer的流程为例：</p>
+<ul>
+<li>从Timer中取出key，计算该key属于哪一个KeyGroup；</li>
+<li>计算出该KeyGroup在整个KeyGroupRange中的偏移量，按该偏移量定位到HashMap&lt;T, T&gt;[]数组的下标；</li>
+<li>根据putIfAbsent()方法的语义，只有当对应HashMap不存在该Timer的key时，才将Timer插入最小堆中。</li>
+</ul>
+<h3 id="timer-on-RocksDb"><a href="#timer-on-RocksDb" class="headerlink" title="timer on RocksDb"></a>timer on RocksDb</h3><p>doing</p>
 <h3 id="Referenece"><a href="#Referenece" class="headerlink" title="Referenece"></a>Referenece</h3><p><a href="https://blog.csdn.net/nazeniwaresakini/article/details/104220113" target="_blank" rel="noopener">https://blog.csdn.net/nazeniwaresakini/article/details/104220113</a></p>
+<p><a href="http://aitozi.com/flink-timerservice-based-on-rocksdb.html" target="_blank" rel="noopener">http://aitozi.com/flink-timerservice-based-on-rocksdb.html</a></p>
 
       
     </div>
@@ -644,7 +673,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Timer注册好了之后是如何触发的呢？"><span class="nav-number">1.</span> <span class="nav-text">Timer注册好了之后是如何触发的呢？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#eventTime"><span class="nav-number">1.1.</span> <span class="nav-text">eventTime</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#processTime"><span class="nav-number">1.2.</span> <span class="nav-text">processTime</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HeapPriorityQueueSet"><span class="nav-number">2.</span> <span class="nav-text">HeapPriorityQueueSet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Referenece"><span class="nav-number">3.</span> <span class="nav-text">Referenece</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Timer注册好了之后是如何触发的呢？"><span class="nav-number">1.</span> <span class="nav-text">Timer注册好了之后是如何触发的呢？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#eventTime"><span class="nav-number">1.1.</span> <span class="nav-text">eventTime</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#processTime"><span class="nav-number">1.2.</span> <span class="nav-text">processTime</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TimerHeapInternalTimer"><span class="nav-number">2.</span> <span class="nav-text">TimerHeapInternalTimer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HeapPriorityQueueSet"><span class="nav-number">3.</span> <span class="nav-text">HeapPriorityQueueSet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#timer-on-RocksDb"><span class="nav-number">4.</span> <span class="nav-text">timer on RocksDb</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Referenece"><span class="nav-number">5.</span> <span class="nav-text">Referenece</span></a></li></ol></div>
             
 
           </div>
