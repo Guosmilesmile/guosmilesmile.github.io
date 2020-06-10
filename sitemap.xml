@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/06/10/Flink%E9%93%BE%E8%B7%AF%E5%BB%B6%E8%BF%9F%E7%9B%91%E6%8E%A7%E7%9A%84LatencyMarker%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0/</loc>
+    
+    <lastmod>2020-06-10T14:10:10.575Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/06/07/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-Timer/</loc>
     
     <lastmod>2020-06-10T13:44:05.956Z</lastmod>
