@@ -100,16 +100,16 @@
 
   <meta name="description" content="前言今天在群里看到有人问了这么一个问题，在open里面开了一个定时任务，每隔一段时间更新下数据，手动cancel掉作业后，发现这个定时任务还在执行。 同一个时间，在perfma上看到一个挺有趣的内存泄露的排查记录，连接如下： https://club.perfma.com/article/1555905 今天就来聊聊flink的对象不正确释放问题。 TaskManager架构看下Flink的整体的">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Flink 对象的不正确释放（反面教材">
+<meta property="og:title" content="Flink 对象的不正确释放和内存泄露（反面教材">
 <meta property="og:url" content="http://yoursite.com/2020/06/17/Flink-对象的不正确释放（反面教材/index.html">
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="前言今天在群里看到有人问了这么一个问题，在open里面开了一个定时任务，每隔一段时间更新下数据，手动cancel掉作业后，发现这个定时任务还在执行。 同一个时间，在perfma上看到一个挺有趣的内存泄露的排查记录，连接如下： https://club.perfma.com/article/1555905 今天就来聊聊flink的对象不正确释放问题。 TaskManager架构看下Flink的整体的">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/81D17722B2304165A251569F0CBCB2BA?method=download&shareKey=761e56d216c0832f923753677def7816">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/2F9F99093B4C44CDBEC9E22B691BFC54?method=download&shareKey=0fa604758cc8fb09e0fcec61a7cbf893">
-<meta property="og:updated_time" content="2020-06-17T14:28:34.047Z">
+<meta property="og:updated_time" content="2020-06-17T14:43:49.452Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Flink 对象的不正确释放（反面教材">
+<meta name="twitter:title" content="Flink 对象的不正确释放和内存泄露（反面教材">
 <meta name="twitter:description" content="前言今天在群里看到有人问了这么一个问题，在open里面开了一个定时任务，每隔一段时间更新下数据，手动cancel掉作业后，发现这个定时任务还在执行。 同一个时间，在perfma上看到一个挺有趣的内存泄露的排查记录，连接如下： https://club.perfma.com/article/1555905 今天就来聊聊flink的对象不正确释放问题。 TaskManager架构看下Flink的整体的">
 <meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/81D17722B2304165A251569F0CBCB2BA?method=download&shareKey=761e56d216c0832f923753677def7816">
 
@@ -128,7 +128,7 @@
   };
 </script>
 
-  <title>Flink 对象的不正确释放（反面教材 | Pray</title>
+  <title>Flink 对象的不正确释放和内存泄露（反面教材 | Pray</title>
   
 
 
@@ -331,7 +331,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">Flink 对象的不正确释放（反面教材
+          <h1 class="post-title" itemprop="name headline">Flink 对象的不正确释放和内存泄露（反面教材
 
               
             
@@ -357,7 +357,7 @@
                 
               
 
-              <time title="创建时间：2020-06-17 22:28:09 / 修改时间：22:28:34" itemprop="dateCreated datePublished" datetime="2020-06-17T22:28:09+08:00">2020-06-17</time>
+              <time title="创建时间：2020-06-17 22:28:09 / 修改时间：22:43:49" itemprop="dateCreated datePublished" datetime="2020-06-17T22:28:09+08:00">2020-06-17</time>
             
 
             
@@ -475,6 +475,12 @@
 <p>而且锁的是this，锁的是这个实例，而不是类，那么这个client也会多次创建。</p>
 <h3 id="多线程模型和多进程模型"><a href="#多线程模型和多进程模型" class="headerlink" title="多线程模型和多进程模型"></a>多线程模型和多进程模型</h3><p>多进程模型，每个task是一个进程，如果作业job进程就会跟着kill，可以很好的对资源进行控制和隔离</p>
 <p>多线程模型，可以更好的利用cpu，毕竟多进程间的数据共享等等都会产生cpu消耗。但是像flink这样TM一个jvm，如果job混合部署，一个job异常导致jvm崩溃，会连坐另一个job，如果一个job到处创建资源不释放，很容易影响整个集群。因此flink最好部署在yarn或者kubernetes上，一个job一个集群，实现隔离。</p>
+<h3 id="堆外内存"><a href="#堆外内存" class="headerlink" title="堆外内存"></a>堆外内存</h3><p>Flink大量使用堆外内存，堆外内存的使用可以提高计算能力，不用担心gc问题。</p>
+<p>Heap 空间可以认为是 JVM 向 OS 申请好的一段连续内存。Java 对象 new 的时候是从这段 JVM 已经申请的内存中划分出一部分，GC<br>时对象 finalize 也是将内存还给 JVM，并不会真的像 OS 去释放内存。</p>
+<p>Direct/Native 内存则是直接向 OS 申请的内存。持有该内存的对象在 finalize 的时候必须向 OS 释放这段内存，否则GC是无法自动释放该内存的，就会造成泄漏。<br>Direct 内存相比 Native 内存的区别主要有两点，一是申请时 JVM 会检查 MaxDirectMemorySize，二是 JVM 会保证DirectByteBuffer 被销毁的时候会向 OS 去释放这段内存。<br>Native 内存需要我们自己保证内存的释放，在 Flink 中由于申请到的 Native 内存也是封装在 DirectByteBuffer<br>里的，所以这部分内存的释放是通过给 DirectByteBuffer 设置 cleaner 实现的。详见<br><code>MemorySegmentFactory#allocateOffHeapUnsafeMemory</code></p>
+<p>那如果JVM因为异常挂掉或者因为内存超用被kill，会出现无法调用finalize向os释放这部分内存，导致新拉起的TM在该container中的可用堆外内存并没有那么多，资源不够导致雪崩继续挂，再拉起再挂。</p>
+<p>资源隔离和资源回收就显得很重要 </p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="http://apache-flink.147419.n8.nabble.com/flink-1-10-td2934.html#a2971" target="_blank" rel="noopener">http://apache-flink.147419.n8.nabble.com/flink-1-10-td2934.html#a2971</a></p>
 
       
     </div>
@@ -667,7 +673,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TaskManager架构"><span class="nav-number">2.</span> <span class="nav-text">TaskManager架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#task的生命周期"><span class="nav-number">3.</span> <span class="nav-text">task的生命周期</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题分析"><span class="nav-number">4.</span> <span class="nav-text">问题分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#为什么单例模式要使用volatile"><span class="nav-number">4.0.1.</span> <span class="nav-text">为什么单例模式要使用volatile</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多线程模型和多进程模型"><span class="nav-number">4.1.</span> <span class="nav-text">多线程模型和多进程模型</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TaskManager架构"><span class="nav-number">2.</span> <span class="nav-text">TaskManager架构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#task的生命周期"><span class="nav-number">3.</span> <span class="nav-text">task的生命周期</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#问题分析"><span class="nav-number">4.</span> <span class="nav-text">问题分析</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#为什么单例模式要使用volatile"><span class="nav-number">4.0.1.</span> <span class="nav-text">为什么单例模式要使用volatile</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多线程模型和多进程模型"><span class="nav-number">4.1.</span> <span class="nav-text">多线程模型和多进程模型</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#堆外内存"><span class="nav-number">4.2.</span> <span class="nav-text">堆外内存</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">4.3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
             
 
           </div>
