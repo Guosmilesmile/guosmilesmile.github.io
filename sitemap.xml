@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/07/05/Flink%E4%B8%AD%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2020-07-05T03:18:47.230Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/07/04/Flink-on-kubernetes-%E5%AE%95%E6%9C%BA%E6%81%A2%E5%A4%8D/</loc>
     
     <lastmod>2020-07-04T09:05:36.620Z</lastmod>
