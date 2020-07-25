@@ -105,7 +105,7 @@
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="背景现有集群版本是Flink 1.10.1，想要升级到社区最新的版本Flink 1.11.1. 踩坑过程No hostname could be resolved for ip address详细的社区邮件讨论过程如下： http://apache-flink.147419.n8.nabble.com/Flink-1-11-submit-job-timed-out-td4982.html 在提交作">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-07-23T11:59:36.099Z">
+<meta property="og:updated_time" content="2020-07-25T08:37:47.057Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Flink1.11升级填坑">
 <meta name="twitter:description" content="背景现有集群版本是Flink 1.10.1，想要升级到社区最新的版本Flink 1.11.1. 踩坑过程No hostname could be resolved for ip address详细的社区邮件讨论过程如下： http://apache-flink.147419.n8.nabble.com/Flink-1-11-submit-job-timed-out-td4982.html 在提交作">
@@ -354,12 +354,24 @@
                 
               
 
-              <time title="创建时间：2020-07-23 19:55:50 / 修改时间：19:59:36" itemprop="dateCreated datePublished" datetime="2020-07-23T19:55:50+08:00">2020-07-23</time>
+              <time title="创建时间：2020-07-23 19:55:50" itemprop="dateCreated datePublished" datetime="2020-07-23T19:55:50+08:00">2020-07-23</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-07-25 16:37:47" itemprop="dateModified" datetime="2020-07-25T16:37:47+08:00">2020-07-25</time>
               
             
           </span>
@@ -442,6 +454,7 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">.assignTimestampsAndWatermarks(WatermarkStrategy.&lt;StationLog&gt;forBoundedOutOfOrderness(Duration.ofSeconds(<span class="number">3</span>))</span><br><span class="line">				.withTimestampAssigner(<span class="keyword">new</span> SerializableTimestampAssigner&lt;StationLog&gt;() &#123;</span><br><span class="line">					<span class="meta">@Override</span></span><br><span class="line">					<span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(StationLog element, <span class="keyword">long</span> recordTimestamp)</span> </span>&#123;</span><br><span class="line">						<span class="keyword">return</span> element.getCallTime(); <span class="comment">//指定EventTime对应的字段</span></span><br><span class="line">					&#125;</span><br><span class="line">				&#125;)</span><br></pre></td></tr></table></figure>
 <p>如果有自定义，使用方式如下</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">.assignTimestampsAndWatermarks(((WatermarkStrategy)(ctx)-&gt;<span class="keyword">new</span> BoundOutOrdernessStrategy(<span class="number">60</span>,<span class="number">60</span>)</span><br><span class="line">				.withTimestampAssigner(<span class="keyword">new</span> SerializableTimestampAssigner&lt;StationLog&gt;() &#123;</span><br><span class="line">					<span class="meta">@Override</span></span><br><span class="line">					<span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(StationLog element, <span class="keyword">long</span> recordTimestamp)</span> </span>&#123;</span><br><span class="line">						<span class="keyword">return</span> element.getCallTime(); <span class="comment">//指定EventTime对应的字段</span></span><br><span class="line">					&#125;</span><br><span class="line">				&#125;)</span><br></pre></td></tr></table></figure>
+<h4 id="工具类"><a href="#工具类" class="headerlink" title="工具类"></a>工具类</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">WatermarkStrategys</span></span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt; T extends TimeEvent&gt; <span class="function">WatermarkStrategy&lt;T&gt; <span class="title">forBoundOutOfOrderness</span><span class="params">(<span class="keyword">long</span> futuerOutMs,<span class="keyword">long</span> maxOutofOrderMs)</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> ((WatermarkStrategy)(ctx)-&gt;<span class="keyword">new</span> BoundOutOrdernessStrategy(futuerOutMs,maxOutofOrderMs))</span><br><span class="line">            .withTimestampAssigner((SerializableTimestampAssigner&lt;T&gt;)(element,recordTimeStamp)-&gt; event.getEventTimeMs())</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">TimeEvent</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">getEventTimeMs</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 <h3 id="flink1-11，idea运行失败"><a href="#flink1-11，idea运行失败" class="headerlink" title="flink1.11，idea运行失败"></a>flink1.11，idea运行失败</h3><p>社区讨论见</p>
 <p><a href="http://apache-flink.147419.n8.nabble.com/flink1-11-idea-td4576.html" target="_blank" rel="noopener">http://apache-flink.147419.n8.nabble.com/flink1-11-idea-td4576.html</a></p>
 <p>作业的依赖从1.10.1升级到1.11.0，在idea运行的时候报错</p>
@@ -644,7 +657,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#踩坑过程"><span class="nav-number">2.</span> <span class="nav-text">踩坑过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#No-hostname-could-be-resolved-for-ip-address"><span class="nav-number">2.1.</span> <span class="nav-text">No hostname could be resolved for ip address</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新版本waterMark改动"><span class="nav-number">2.2.</span> <span class="nav-text">新版本waterMark改动</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flink1-11，idea运行失败"><span class="nav-number">2.3.</span> <span class="nav-text">flink1.11，idea运行失败</span></a></li></ol></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#踩坑过程"><span class="nav-number">2.</span> <span class="nav-text">踩坑过程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#No-hostname-could-be-resolved-for-ip-address"><span class="nav-number">2.1.</span> <span class="nav-text">No hostname could be resolved for ip address</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新版本waterMark改动"><span class="nav-number">2.2.</span> <span class="nav-text">新版本waterMark改动</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#工具类"><span class="nav-number">2.2.1.</span> <span class="nav-text">工具类</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flink1-11，idea运行失败"><span class="nav-number">2.3.</span> <span class="nav-text">flink1.11，idea运行失败</span></a></li></ol></li></ol></div>
             
 
           </div>
