@@ -5,7 +5,6 @@ tags:
 categories:
 	- Flink
 ---
-
 ## 背景
 
 现有集群版本是Flink 1.10.1，想要升级到社区最新的版本Flink 1.11.1.
@@ -196,6 +195,23 @@ dataStream.assignTimestampsAndWatermarks(
 ```
 
 
+
+####  工具类
+
+
+
+```java
+public class WatermarkStrategys{
+    public static < T extends TimeEvent> WatermarkStrategy<T> forBoundOutOfOrderness(long futuerOutMs,long maxOutofOrderMs){
+        return ((WatermarkStrategy)(ctx)->new BoundOutOrdernessStrategy(futuerOutMs,maxOutofOrderMs))
+            .withTimestampAssigner((SerializableTimestampAssigner<T>)(element,recordTimeStamp)-> event.getEventTimeMs())
+    }
+}
+
+public interface TimeEvent{
+    long getEventTimeMs();
+}
+```
 
 
 
