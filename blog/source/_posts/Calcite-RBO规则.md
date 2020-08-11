@@ -409,240 +409,95 @@ FROM sales s
 	LEFT JOIN product_class pc ON s.product_id = pc.product_id
 ```
 
-#### AGGREGATE_JOIN_REMOVE
-
-如果该联接是左联接或右联接，并且不计算任何聚集函数或所有聚集调用具有不同的联接，则删除该联接
-
+#### FILTER_REDUCE_EXPRESSIONS
 
 ```
-select distinct s.product_id from
-sales as s
-left join product as p
-on s.product_id = p.product_id
+SELECT `sal`
+FROM `emp`
+WHERE CASE WHEN `sal` = 1000 THEN CASE WHEN `sal` = 1000 THEN NULL ELSE 1 END IS NULL ELSE CASE WHEN `sal` = 2000 THEN NULL ELSE 1 END IS NULL END IS TRUE
 
-
-select distinct s.product_id from sales as s
- ```
- 
-#### AGGREGATE_JOIN_TRANSPOSE
-
-Rule that pushes an {@link Aggregate} past a {@link Join}.
-
-
-
-#### AGGREGATE_JOIN_TRANSPOSE_EXTENDED
-
-As {@link #AGGREGATE_JOIN_TRANSPOSE}, but extended to push down aggregate functions.
-
-
-#### AGGREGATE_UNION_TRANSPOSE
-
-Rule that pushes an {@link Aggregate} past a non-distinct {@link Union}
-
-
-#### AGGREGATE_UNION_AGGREGATE
-
-```java
-/** Rule that matches an {@link Aggregate} whose input is a {@link Union}
-   * one of whose inputs is an {@code Aggregate}.
-   *
-   * <p>Because it matches {@link RelNode} for each input of {@code Union}, it
-   * will create O(N ^ 2) matches, which may cost too much during the popMatch
-   * phase in VolcanoPlanner. If efficiency is a concern, we recommend that you
-   * use {@link #AGGREGATE_UNION_AGGREGATE_FIRST}
-   * and {@link #AGGREGATE_UNION_AGGREGATE_SECOND} instead. */
- ```
- 
-
- 
-#### AGGREGATE_UNION_AGGREGATE_FIRST
- 
- 
-#### AGGREGATE_UNION_AGGREGATE_SECOND
- 
- 
- 
-#### AggregateCaseToFilterRule
-
-```
-SELECT SUM(CASE WHEN gender = 'F' THEN salary END) FROM Emp
-
-become 
-
-SELECT SUM(salary) FILTER (WHERE gender = 'F')  FROM Emp
-
-
-```
- 
-#### CALC_MERGE
-
-合并LogicalCalc 
-
-#### 忽略calc相关
-
-
-#### FILTER_INTO_JOIN
-
-Rule that tries to push filter expressions into a join condition and into the inputs of the join.
-
-将join外层的filter下推到join左右两侧。谓词下推。
-
-#### FILTER_MERGE
-
-合并两个LogicalFilter
-
-
-#### FILTER_CALC_MERGE
-
-将Filter合并进LogicalCalc（LogicalCalc由Filter和Project组合成)
-
-#### FILTER_TO_CALC
-
-同PROJECT_TO_CALC
-
-
-
-#### FILTER_PROJECT_TRANSPOSE
-
-将filter下推到子查询中
-
-
-```
-SELECT `DATE_CD`, SUM(`IB0002001_CN000`)
-FROM (SELECT `IDX_ID`, `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`
-FROM `CUBE2L_IB00040010_CN000`
-GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`, `IDX_ID`) AS `IB0002001_CN000`
-WHERE `IDX_ID` IN ('IB0002001_CN000') AND `DATE_CD` = '2020-05-31'
-GROUP BY `DATE_CD`
-
-LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
-  LogicalProject(DATE_CD=[$1], IB0002001_CN000=[$2])
-    LogicalFilter(condition=[AND(=($0, 'IB0002001_CN000'), =($1, CAST('2020-05-31'):DATE NOT NULL))])
-      LogicalProject(IDX_ID=[$1], DATE_CD=[$0], IB0002001_CN000=[$2])
-        LogicalAggregate(group=[{0, 1}], IB0002001_CN000=[SUM($2)])
-          LogicalProject(DATE_CD=[$0], IDX_ID=[$3], IDX_VAL=[$1])
-            LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])
+LogicalProject(sal=[$0])
+  LogicalFilter(condition=[IS TRUE(CASE(=($0, 1000), IS NULL(CASE(=($0, 1000), null:INTEGER, 1)), IS NULL(CASE(=($0, 2000), null:INTEGER, 1))))])
+    LogicalTableScan(table=[[emp]])
 
 After --------------------
 
-LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
-  LogicalProject(DATE_CD=[$1], IB0002001_CN000=[$2])
-    LogicalProject(IDX_ID=[$1], DATE_CD=[$0], IB0002001_CN000=[$2])
-      LogicalFilter(condition=[AND(=($1, 'IB0002001_CN000'), =($0, CAST('2020-05-31'):DATE NOT NULL))])
-        LogicalAggregate(group=[{0, 1}], IB0002001_CN000=[SUM($2)])
-          LogicalProject(DATE_CD=[$0], IDX_ID=[$3], IDX_VAL=[$1])
-            LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])
+LogicalProject(sal=[$0])
+  LogicalFilter(condition=[OR(=($0, 1000), AND(CAST(=($0, 2000)):BOOLEAN NOT NULL, IS NOT TRUE(=($0, 1000))))])
+    LogicalTableScan(table=[[emp]])
 
-SELECT `DATE_CD`, SUM(`IB0002001_CN000`) AS `EXPR$1`
-FROM (SELECT `DATE_CD`, `IDX_ID`, SUM(`IDX_VAL`) AS `IB0002001_CN000`
-FROM `CUBE2L_IB00040010_CN000`
-GROUP BY `DATE_CD`, `IDX_ID`
-HAVING `IDX_ID` = 'IB0002001_CN000' AND `DATE_CD` = '2020-05-31') AS `t1`
-GROUP BY `DATE_CD`
+SELECT `sal`
+FROM `emp`
+WHERE `sal` = 1000 OR CAST(`sal` = 2000 AS BOOLEAN) AND `sal` = 1000 IS NOT TRUE
 
 ```
 
 
-#### FILTER_AGGREGATE_TRANSPOSE
+#### UNION_TO_DISTINCT
 
-将Filter下推到agg下
-
-以上面的规则为例，在加上FILTER_AGGREGATE_TRANSPOSE,可以将having的内容下推到where
+将union语句转为group by + union
 
 ```
-builder.addRuleInstance(CoreRules.FILTER_PROJECT_TRANSPOSE);
-builder.addRuleInstance(CoreRules.FILTER_AGGREGATE_TRANSPOSE);
-```
+SELECT *
+FROM `emp`
+UNION
+SELECT *
+FROM `emp`
 
-```
-SELECT `DATE_CD`, SUM(`IB0002001_CN000`)
-FROM (SELECT `IDX_ID`, `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`
-FROM `CUBE2L_IB00040010_CN000`
-GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`, `IDX_ID`) AS `IB0002001_CN000`
-WHERE `IDX_ID` IN ('IB0002001_CN000') AND `DATE_CD` = '2020-05-31'
-GROUP BY `DATE_CD`
-
-LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
-  LogicalProject(DATE_CD=[$1], IB0002001_CN000=[$2])
-    LogicalFilter(condition=[AND(=($0, 'IB0002001_CN000'), =($1, CAST('2020-05-31'):DATE NOT NULL))])
-      LogicalProject(IDX_ID=[$1], DATE_CD=[$0], IB0002001_CN000=[$2])
-        LogicalAggregate(group=[{0, 1}], IB0002001_CN000=[SUM($2)])
-          LogicalProject(DATE_CD=[$0], IDX_ID=[$3], IDX_VAL=[$1])
-            LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])
+LogicalUnion(all=[false])
+  LogicalProject(sal=[$0], deptno=[$1], empno=[$2])
+    LogicalTableScan(table=[[emp]])
+  LogicalProject(sal=[$0], deptno=[$1], empno=[$2])
+    LogicalTableScan(table=[[emp]])
 
 After --------------------
 
-LogicalAggregate(group=[{0}], EXPR$1=[SUM($1)])
-  LogicalProject(DATE_CD=[$1], IB0002001_CN000=[$2])
-    LogicalProject(IDX_ID=[$1], DATE_CD=[$0], IB0002001_CN000=[$2])
-      LogicalAggregate(group=[{0, 1}], IB0002001_CN000=[SUM($2)])
-        LogicalFilter(condition=[AND(=($1, 'IB0002001_CN000'), =($0, 2020-05-31))])
-          LogicalProject(DATE_CD=[$0], IDX_ID=[$3], IDX_VAL=[$1])
-            LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])
+LogicalAggregate(group=[{0, 1, 2}])
+  LogicalUnion(all=[true])
+    LogicalProject(sal=[$0], deptno=[$1], empno=[$2])
+      LogicalTableScan(table=[[emp]])
+    LogicalProject(sal=[$0], deptno=[$1], empno=[$2])
+      LogicalTableScan(table=[[emp]])
 
-SELECT `DATE_CD`, SUM(`IB0002001_CN000`) AS `EXPR$1`
-FROM (SELECT `DATE_CD`, SUM(`IDX_VAL`) AS `IB0002001_CN000`
-FROM (SELECT `DATE_CD`, `IDX_ID`, `IDX_VAL`
-FROM `CUBE2L_IB00040010_CN000`) AS `t`
-WHERE `IDX_ID` = 'IB0002001_CN000' AND `DATE_CD` = DATE '2020-05-31'
-GROUP BY `DATE_CD`, `IDX_ID`) AS `t3`
-GROUP BY `DATE_CD`
+SELECT `sal`, `deptno`, `empno`
+FROM (SELECT *
+FROM `emp`
+UNION ALL
+SELECT *
+FROM `emp`) AS `t1`
+GROUP BY `sal`, `deptno`, `empno`
 
-```
-
-#### PROJECT_FILTER_TRANSPOSE
-
-将project下推到filter之后
-
-目前没有想到这种场景
-
-#### PROJECT_JOIN_JOIN_REMOVE
-
-```
-SELECT s.product_id, pc.product_id
-FROM sales s
-	LEFT JOIN product p ON s.product_id = p.product_id
-	LEFT JOIN product_class pc ON s.product_id = pc.product_id
- 
- 
- becomes
-
-SELECT s.product_id, pc.product_id
-FROM sales s
-	LEFT JOIN product_class pc ON s.product_id = pc.product_id
-
-
- ```
- 
-### PROJECT_JOIN_REMOVE
-
-```
-SELECT s.product_id
-FROM sales s
-	LEFT JOIN product p ON s.product_id = p.product_id
-
-
-become
-
-select s.product_id from sales as s
 
 ```
 
 
-#### PROJECT_JOIN_TRANSPOSE
+#### JOIN_EXTRACT_FILTER
 
-将project下推到join
+将join转为where操作
 
-目前没有想到场景
+```
+SELECT `emp`.`sal`
+FROM `emp`
+INNER JOIN `dept` ON `emp`.`deptno` = `dept`.`deptno`
 
-#### PROJECT_MERGE
+LogicalProject(sal=[$0])
+  LogicalJoin(condition=[=($1, $4)], joinType=[inner])
+    LogicalTableScan(table=[[emp]])
+    LogicalTableScan(table=[[dept]])
 
-将project进行merge
+After --------------------
 
+LogicalProject(sal=[$0])
+  LogicalFilter(condition=[=($1, $4)])
+    LogicalJoin(condition=[true], joinType=[inner])
+      LogicalTableScan(table=[[emp]])
+      LogicalTableScan(table=[[dept]])
 
-#### JOIN_PROJECT_BOTH_TRANSPOSE
+SELECT `emp`.`sal`
+FROM `emp`,
+`dept`
+WHERE `emp`.`deptno` = `dept`.`deptno`
 
+Process finished with exit code 0
 
-#### JOIN_PROJECT_LEFT_TRANSPOSE
-
-#### JOIN_PROJECT_RIGHT_TRANSPOSE
+```
