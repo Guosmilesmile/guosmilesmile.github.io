@@ -108,7 +108,7 @@
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/F9E42F67D82149FEA470F837FABD8530?method=download&shareKey=3db6ce4e929c9b1efc0f836f4cac021c">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/3263AA99C4BD46C9843476646FCE3A4D?method=download&shareKey=c90b340b2ad6f9f3ec859f2e784ee1db">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/7F01E2D51AC34EF5B32CD131C5DA19FD?method=download&shareKey=4a133510b85532b7c7ab15d9a2085335">
-<meta property="og:updated_time" content="2020-08-11T03:09:30.566Z">
+<meta property="og:updated_time" content="2020-08-13T10:43:53.393Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Calcite RBO rule 解析和自定义">
 <meta name="twitter:description" content="什么是查询优化器查询优化器是传统数据库的核心模块，也是大数据计算引擎的核心模块，开源大数据引擎如 Impala、Presto、Drill、HAWQ、 Spark、Hive 等都有自己的查询优化器。Calcite 就是从 Hive 的优化器演化而来的。 优化器的作用：将解析器生成的关系代数表达式转换成执行计划，供执行引擎执行，在这个过程中，会应用一些规则优化，以帮助生成更高效的执行计划。 基于成本优">
@@ -358,12 +358,24 @@
                 
               
 
-              <time title="创建时间：2020-08-11 10:11:05 / 修改时间：11:09:30" itemprop="dateCreated datePublished" datetime="2020-08-11T10:11:05+08:00">2020-08-11</time>
+              <time title="创建时间：2020-08-11 10:11:05" itemprop="dateCreated datePublished" datetime="2020-08-11T10:11:05+08:00">2020-08-11</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-08-13 18:43:53" itemprop="dateModified" datetime="2020-08-13T18:43:53+08:00">2020-08-13</time>
               
             
           </span>
@@ -499,13 +511,10 @@
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">relBuilder.push 加入数据源</span><br><span class="line">relbuilder.project 加入投影 还可以agg filter 等等</span><br></pre></td></tr></table></figure>
 <p>通过call替换掉原来的tree</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">call.transformTo(node);</span><br></pre></td></tr></table></figure>
-<h3 id="常用函数"><a href="#常用函数" class="headerlink" title="常用函数"></a>常用函数</h3><p>RexUtil.composeDisjunction 以or合并两个规则</p>
-<p>RexUtil.composeConjunction 以and合并两个规则</p>
-<p>((HepRelVertex)rel.getInput(0)).getCurrentRel() 强转获取节点</p>
-<p>node.getCluster()可以继续get出很多东西getPlanner()、getRexBuilder()、getTypeFactory()</p>
-<p>RelDataType sqlType = typeFactory.createSqlType(SqlTypeName.ANY) 创建对应的类型</p>
-<p>rexBuilder.makeLiteral 创建常量  makeCall创建操作符等等</p>
-<p>SqlStdOperatorTable可以获取函数集合  SUM MIN MAX</p>
+<h3 id="常用函数"><a href="#常用函数" class="headerlink" title="常用函数"></a>常用函数</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">RexUtil.composeDisjunction 以or合并两个规则</span><br><span class="line"></span><br><span class="line">RexUtil.composeConjunction 以and合并两个规则</span><br><span class="line"></span><br><span class="line">((HepRelVertex)rel.getInput(0)).getCurrentRel() 强转获取节点</span><br><span class="line"></span><br><span class="line">node.getCluster()可以继续get出很多东西getPlanner()、getRexBuilder()、getTypeFactory()</span><br><span class="line"></span><br><span class="line">RelDataType sqlType = typeFactory.createSqlType(SqlTypeName.ANY) 创建对应的类型</span><br><span class="line"></span><br><span class="line">rexBuilder.makeLiteral 创建常量  makeCall创建操作符等等</span><br><span class="line"></span><br><span class="line">SqlStdOperatorTable可以获取函数集合  SUM MIN MAX</span><br><span class="line"></span><br><span class="line">创建agg  relBuilder.aggregate(relBuilder.groupKey(ImmutableBitset.range(aggCount)),aggCallLists)</span><br></pre></td></tr></table></figure>
+<h3 id="中文编码问题"><a href="#中文编码问题" class="headerlink" title="中文编码问题"></a>中文编码问题</h3><p>Calcite中默认使用的编码是ISO-8895-1，如果使用中文，就会出现编码问题，需要修改编码方式。</p>
+<p>通过在代码中增加解决</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">System.setProperty(&quot;saffron.default.charset&quot;,ConversionUtil.NATIVE_UTF16_CHARSET_NAME);</span><br></pre></td></tr></table></figure>
 <h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.cnblogs.com/fxjwind/p/11279080.html" target="_blank" rel="noopener">Calcite分析 - Rule</a></p>
 <p><a href="https://matt33.com/2019/03/17/apache-calcite-planner/" target="_blank" rel="noopener">Apache Calcite 优化器详解（二）</a></p>
 
@@ -704,7 +713,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#什么是查询优化器"><span class="nav-number">1.</span> <span class="nav-text">什么是查询优化器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于成本优化（CBO）"><span class="nav-number">2.</span> <span class="nav-text">基于成本优化（CBO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于规则优化（RBO）"><span class="nav-number">3.</span> <span class="nav-text">基于规则优化（RBO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#优化规则"><span class="nav-number">4.</span> <span class="nav-text">优化规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#谓词下推（Predicate-Pushdown）"><span class="nav-number">5.</span> <span class="nav-text">谓词下推（Predicate Pushdown）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常量折叠（Constant-Folding）"><span class="nav-number">6.</span> <span class="nav-text">常量折叠（Constant Folding）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何使用RBO"><span class="nav-number">7.</span> <span class="nav-text">如何使用RBO</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-初始化-HepProgram"><span class="nav-number">7.1.</span> <span class="nav-text">1. 初始化 HepProgram</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分析现有rule"><span class="nav-number">8.</span> <span class="nav-text">分析现有rule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自定义rule"><span class="nav-number">9.</span> <span class="nav-text">自定义rule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用函数"><span class="nav-number">10.</span> <span class="nav-text">常用函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">11.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#什么是查询优化器"><span class="nav-number">1.</span> <span class="nav-text">什么是查询优化器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于成本优化（CBO）"><span class="nav-number">2.</span> <span class="nav-text">基于成本优化（CBO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于规则优化（RBO）"><span class="nav-number">3.</span> <span class="nav-text">基于规则优化（RBO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#优化规则"><span class="nav-number">4.</span> <span class="nav-text">优化规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#谓词下推（Predicate-Pushdown）"><span class="nav-number">5.</span> <span class="nav-text">谓词下推（Predicate Pushdown）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常量折叠（Constant-Folding）"><span class="nav-number">6.</span> <span class="nav-text">常量折叠（Constant Folding）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何使用RBO"><span class="nav-number">7.</span> <span class="nav-text">如何使用RBO</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-初始化-HepProgram"><span class="nav-number">7.1.</span> <span class="nav-text">1. 初始化 HepProgram</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分析现有rule"><span class="nav-number">8.</span> <span class="nav-text">分析现有rule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自定义rule"><span class="nav-number">9.</span> <span class="nav-text">自定义rule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用函数"><span class="nav-number">10.</span> <span class="nav-text">常用函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#中文编码问题"><span class="nav-number">11.</span> <span class="nav-text">中文编码问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">12.</span> <span class="nav-text">Reference</span></a></li></ol></div>
             
 
           </div>
