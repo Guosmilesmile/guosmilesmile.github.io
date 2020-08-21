@@ -6,6 +6,8 @@ categories: Calcite
 ---
 
 
+
+
 ### 什么是查询优化器
 
 查询优化器是传统数据库的核心模块，也是大数据计算引擎的核心模块，开源大数据引擎如 Impala、Presto、Drill、HAWQ、 Spark、Hive 等都有自己的查询优化器。Calcite 就是从 Hive 的优化器演化而来的。
@@ -218,12 +220,219 @@ public class JoinAssociateRule extends RelOptRule implements TransformationRule
 
 ```
 
+对于Join结合律，调用super，即RelOptRule的构造函数,匹配的树状为
+```
+join
+   join 
+      any
+```
+```java
+ /**
+   * Creates a JoinAssociateRule.
+   */
+  public JoinAssociateRule(RelBuilderFactory relBuilderFactory) {
+    super(
+        operand(Join.class,
+            operand(Join.class, any()),
+            operand(RelSubset.class, any())),
+        relBuilderFactory, null);
+  }
+```
+operand也是一个树形结构，Top的Operand的类型是Join，他有两个children，其中一个也是join，另一个是RelSubset
+
+他们的children是any()
 
 
+```java
+public void onMatch(final RelOptRuleCall call) {
+    final Join topJoin = call.rel(0);
+    final Join bottomJoin = call.rel(1);
+    final RelNode relA = bottomJoin.getLeft();
+    final RelNode relB = bottomJoin.getRight();
+    final RelSubset relC = call.rel(2);
+    final RelOptCluster cluster = topJoin.getCluster();
+    final RexBuilder rexBuilder = cluster.getRexBuilder();
+
+    if (relC.getConvention() != relA.getConvention()) {
+      // relC could have any trait-set. But if we're matching say
+      // EnumerableConvention, we're only interested in enumerable subsets.
+      return;
+    }
+
+    //        topJoin
+    //        /     \
+    //   bottomJoin  C
+    //    /    \
+    //   A      B
+
+    final int aCount = relA.getRowType().getFieldCount();
+    final int bCount = relB.getRowType().getFieldCount();
+    final int cCount = relC.getRowType().getFieldCount();
+    final ImmutableBitSet aBitSet = ImmutableBitSet.range(0, aCount);
+    final ImmutableBitSet bBitSet =
+        ImmutableBitSet.range(aCount, aCount + bCount);
+
+    if (!topJoin.getSystemFieldList().isEmpty()) {
+      // FIXME Enable this rule for joins with system fields
+      return;
+    }
+
+    // If either join is not inner, we cannot proceed.
+    // (Is this too strict?)
+    if (topJoin.getJoinType() != JoinRelType.INNER
+        || bottomJoin.getJoinType() != JoinRelType.INNER) {
+      return;
+    }
+
+    // Goal is to transform to
+    //
+    //       newTopJoin
+    //        /     \
+    //       A   newBottomJoin
+    //               /    \
+    //              B      C
+
+    // Split the condition of topJoin and bottomJoin into a conjunctions. A
+    // condition can be pushed down if it does not use columns from A.
+    final List<RexNode> top = new ArrayList<>();
+    final List<RexNode> bottom = new ArrayList<>();
+    JoinPushThroughJoinRule.split(topJoin.getCondition(), aBitSet, top, bottom);
+    JoinPushThroughJoinRule.split(bottomJoin.getCondition(), aBitSet, top,
+        bottom);
+
+    // Mapping for moving conditions from topJoin or bottomJoin to
+    // newBottomJoin.
+    // target: | B | C      |
+    // source: | A       | B | C      |
+    final Mappings.TargetMapping bottomMapping =
+        Mappings.createShiftMapping(
+            aCount + bCount + cCount,
+            0, aCount, bCount,
+            bCount, aCount + bCount, cCount);
+    final List<RexNode> newBottomList =
+        new RexPermuteInputsShuttle(bottomMapping, relB, relC)
+            .visitList(bottom);
+    RexNode newBottomCondition =
+        RexUtil.composeConjunction(rexBuilder, newBottomList);
+
+    final Join newBottomJoin =
+        bottomJoin.copy(bottomJoin.getTraitSet(), newBottomCondition, relB,
+            relC, JoinRelType.INNER, false);
+
+    // Condition for newTopJoin consists of pieces from bottomJoin and topJoin.
+    // Field ordinals do not need to be changed.
+    RexNode newTopCondition = RexUtil.composeConjunction(rexBuilder, top);
+    @SuppressWarnings("SuspiciousNameCombination")
+    final Join newTopJoin =
+        topJoin.copy(topJoin.getTraitSet(), newTopCondition, relA,
+            newBottomJoin, JoinRelType.INNER, false);
+
+    call.transformTo(newTopJoin);
+  }
+```
 
 ### 自定义rule
 
+补充下基础概念
 
+RexLiteral表示常量，RexVariable表示变量，RexCall表示操作来连接Literal和Variable
+
+
+
+自定义rule，有三个主要的方法，一个是matches，一个是onMatch，一个是构造函数
+
+判断一个tree是否满足该rule，先从构造函数开始匹配，满足构造函数的tree，在满足matches方法，就可以进入到onMatch方法。
+
+matches方法默认是返回true，可以进行改写
+
+```java
+ @Override
+    public boolean matches(RelOptRuleCall call) {
+        return super.matches(call);
+    }
+```
+
+假设想要匹配
+
+```
+join
+  project
+```
+构造函数得这么写
+
+```
+ super(
+        operand(Join.class,
+            operand(Project.class, any())),
+        relBuilderFactory, null);
+```
+
+在onMatch中可以通过call.rel(x)获取构造函数中匹配的relNode
+
+```
+Join join = call.rel(0);
+Project project = call.rel(1);
+
+```
+
+通过一些强转可以获取对应的节点
+
+```java
+((HepRelVertex)rel.getInput(0)).getCurrentRel()
+```
+
+创建rebuild，生成node
+
+```java
+ RelBuilder relBuilder = call.builder();
+ RelNode build = relBuilder.build();
+```
+
+对relBuilder操作
+
+```java
+
+relBuilder.push 加入数据源
+relbuilder.project 加入投影 还可以agg filter 等等
+```
+
+
+通过call替换掉原来的tree
+
+```java
+call.transformTo(node);
+```
+
+
+### 常用函数
+
+```
+RexUtil.composeDisjunction 以or合并两个规则
+
+RexUtil.composeConjunction 以and合并两个规则
+
+((HepRelVertex)rel.getInput(0)).getCurrentRel() 强转获取节点
+
+node.getCluster()可以继续get出很多东西getPlanner()、getRexBuilder()、getTypeFactory()
+
+RelDataType sqlType = typeFactory.createSqlType(SqlTypeName.ANY) 创建对应的类型
+
+rexBuilder.makeLiteral 创建常量  makeCall创建操作符等等
+
+SqlStdOperatorTable可以获取函数集合  SUM MIN MAX
+
+创建agg  relBuilder.aggregate(relBuilder.groupKey(ImmutableBitset.range(aggCount)),aggCallLists)
+
+```
+### 中文编码问题
+
+Calcite中默认使用的编码是ISO-8895-1，如果使用中文，就会出现编码问题，需要修改编码方式。
+
+通过在代码中增加解决
+
+```
+System.setProperty("saffron.default.charset",ConversionUtil.NATIVE_UTF16_CHARSET_NAME);
+```
 
 
 ### Reference
