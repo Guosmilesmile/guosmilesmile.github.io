@@ -3,7 +3,6 @@ title: Flink on kubernetes 宕机恢复
 date: 2020-07-04 16:48:34
 tags:
 categories:
-	- Kubernetes
 	- Flink
 ---
 

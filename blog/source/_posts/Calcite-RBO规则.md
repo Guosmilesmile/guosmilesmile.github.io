@@ -501,3 +501,10 @@ WHERE `emp`.`deptno` = `dept`.`deptno`
 Process finished with exit code 0
 
 ```
+
+
+SELECT `deptno`, COUNT(`ename`) AS `EXPR$1`, MIN(`EXPR$2`) AS `EXPR$2`
+FROM (SELECT `deptno`, `ename`, SUM(`sal`) AS `EXPR$2`, GROUPING(`deptno`, `ename`) = 0 AS `$g_0`, GROUPING(`deptno`, `ename`) = 1 AS `$g_1`
+FROM `emp`
+GROUP BY GROUPING SETS((`deptno`, `ename`), `deptno`)) AS `t1`
+GROUP BY `deptno`
