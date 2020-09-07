@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2020/09/07/FlinkKafkaConsumer%E9%87%8D%E5%A4%8D%E6%B6%88%E8%B4%B9%E6%95%B0%E6%8D%AE%E9%97%AE%E9%A2%98/</loc>
+    
+    <lastmod>2020-09-07T07:37:21.686Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2020/09/06/Flink%E5%AE%9E%E6%97%B6%E7%BB%9F%E8%AE%A1%E7%B4%AF%E8%AE%A1PV%E6%88%96%E8%80%85UV/</loc>
     
     <lastmod>2020-09-06T08:23:22.425Z</lastmod>
