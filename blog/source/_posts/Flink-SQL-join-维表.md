@@ -34,6 +34,105 @@ FOR SYSTEM_TIME AS OF a.proctime
 * 维表和维表不能进行JOIN
 * 维表必须指定主键。维表JOIN时，ON的条件必须包含所有主键的等值条件
 
+
+### Demo
+
+维表存储在MySQL中，如下创建维表数据源：
+
+```
+CREATE TABLE dim_province (
+    province_id BIGINT,  -- 省份id
+    province_name  VARCHAR, -- 省份名称
+ region_name VARCHAR -- 区域名称
+) WITH (
+    'connector.type' = 'jdbc',
+    'connector.url' = 'jdbc:mysql://192.168.10.203:3306/mydw',
+    'connector.table' = 'dim_province',
+    'connector.driver' = 'com.mysql.jdbc.Driver',
+    'connector.username' = 'root',
+    'connector.password' = '123qwe',
+    'connector.lookup.cache.max-rows' = '5000',
+    'connector.lookup.cache.ttl' = '10min'
+);
+```
+
+事实表存储在kafka中，数据为用户点击行为，格式为JSON，具体数据样例如下：
+
+```
+{"user_id":63401,"item_id":6244,"cat_id":143,"action":"pv","province":3,"ts":1573445919}
+{"user_id":9164,"item_id":2817,"cat_id":611,"action":"fav","province":28,"ts":1573420486}
+```
+
+创建kafka数据源表，如下：
+
+
+```
+CREATE TABLE user_behavior (
+    user_id BIGINT, -- 用户id
+    item_id BIGINT, -- 商品id
+    cat_id BIGINT,  -- 品类id
+    action STRING,  -- 用户行为
+ province INT,   -- 用户所在的省份
+ ts     BIGINT,  -- 用户行为发生的时间戳
+    proctime as PROCTIME(),   -- 通过计算列产生一个处理时间列
+ eventTime AS TO_TIMESTAMP(FROM_UNIXTIME(ts, 'yyyy-MM-dd HH:mm:ss')), -- 事件时间
+    WATERMARK FOR eventTime as eventTime - INTERVAL '5' SECOND  -- 在eventTime上定义watermark
+) WITH (
+    'connector.type' = 'kafka',  -- 使用 kafka connector
+    'connector.version' = 'universal',  -- kafka 版本，universal 支持 0.11 以上的版本
+    'connector.topic' = 'user_behavior',  -- kafka主题
+    'connector.startup-mode' = 'earliest-offset',  -- 偏移量，从起始 offset 开始读取
+ 'connector.properties.group.id' = 'group1', -- 消费者组
+    'connector.properties.zookeeper.connect' = 'kms-2:2181,kms-3:2181,kms-4:2181',  -- zookeeper 地址
+    'connector.properties.bootstrap.servers' = 'kms-2:9092,kms-3:9092,kms-4:9092',  -- kafka broker 地址
+    'format.type' = 'json'  -- 数据源格式为 json
+);
+```
+创建MySQL的结果表，表示区域销量
+
+```
+CREATE TABLE region_sales_sink (
+    region_name STRING,  -- 区域名称
+    buy_cnt BIGINT  -- 销量
+) WITH (
+  
+    'connector.type' = 'jdbc',
+    'connector.url' = 'jdbc:mysql://192.168.10.203:3306/mydw',
+    'connector.table' = 'top_region', -- MySQL中的待插入数据的表
+    'connector.driver' = 'com.mysql.jdbc.Driver',
+    'connector.username' = 'root',
+    'connector.password' = '123qwe',
+    'connector.write.flush.interval' = '1s'
+);
+```
+
+用户行为数据与省份维表数据join
+
+```
+CREATE VIEW user_behavior_detail AS
+SELECT
+  u.user_id, 
+  u.item_id,
+  u.cat_id,
+  u.action,  
+  p.province_name,
+  p.region_name
+FROM user_behavior AS u LEFT JOIN dim_province FOR SYSTEM_TIME AS OF u.proctime AS p
+ON u.province = p.province_id;
+```
+
+计算区域的销量，并将计算结果写入MySQL
+
+```
+INSERT INTO region_sales_sink
+SELECT 
+  region_name,
+  COUNT(*) buy_cnt
+FROM user_behavior_detail
+WHERE action = 'buy'
+GROUP BY region_name;
+```
+
 ### 缓存机制
 
 
