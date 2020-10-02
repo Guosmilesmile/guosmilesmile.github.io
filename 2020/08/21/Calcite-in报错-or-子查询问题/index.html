@@ -101,11 +101,11 @@
   <meta name="description" content="这次遇到一种神奇的现象 123456SELECT `DATE_CD`, SUM(`IB0002001_CN000`)FROM (SELECT `IDX_ID`, `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`FROM `CUBE2L_IB000400">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Calcite in 过长报错">
-<meta property="og:url" content="http://yoursite.com/2020/08/21/Calcite-in-过长报错/index.html">
+<meta property="og:url" content="http://yoursite.com/2020/08/21/Calcite-in报错-or-子查询问题/index.html">
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="这次遇到一种神奇的现象 123456SELECT `DATE_CD`, SUM(`IB0002001_CN000`)FROM (SELECT `IDX_ID`, `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`FROM `CUBE2L_IB000400">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:updated_time" content="2020-08-21T14:38:55.507Z">
+<meta property="og:updated_time" content="2020-10-02T11:20:12.263Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Calcite in 过长报错">
 <meta name="twitter:description" content="这次遇到一种神奇的现象 123456SELECT `DATE_CD`, SUM(`IB0002001_CN000`)FROM (SELECT `IDX_ID`, `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`FROM `CUBE2L_IB000400">
@@ -115,7 +115,7 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2020/08/21/Calcite-in-过长报错/">
+  <link rel="canonical" href="http://yoursite.com/2020/08/21/Calcite-in报错-or-子查询问题/">
 
 
 
@@ -311,7 +311,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/21/Calcite-in-过长报错/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/21/Calcite-in报错-or-子查询问题/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -354,12 +354,24 @@
                 
               
 
-              <time title="创建时间：2020-08-21 22:38:20 / 修改时间：22:38:55" itemprop="dateCreated datePublished" datetime="2020-08-21T22:38:20+08:00">2020-08-21</time>
+              <time title="创建时间：2020-08-21 22:38:20" itemprop="dateCreated datePublished" datetime="2020-08-21T22:38:20+08:00">2020-08-21</time>
             
 
             
               
 
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-10-02 19:20:12" itemprop="dateModified" datetime="2020-10-02T19:20:12+08:00">2020-10-02</time>
               
             
           </span>
@@ -437,6 +449,9 @@
 <p>一直找下去就可以发现在构建planner的时候有可以配置的地方。</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">SqlToRelConverter.ConfigBuilder configBuilder = SqlToRelConverter.configBuilder();</span><br><span class="line">       SqlToRelConverter.Config config = configBuilder.withInSubQueryThreshold(Integer.MAX_VALUE).build()</span><br><span class="line">       </span><br><span class="line">FrameworkConfig frameworkConfig = Frameworks.newConfigBuilder()</span><br><span class="line"> .sqlToRelConverterConfig(config)</span><br><span class="line"> .build();</span><br></pre></td></tr></table></figure>
 <p>完整代码<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">SqlParser.ConfigBuilder parserConfig = SqlParser.configBuilder();</span><br><span class="line">       SqlParser.Config build = parserConfig.setCaseSensitive(<span class="keyword">false</span>).setLex(Lex.MYSQL).build();</span><br><span class="line">       SqlToRelConverter.ConfigBuilder configBuilder = SqlToRelConverter.configBuilder();</span><br><span class="line">       SqlToRelConverter.Config config = configBuilder.withInSubQueryThreshold(Integer.MAX_VALUE).build();</span><br><span class="line"></span><br><span class="line">       FrameworkConfig frameworkConfig = Frameworks.newConfigBuilder()</span><br><span class="line">               .parserConfig(build)</span><br><span class="line">               .sqlToRelConverterConfig(config)</span><br><span class="line">               .defaultSchema(rootSchema)</span><br><span class="line">               .build();</span><br></pre></td></tr></table></figure></p>
+<h3 id="如果不想让子查询转为join"><a href="#如果不想让子查询转为join" class="headerlink" title="如果不想让子查询转为join"></a>如果不想让子查询转为join</h3><p>一般情况下，如果出现如下sql<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">DATE_CD in ( <span class="keyword">SELECT</span> DATE_CD <span class="keyword">FROM</span> DIM_DATE <span class="keyword">WHERE</span> DATE_CD = <span class="string">'2020-05-31'</span> )</span><br></pre></td></tr></table></figure></p>
+<p> calcite 会自动将语句转为join语句，可以通过下面的开关关闭该功能。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">SqlToRelConverter.Config config = configBuilder.withExpand(false)</span><br><span class="line">               .build();</span><br></pre></td></tr></table></figure>
 
       
     </div>
@@ -637,7 +652,7 @@
             
 
             
-              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#方法一，修改规则，不适配LogicalValues即可"><span class="nav-number">1.</span> <span class="nav-text">方法一，修改规则，不适配LogicalValues即可</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#方法二，过滤条件不转为子查询"><span class="nav-number">2.</span> <span class="nav-text">方法二，过滤条件不转为子查询</span></a></li></ol></div>
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#方法一，修改规则，不适配LogicalValues即可"><span class="nav-number">1.</span> <span class="nav-text">方法一，修改规则，不适配LogicalValues即可</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#方法二，过滤条件不转为子查询"><span class="nav-number">2.</span> <span class="nav-text">方法二，过滤条件不转为子查询</span></a></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#如果不想让子查询转为join"><span class="nav-number"></span> <span class="nav-text">如果不想让子查询转为join</span></a></li></div>
             
 
           </div>
