@@ -124,3 +124,24 @@ public class SqlToelConverter{
 ```
 
 
+### 如果不想让子查询转为join
+
+
+一般情况下，如果出现如下sql
+```sql
+
+DATE_CD in ( SELECT DATE_CD FROM DIM_DATE WHERE DATE_CD = '2020-05-31' ) 
+ ```
+ 
+ 
+ calcite 会自动将语句转为join语句，可以通过下面的开关关闭该功能。
+ 
+```
+
+ SqlToRelConverter.Config config = configBuilder.withExpand(false)
+                .build();
+
+
+```
+
+
