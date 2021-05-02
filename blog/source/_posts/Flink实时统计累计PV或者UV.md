@@ -71,6 +71,7 @@ categories:
 
 
 
+
 ### Flink SQL
 
 每分钟统计当日0时到当前的累计UV数.
@@ -134,6 +135,17 @@ SELECT DATE_FORMAT(TUMBLE_START(t, INTERVAL '1' MINUTE) , 'yyyy-MM-dd HH:mm:00')
 FROM user_behavior group by  TUMBLE(ts, INTERVAL '1' MINUTE);
 
 ```
+
+Emit的原理是这样子的：
+- *当某个key*下面来了第一条数据的时候，注册一个emit delay之后的*处理时间定时器*；
+- 当定时器到了的时候，
+  - 检查当前的key下的聚合结果跟上次输出的结果是否有变化，
+     - 如果有变化，就发送-[old], +[new] 两条结果到下游；
+     - 如果是*没有变化，则不做任何处理*；
+  - 再次注册一个新的emit delay之后的处理时间定时器。
+
+
+
 
 
 ### Reference
