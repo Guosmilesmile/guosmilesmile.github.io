@@ -24,7 +24,7 @@ categories: Flink
 
 #### Flink 哪些场景需要对数据进行序列化和反序列化？
 
-## reduce导致yarn容器挂掉
+
 
 * 上下游数据传输
 * 读写 RocksDB 中的 State 数据
@@ -125,13 +125,13 @@ kryo 代码中的 MapSerializer 类封装了通用的 Map 类型序列化和反�
 序列化逻辑：
 write 方法精简后的截图如下所示，大概逻辑：调用 Map 的迭代器，将 map 中所有 Key Value 数据遍历出来，依次序列化。
 
-![image](https://mmbiz.qpic.cn/mmbiz_png/7iahLicCzg1mcLQE7RVmxw8JqbYVuSsC7AywMwsmbGnPAD4BquX2dvXxxvbpPzf6hF6XamRrAl3LdGtibiaWpnibbng/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+![image](https://note.youdao.com/yws/api/personal/file/9B63B913DB874CCABFAD9E75CE22A5F8?method=download&shareKey=17d9e936ae19575a4235166879e962e0)
 
 
 反序列化逻辑：
 read 方法精简后的截图如下所示，大概逻辑：反序列化出所有 Key Value 的数据，依次 put 到 Map 中。
 
-![image](https://mmbiz.qpic.cn/mmbiz_png/7iahLicCzg1mcLQE7RVmxw8JqbYVuSsC7AIktQrTDQlrhfP67MWZ1VLrAZH0aWTGV1n4QyBicORp8HWHNsQbfycBw/640?wx_fmt=png&tp=webp&wxfrom=5&wx_lazy=1&wx_co=1)
+![image](https://note.youdao.com/yws/api/personal/file/908FABBA717C463CA8508EA7D34392CF?method=download&shareKey=ab6483fd0896b68180dcc2e7ec2d0d8f)
 
 由上述原理分析可知：
 
@@ -222,6 +222,9 @@ env.getConfig().registerTypeWithKryoSerializer(Class.forName(className),
                                                Class.forName(serializerClassName));
 ```
 
+
+
+## reduce导致yarn容器挂掉
 
 1. 服务器load值500+，无法界定是因为load值高导致容器被yarn认为异常剔除还是其他原因。
 2. cpu普通很低
