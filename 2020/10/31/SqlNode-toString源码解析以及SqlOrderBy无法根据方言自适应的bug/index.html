@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="主要方法来来自于SqlNode.toSqlString123456public SqlString toSqlString(UnaryOperator&amp;lt;SqlWriterConfig&amp;gt; transform) &amp;#123;    final SqlWriterConfig config = transform.apply(SqlPrettyWriter.config());    Sql">
+<meta property="og:type" content="article">
+<meta property="og:title" content="SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug">
+<meta property="og:url" content="http://yoursite.com/2020/10/31/SqlNode-toString源码解析以及SqlOrderBy无法根据方言自适应的bug/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="主要方法来来自于SqlNode.toSqlString123456public SqlString toSqlString(UnaryOperator&amp;lt;SqlWriterConfig&amp;gt; transform) &amp;#123;    final SqlWriterConfig config = transform.apply(SqlPrettyWriter.config());    Sql">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-10-31T07:59:03.185Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug">
+<meta name="twitter:description" content="主要方法来来自于SqlNode.toSqlString123456public SqlString toSqlString(UnaryOperator&amp;lt;SqlWriterConfig&amp;gt; transform) &amp;#123;    final SqlWriterConfig config = transform.apply(SqlPrettyWriter.config());    Sql">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/10/31/SqlNode-toString源码解析以及SqlOrderBy无法根据方言自适应的bug/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/10/31/SqlNode-toString源码解析以及SqlOrderBy无法根据方言自适应的bug/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-10-31 15:58:44 / 修改时间：15:59:03" itemprop="dateCreated datePublished" datetime="2020-10-31T15:58:44+08:00">2020-10-31</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Calcite/" itemprop="url" rel="index"><span itemprop="name">Calcite</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>主要方法来来自于SqlNode.toSqlString<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> SqlString <span class="title">toSqlString</span><span class="params">(UnaryOperator&lt;SqlWriterConfig&gt; transform)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> SqlWriterConfig config = transform.apply(SqlPrettyWriter.config());</span><br><span class="line">    SqlPrettyWriter writer = <span class="keyword">new</span> SqlPrettyWriter(config);</span><br><span class="line">    unparse(writer, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    <span class="keyword">return</span> writer.toSqlString();</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>主要的方法来源于unparse方法，这个方法在sqlNode中的定义如下.</p>
+<p>将此节点的SQL表示写到写入器,leftPrec和rightPrec参数为我们提供了足够的上下文来决定是否需要将表达式用括号括起来。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Writes a SQL representation of this node to a writer.</span></span><br><span class="line"><span class="comment">   * &lt;p&gt;The &lt;code&gt;leftPrec&lt;/code&gt; and &lt;code&gt;rightPrec&lt;/code&gt; parameters give</span></span><br><span class="line"><span class="comment">   * us enough context to decide whether we need to enclose the expression in</span></span><br><span class="line"><span class="comment">   * parentheses. For example, we need parentheses around "2 + 3" if preceded</span></span><br><span class="line"><span class="comment">   * by "5 *". This is because the precedence of the "*" operator is greater</span></span><br><span class="line"><span class="comment">   * than the precedence of the "+" operator.</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * &lt;p&gt;The algorithm handles left- and right-associative operators by giving</span></span><br><span class="line"><span class="comment">   * them slightly different left- and right-precedence.</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * &lt;p&gt;If &#123;<span class="doctag">@link</span> SqlWriter#isAlwaysUseParentheses()&#125; is true, we use</span></span><br><span class="line"><span class="comment">   * parentheses even when they are not required by the precedence rules.</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * &lt;p&gt;For the details of this algorithm, see &#123;<span class="doctag">@link</span> SqlCall#unparse&#125;.</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> writer    Target writer</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> leftPrec  The precedence of the &#123;<span class="doctag">@link</span> SqlNode&#125; immediately</span></span><br><span class="line"><span class="comment">   *                  preceding this node in a depth-first scan of the parse</span></span><br><span class="line"><span class="comment">   *                  tree</span></span><br><span class="line"><span class="comment">   * <span class="doctag">@param</span> rightPrec The precedence of the &#123;<span class="doctag">@link</span> SqlNode&#125; immediately</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">unparse</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      SqlWriter writer,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">int</span> leftPrec,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">int</span> rightPrec)</span></span>;</span><br></pre></td></tr></table></figure>
+<p>具体实现取决于子类的node,最基础的实现是SqlCall.unparse。SqlSelect/SqlOrderBy都有自己的实现，得到不同的sql</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unparse</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      SqlWriter writer,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">int</span> leftPrec,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">int</span> rightPrec)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> SqlOperator operator = getOperator();</span><br><span class="line">    <span class="keyword">final</span> SqlDialect dialect = writer.getDialect();</span><br><span class="line">    <span class="keyword">if</span> (leftPrec &gt; operator.getLeftPrec()</span><br><span class="line">        || (operator.getRightPrec() &lt;= rightPrec &amp;&amp; (rightPrec != <span class="number">0</span>))</span><br><span class="line">        || writer.isAlwaysUseParentheses() &amp;&amp; isA(SqlKind.EXPRESSION)) &#123;</span><br><span class="line">      <span class="keyword">final</span> SqlWriter.Frame frame = writer.startList(<span class="string">"("</span>, <span class="string">")"</span>);</span><br><span class="line">      dialect.unparseCall(writer, <span class="keyword">this</span>, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">      writer.endList(frame);</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      dialect.unparseCall(writer, <span class="keyword">this</span>, leftPrec, rightPrec);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>先判断是否需要添加括号，如果不需要就直接进行dialect.unparseCall</p>
+<p>如果需要添加括号那么就是，先申明一个Frame，startList的开和闭是(),<br>然后，再进行dialect.unparseCall后得到的结果以Frame结尾</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> SqlWriter.Frame frame = writer.startList(<span class="string">"("</span>, <span class="string">")"</span>);</span><br><span class="line">dialect.unparseCall(writer, <span class="keyword">this</span>, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">writer.endList(frame);</span><br></pre></td></tr></table></figure>
+<p>SqlDialect.unparseCall有自己的实现，基本的实现如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unparseCall</span><span class="params">(SqlWriter writer, SqlCall call, <span class="keyword">int</span> leftPrec,</span></span></span><br><span class="line"><span class="function"><span class="params">     <span class="keyword">int</span> rightPrec)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">switch</span> (call.getKind()) &#123;</span><br><span class="line">   <span class="keyword">case</span> ROW:</span><br><span class="line">     <span class="comment">// Remove the ROW keyword if the dialect does not allow that.</span></span><br><span class="line">     <span class="keyword">if</span> (!getConformance().allowExplicitRowValueConstructor()) &#123;</span><br><span class="line">       <span class="comment">// Fix the syntax when there is no parentheses after VALUES keyword.</span></span><br><span class="line">       <span class="keyword">if</span> (!writer.isAlwaysUseParentheses()) &#123;</span><br><span class="line">         writer.print(<span class="string">" "</span>);</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">final</span> SqlWriter.Frame frame = writer.isAlwaysUseParentheses()</span><br><span class="line">               ? writer.startList(SqlWriter.FrameTypeEnum.FUN_CALL)</span><br><span class="line">               : writer.startList(SqlWriter.FrameTypeEnum.FUN_CALL, <span class="string">"("</span>, <span class="string">")"</span>);</span><br><span class="line">       <span class="keyword">for</span> (SqlNode operand : call.getOperandList()) &#123;</span><br><span class="line">         writer.sep(<span class="string">","</span>);</span><br><span class="line">         operand.unparse(writer, leftPrec, rightPrec);</span><br><span class="line">       &#125;</span><br><span class="line">       writer.endList(frame);</span><br><span class="line">       <span class="keyword">break</span>;</span><br><span class="line">     &#125;</span><br><span class="line">     call.getOperator().unparse(writer, call, leftPrec, rightPrec);</span><br><span class="line">     <span class="keyword">break</span>;</span><br><span class="line">   <span class="keyword">default</span>:</span><br><span class="line">     call.getOperator().unparse(writer, call, leftPrec, rightPrec);</span><br><span class="line">   &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>下沉到call.getOperator().unparse</p>
+<p>先看看如果这个sqlNode是sqlSelect，对应的operation是SqlSelectOperator</p>
+<p>SqlSelectOperator.unparse如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unparse</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      SqlWriter writer,</span></span></span><br><span class="line"><span class="function"><span class="params">      SqlCall call,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">int</span> leftPrec,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">int</span> rightPrec)</span> </span>&#123;</span><br><span class="line">    SqlSelect select = (SqlSelect) call;</span><br><span class="line">    <span class="keyword">final</span> SqlWriter.Frame selectFrame =</span><br><span class="line">        writer.startList(SqlWriter.FrameTypeEnum.SELECT);</span><br><span class="line">    writer.sep(<span class="string">"SELECT"</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (select.hasHints()) &#123;</span><br><span class="line">      writer.sep(<span class="string">"/*+"</span>);</span><br><span class="line">      select.hints.unparse(writer, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">      writer.print(<span class="string">"*/"</span>);</span><br><span class="line">      writer.newlineAndIndent();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; select.keywordList.size(); i++) &#123;</span><br><span class="line">      <span class="keyword">final</span> SqlNode keyword = select.keywordList.get(i);</span><br><span class="line">      keyword.unparse(writer, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    writer.topN(select.fetch, select.offset);</span><br><span class="line">    <span class="keyword">final</span> SqlNodeList selectClause =</span><br><span class="line">        select.selectList != <span class="keyword">null</span></span><br><span class="line">            ? select.selectList</span><br><span class="line">            : SqlNodeList.of(SqlIdentifier.star(SqlParserPos.ZERO));</span><br><span class="line">    writer.list(SqlWriter.FrameTypeEnum.SELECT_LIST, SqlWriter.COMMA,</span><br><span class="line">        selectClause);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (select.from != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="comment">// Calcite SQL requires FROM but MySQL does not.</span></span><br><span class="line">      writer.sep(<span class="string">"FROM"</span>);</span><br><span class="line"></span><br><span class="line">      <span class="comment">// for FROM clause, use precedence just below join operator to make</span></span><br><span class="line">      <span class="comment">// sure that an un-joined nested select will be properly</span></span><br><span class="line">      <span class="comment">// parenthesized</span></span><br><span class="line">      <span class="keyword">final</span> SqlWriter.Frame fromFrame =</span><br><span class="line">          writer.startList(SqlWriter.FrameTypeEnum.FROM_LIST);</span><br><span class="line">      select.from.unparse(</span><br><span class="line">          writer,</span><br><span class="line">          SqlJoin.OPERATOR.getLeftPrec() - <span class="number">1</span>,</span><br><span class="line">          SqlJoin.OPERATOR.getRightPrec() - <span class="number">1</span>);</span><br><span class="line">      writer.endList(fromFrame);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (select.where != <span class="keyword">null</span>) &#123;</span><br><span class="line">      writer.sep(<span class="string">"WHERE"</span>);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (!writer.isAlwaysUseParentheses()) &#123;</span><br><span class="line">        SqlNode node = select.where;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// decide whether to split on ORs or ANDs</span></span><br><span class="line">        SqlBinaryOperator whereSep = SqlStdOperatorTable.AND;</span><br><span class="line">        <span class="keyword">if</span> ((node <span class="keyword">instanceof</span> SqlCall)</span><br><span class="line">            &amp;&amp; node.getKind() == SqlKind.OR) &#123;</span><br><span class="line">          whereSep = SqlStdOperatorTable.OR;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// unroll whereClause</span></span><br><span class="line">        <span class="keyword">final</span> List&lt;SqlNode&gt; list = <span class="keyword">new</span> ArrayList&lt;&gt;(<span class="number">0</span>);</span><br><span class="line">        <span class="keyword">while</span> (node.getKind() == whereSep.kind) &#123;</span><br><span class="line">          <span class="keyword">assert</span> node <span class="keyword">instanceof</span> SqlCall;</span><br><span class="line">          <span class="keyword">final</span> SqlCall call1 = (SqlCall) node;</span><br><span class="line">          list.add(<span class="number">0</span>, call1.operand(<span class="number">1</span>));</span><br><span class="line">          node = call1.operand(<span class="number">0</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        list.add(<span class="number">0</span>, node);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// unparse in a WHERE_LIST frame</span></span><br><span class="line">        writer.list(SqlWriter.FrameTypeEnum.WHERE_LIST, whereSep,</span><br><span class="line">            <span class="keyword">new</span> SqlNodeList(list, select.where.getParserPosition()));</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        select.where.unparse(writer, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (select.groupBy != <span class="keyword">null</span>) &#123;</span><br><span class="line">      writer.sep(<span class="string">"GROUP BY"</span>);</span><br><span class="line">      <span class="keyword">final</span> SqlNodeList groupBy =</span><br><span class="line">          select.groupBy.size() == <span class="number">0</span> ? SqlNodeList.SINGLETON_EMPTY</span><br><span class="line">              : select.groupBy;</span><br><span class="line">      writer.list(SqlWriter.FrameTypeEnum.GROUP_BY_LIST, SqlWriter.COMMA,</span><br><span class="line">          groupBy);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (select.having != <span class="keyword">null</span>) &#123;</span><br><span class="line">      writer.sep(<span class="string">"HAVING"</span>);</span><br><span class="line">      select.having.unparse(writer, <span class="number">0</span>, <span class="number">0</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (select.windowDecls.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">      writer.sep(<span class="string">"WINDOW"</span>);</span><br><span class="line">      writer.list(SqlWriter.FrameTypeEnum.WINDOW_DECL_LIST, SqlWriter.COMMA,</span><br><span class="line">          select.windowDecls);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">if</span> (select.orderBy != <span class="keyword">null</span> &amp;&amp; select.orderBy.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">      writer.sep(<span class="string">"ORDER BY"</span>);</span><br><span class="line">      writer.list(SqlWriter.FrameTypeEnum.ORDER_BY_LIST, SqlWriter.COMMA,</span><br><span class="line">          select.orderBy);</span><br><span class="line">    &#125;</span><br><span class="line">    writer.fetchOffset(select.fetch, select.offset);</span><br><span class="line">    writer.endList(selectFrame);</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="坑"><a href="#坑" class="headerlink" title="坑"></a>坑</h3><p>虽然sqlSelectOperation的unparse中通过writer来转为sql</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">writer.fetchOffset(select.fetch, select.offset);</span><br><span class="line">writer.endList(selectFrame);</span><br></pre></td></tr></table></figure>
+<p>但是在sqlorder中unparse却没有把offset和fetch传递到里头去，而是自己处理，这样就无法做到根据不同的dialect进行转换（例如oracle中关于limit的实现跟其他数据库不一样）</p>
+<p>sqlOrderBy<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unparse</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">        SqlWriter writer,</span></span></span><br><span class="line"><span class="function"><span class="params">        SqlCall call,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">int</span> leftPrec,</span></span></span><br><span class="line"><span class="function"><span class="params">        <span class="keyword">int</span> rightPrec)</span> </span>&#123;</span><br><span class="line">      SqlOrderBy orderBy = (SqlOrderBy) call;</span><br><span class="line">      <span class="keyword">final</span> SqlWriter.Frame frame =</span><br><span class="line">          writer.startList(SqlWriter.FrameTypeEnum.ORDER_BY);</span><br><span class="line">      <span class="comment">// 等价于直接通过sqlSelect去转换</span></span><br><span class="line">      orderBy.query.unparse(writer, getLeftPrec(), getRightPrec());</span><br><span class="line">      <span class="keyword">if</span> (orderBy.orderList != SqlNodeList.EMPTY) &#123;</span><br><span class="line">        writer.sep(getName());</span><br><span class="line">        writer.list(SqlWriter.FrameTypeEnum.ORDER_BY_LIST, SqlWriter.COMMA,</span><br><span class="line">            orderBy.orderList);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (orderBy.offset != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">final</span> SqlWriter.Frame frame2 =</span><br><span class="line">            writer.startList(SqlWriter.FrameTypeEnum.OFFSET);</span><br><span class="line">        writer.newlineAndIndent();</span><br><span class="line">        writer.keyword(<span class="string">"OFFSET"</span>);</span><br><span class="line">        orderBy.offset.unparse(writer, -<span class="number">1</span>, -<span class="number">1</span>);</span><br><span class="line">        writer.keyword(<span class="string">"ROWS"</span>);</span><br><span class="line">        writer.endList(frame2);</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (orderBy.fetch != <span class="keyword">null</span>) &#123;</span><br><span class="line">        <span class="keyword">final</span> SqlWriter.Frame frame3 =</span><br><span class="line">            writer.startList(SqlWriter.FrameTypeEnum.FETCH);</span><br><span class="line">        writer.newlineAndIndent();</span><br><span class="line">        writer.keyword(<span class="string">"FETCH"</span>);</span><br><span class="line">        writer.keyword(<span class="string">"NEXT"</span>);</span><br><span class="line">        orderBy.fetch.unparse(writer, -<span class="number">1</span>, -<span class="number">1</span>);</span><br><span class="line">        writer.keyword(<span class="string">"ROWS"</span>);</span><br><span class="line">        writer.keyword(<span class="string">"ONLY"</span>);</span><br><span class="line">        writer.endList(frame3);</span><br><span class="line">      &#125;</span><br><span class="line">      writer.endList(frame);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>通过sqlSelect转换，然后写死了fetch部分….</p>
+<h4 id="修改"><a href="#修改" class="headerlink" title="修改"></a>修改</h4><p>修改SqlOrderBy的源码,将offset和fetch的部分，改为通过write的fetchOffset的方法（内部会通过自身的方言来实现）</p>
+<p>SqlPrettyWriter.fetchOffset<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fetchOffset</span><span class="params">(SqlNode fetch, SqlNode offset)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (fetch == <span class="keyword">null</span> &amp;&amp; offset == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    dialect.unparseOffsetFetch(<span class="keyword">this</span>, offset, fetch);</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure></p>
+<p>SqlOrderBy源码修改部分<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">unparse</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">               SqlWriter writer,</span></span></span><br><span class="line"><span class="function"><span class="params">               SqlCall call,</span></span></span><br><span class="line"><span class="function"><span class="params">               <span class="keyword">int</span> leftPrec,</span></span></span><br><span class="line"><span class="function"><span class="params">               <span class="keyword">int</span> rightPrec)</span> </span>&#123;</span><br><span class="line">           SqlOrderBy orderBy = (SqlOrderBy) call;</span><br><span class="line">           <span class="keyword">final</span> SqlWriter.Frame frame =</span><br><span class="line">                   writer.startList(SqlWriter.FrameTypeEnum.ORDER_BY);</span><br><span class="line">           orderBy.query.unparse(writer, getLeftPrec(), getRightPrec());</span><br><span class="line">           <span class="keyword">if</span> (orderBy.orderList != SqlNodeList.EMPTY) &#123;</span><br><span class="line">               writer.sep(getName());</span><br><span class="line">               writer.list(SqlWriter.FrameTypeEnum.ORDER_BY_LIST, SqlWriter.COMMA,</span><br><span class="line">                       orderBy.orderList);</span><br><span class="line">           &#125;</span><br><span class="line">           <span class="comment">/*if (orderBy.offset != null) &#123;</span></span><br><span class="line"><span class="comment">               final SqlWriter.Frame frame2 =</span></span><br><span class="line"><span class="comment">                       writer.startList(SqlWriter.FrameTypeEnum.OFFSET);</span></span><br><span class="line"><span class="comment">               writer.newlineAndIndent();</span></span><br><span class="line"><span class="comment">               writer.keyword("OFFSET");</span></span><br><span class="line"><span class="comment">               orderBy.offset.unparse(writer, -1, -1);</span></span><br><span class="line"><span class="comment">               writer.keyword("ROWS");</span></span><br><span class="line"><span class="comment">               writer.endList(frame2);</span></span><br><span class="line"><span class="comment">           &#125;</span></span><br><span class="line"><span class="comment">           if (orderBy.fetch != null) &#123;</span></span><br><span class="line"><span class="comment">               final SqlWriter.Frame frame3 =</span></span><br><span class="line"><span class="comment">                       writer.startList(SqlWriter.FrameTypeEnum.FETCH);</span></span><br><span class="line"><span class="comment">               writer.newlineAndIndent();</span></span><br><span class="line"><span class="comment">               writer.keyword("FETCH");</span></span><br><span class="line"><span class="comment">               writer.keyword("NEXT");</span></span><br><span class="line"><span class="comment">               orderBy.fetch.unparse(writer, -1, -1);</span></span><br><span class="line"><span class="comment">               writer.keyword("ROWS");</span></span><br><span class="line"><span class="comment">               writer.keyword("ONLY");</span></span><br><span class="line"><span class="comment">               writer.endList(frame3);</span></span><br><span class="line"><span class="comment">           &#125;*/</span></span><br><span class="line">           writer.fetchOffset(orderBy.fetch, orderBy.offset);</span><br><span class="line">           writer.endList(frame);</span><br><span class="line">       &#125;</span><br></pre></td></tr></table></figure></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/10/12/实例应用：获取超过10s没有更新的key/" rel="next" title="实例应用：获取超过10s没有更新的key">
+                <i class="fa fa-chevron-left"></i> 实例应用：获取超过10s没有更新的key
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/11/21/Calcite-RBO-出现-VALUES导致sql变型/" rel="prev" title="Calcite RBO 出现 VALUES导致sql变型">
+                Calcite RBO 出现 VALUES导致sql变型 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#坑"><span class="nav-number">1.</span> <span class="nav-text">坑</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#修改"><span class="nav-number">1.1.</span> <span class="nav-text">修改</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

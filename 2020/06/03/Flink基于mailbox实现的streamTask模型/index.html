@@ -1,0 +1,934 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="AbstractUdfStreamOperator基本上所有的流式操作，都继承了这个类，如果是单流操作就实现OneInputStreamOperator接口，如果是双流操作就实现TwoInputStreamOperator接口。 AbstractUdfStreamOperator 继承了 AbstractStreamOperator。 AbstractUdfStreamOperator 源码简版：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析-基于mailbox实现的streamTask模型">
+<meta property="og:url" content="http://yoursite.com/2020/06/03/Flink基于mailbox实现的streamTask模型/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="AbstractUdfStreamOperator基本上所有的流式操作，都继承了这个类，如果是单流操作就实现OneInputStreamOperator接口，如果是双流操作就实现TwoInputStreamOperator接口。 AbstractUdfStreamOperator 继承了 AbstractStreamOperator。 AbstractUdfStreamOperator 源码简版：">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://img-blog.csdnimg.cn/20200422151623683.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3l1Y2h1YW5jaGVu,size_16,color_FFFFFF,t_70">
+<meta property="og:updated_time" content="2020-06-03T12:39:28.655Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析-基于mailbox实现的streamTask模型">
+<meta name="twitter:description" content="AbstractUdfStreamOperator基本上所有的流式操作，都继承了这个类，如果是单流操作就实现OneInputStreamOperator接口，如果是双流操作就实现TwoInputStreamOperator接口。 AbstractUdfStreamOperator 继承了 AbstractStreamOperator。 AbstractUdfStreamOperator 源码简版：">
+<meta name="twitter:image" content="https://img-blog.csdnimg.cn/20200422151623683.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3l1Y2h1YW5jaGVu,size_16,color_FFFFFF,t_70">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/06/03/Flink基于mailbox实现的streamTask模型/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析-基于mailbox实现的streamTask模型 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/03/Flink基于mailbox实现的streamTask模型/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析-基于mailbox实现的streamTask模型
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-06-03 20:38:05 / 修改时间：20:39:28" itemprop="dateCreated datePublished" datetime="2020-06-03T20:38:05+08:00">2020-06-03</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="AbstractUdfStreamOperator"><a href="#AbstractUdfStreamOperator" class="headerlink" title="AbstractUdfStreamOperator"></a>AbstractUdfStreamOperator</h3><p>基本上所有的流式操作，都继承了这个类，如果是单流操作就实现OneInputStreamOperator接口，如果是双流操作就实现TwoInputStreamOperator接口。</p>
+<p>AbstractUdfStreamOperator 继承了 AbstractStreamOperator。</p>
+<p>AbstractUdfStreamOperator 源码简版：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractUdfStreamOperator</span>&lt;<span class="title">OUT</span>, <span class="title">F</span> <span class="keyword">extends</span> <span class="title">Function</span>&gt;  <span class="keyword">extends</span> <span class="title">AbstractStreamOperator</span>&lt;<span class="title">OUT</span>&gt; <span class="keyword">implements</span> <span class="title">OutputTypeConfigurable</span>&lt;<span class="title">OUT</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">     <span class="comment">/** The user function. */</span></span><br><span class="line">     <span class="keyword">protected</span> <span class="keyword">final</span> F userFunction;</span><br><span class="line"></span><br><span class="line">     <span class="function"><span class="keyword">public</span> <span class="title">AbstractUdfStreamOperator</span><span class="params">(F userFunction)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">this</span>.userFunction = requireNonNull(userFunction);</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     <span class="function"><span class="keyword">public</span> F <span class="title">getUserFunction</span><span class="params">()</span> </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> userFunction;</span><br><span class="line">     &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">super</span>.open();</span><br><span class="line">		FunctionUtils.openFunction(userFunction, <span class="keyword">new</span> Configuration());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">super</span>.close();</span><br><span class="line">		functionsClosed = <span class="keyword">true</span>;</span><br><span class="line">		FunctionUtils.closeFunction(userFunction);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>AbstractUdfStreamOperator 类中有个泛型 F 类型属性 userFunction，用于保存用户定义的 MapFunction、FlatMapFunction。AbstractUdfStreamOperator 的构造器可以将 userFunction 保存起来。</p>
+<p>也提供了open和close方法等，可以在调用上层的close方法后调用用户的close方法。</p>
+<h3 id="AbstractStreamOperator"><a href="#AbstractStreamOperator" class="headerlink" title="AbstractStreamOperator"></a>AbstractStreamOperator</h3><p>所有流操作的基类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractStreamOperator</span>&lt;<span class="title">OUT</span>&gt;</span></span><br><span class="line"><span class="class">		<span class="keyword">implements</span> <span class="title">StreamOperator</span>&lt;<span class="title">OUT</span>&gt;, <span class="title">SetupableStreamOperator</span>&lt;<span class="title">OUT</span>&gt;, <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 该算子的chain策略，ALWAYS可以成chain，NEVER不成chain，HEAD可以称为头部被chain，在各自的</span></span><br><span class="line">    <span class="comment">// 实现类中会被覆盖</span></span><br><span class="line">    <span class="keyword">protected</span> ChainingStrategy chainingStrategy = ChainingStrategy.HEAD;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 包含该算子以及成chain的task</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> StreamTask&lt;?, ?&gt; container;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 第一条流的keySelector，如果是非keyed operator，为null</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> KeySelector&lt;?, ?&gt; stateKeySelector1;</span><br><span class="line">    </span><br><span class="line">    <span class="comment">// 第二条流的keySelector，如果是非keyed operator，为null</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> KeySelector&lt;?, ?&gt; stateKeySelector2;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setup</span><span class="params">(StreamTask&lt;?, ?&gt; containingTask, StreamConfig config, Output&lt;StreamRecord&lt;OUT&gt;&gt; output)</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">initializeState</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>一个算子，可能是keyed，也可能是非keyed，包含了两者都该有的属性，主要负责生命周期相关的操作。</p>
+<h2 id="StreamTask"><a href="#StreamTask" class="headerlink" title="StreamTask"></a>StreamTask</h2><p>所有stream task的基本类。一个task 运行一个或者多个StreamOperator（如果成chain）。成chain的算子在同一个线程内同步运行。</p>
+<p>每一个 <code>StreamNode</code> 在添加到 <code>StreamGraph</code> 的时候都会有一个关联的 <code>jobVertexClass</code> 属性，这个属性就是该 <code>StreamNode</code> 对应的 <code>StreamTask</code> 类型；对于一个 <code>OperatorChain</code> 而言，它所对应的 <code>StreamTask</code> 就是其 head operator 对应的 <code>StreamTask</code></p>
+<p>生命周期如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">*  -- invoke()</span><br><span class="line">*        |</span><br><span class="line">*        +----&gt; <span class="function">Create basic <span class="title">utils</span> <span class="params">(config, etc)</span> and load the chain of operators</span></span><br><span class="line"><span class="function">*        +----&gt; operators.<span class="title">setup</span><span class="params">()</span></span></span><br><span class="line"><span class="function">*        +----&gt; task specific <span class="title">init</span><span class="params">()</span></span></span><br><span class="line"><span class="function">*        +----&gt; initialize-operator-<span class="title">states</span><span class="params">()</span></span></span><br><span class="line"><span class="function">*        +----&gt; open-<span class="title">operators</span><span class="params">()</span></span></span><br><span class="line"><span class="function">*        +----&gt; <span class="title">run</span><span class="params">()</span></span></span><br><span class="line"><span class="function">* --------------&gt; mailboxProcessor.<span class="title">runMailboxLoop</span><span class="params">()</span></span>;</span><br><span class="line">* --------------&gt; StreamTask.processInput()</span><br><span class="line">* --------------&gt; StreamTask.inputProcessor.processInput()</span><br><span class="line">* --------------&gt; 间接调用 operator的processElement()和processWatermark()方法</span><br><span class="line">*        +----&gt; close-operators()</span><br><span class="line">*        +----&gt; dispose-operators()</span><br><span class="line">*        +----&gt; common cleanup</span><br><span class="line">*        +----&gt; <span class="function">task specific <span class="title">cleanup</span><span class="params">()</span></span></span><br></pre></td></tr></table></figure>
+<ul>
+<li><p>创建状态存储后端，为 OperatorChain 中的所有算子提供状态</p>
+</li>
+<li><p>加载 OperatorChain 中的所有算子</p>
+</li>
+<li><p>所有的 operator 调用 <code>setup</code></p>
+</li>
+<li><p>task 相关的初始化操作</p>
+</li>
+<li><p>所有 operator 调用 <code>initializeState</code> 初始化状态</p>
+</li>
+<li><p>所有的 operator 调用 <code>open</code></p>
+</li>
+<li><p><code>run</code> 方法循环处理数据</p>
+</li>
+<li><p>所有 operator 调用 <code>close</code></p>
+</li>
+<li><p>所有 operator 调用 <code>dispose</code></p>
+</li>
+<li><p>通用的 cleanup 操作</p>
+</li>
+<li><p>task 相关的 cleanup 操作</p>
+</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">StreamTask</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">    <span class="comment">// invoke前调用，主要初始化状态存储后端，初始化算子等。</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">beforeInvoke</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		disposedOperators = <span class="keyword">false</span>;</span><br><span class="line">		LOG.debug(<span class="string">"Initializing &#123;&#125;."</span>, getName());</span><br><span class="line"></span><br><span class="line">		asyncOperationsThreadPool = Executors.newCachedThreadPool(<span class="keyword">new</span> ExecutorThreadFactory(<span class="string">"AsyncOperations"</span>, uncaughtExceptionHandler));</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 创建状态存储后端</span></span><br><span class="line">		stateBackend = createStateBackend();</span><br><span class="line">		checkpointStorage = stateBackend.createCheckpointStorage(getEnvironment().getJobID());</span><br><span class="line"></span><br><span class="line">		<span class="comment">// if the clock is not already set, then assign a default TimeServiceProvider</span></span><br><span class="line">		<span class="keyword">if</span> (timerService == <span class="keyword">null</span>) &#123;</span><br><span class="line">			ThreadFactory timerThreadFactory =</span><br><span class="line">				<span class="keyword">new</span> DispatcherThreadFactory(TRIGGER_THREAD_GROUP, <span class="string">"Time Trigger for "</span> + getName());</span><br><span class="line"></span><br><span class="line">			timerService = <span class="keyword">new</span> SystemProcessingTimeService(</span><br><span class="line">				<span class="keyword">this</span>::handleTimerException,</span><br><span class="line">				timerThreadFactory);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 创建 OperatorChain，会加载每一个 operator，并调用 setup 方法</span></span><br><span class="line">		operatorChain = <span class="keyword">new</span> OperatorChain&lt;&gt;(<span class="keyword">this</span>, recordWriter);</span><br><span class="line">		headOperator = operatorChain.getHeadOperator();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 和具体 StreamTask 子类相关的初始化操作</span></span><br><span class="line">		<span class="comment">// task specific initialization</span></span><br><span class="line">		init();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// save the work of reloading state, etc, if the task is already canceled</span></span><br><span class="line">		<span class="keyword">if</span> (canceled) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> CancelTaskException();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// -------- Invoke --------</span></span><br><span class="line">		LOG.debug(<span class="string">"Invoking &#123;&#125;"</span>, getName());</span><br><span class="line"></span><br><span class="line">		<span class="comment">// we need to make sure that any triggers scheduled in open() cannot be</span></span><br><span class="line">		<span class="comment">// executed before all operators are opened</span></span><br><span class="line">		actionExecutor.runThrowing(() -&gt; &#123;</span><br><span class="line">			<span class="comment">// both the following operations are protected by the lock</span></span><br><span class="line">			<span class="comment">// so that we avoid race conditions in the case that initializeState()</span></span><br><span class="line">			<span class="comment">// registers a timer, that fires before the open() is called.</span></span><br><span class="line"></span><br><span class="line">			initializeStateAndOpen();</span><br><span class="line">		&#125;);</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">invoke</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			beforeInvoke();</span><br><span class="line"></span><br><span class="line">			<span class="comment">// final check to exit early before starting to run</span></span><br><span class="line">			<span class="keyword">if</span> (canceled) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> CancelTaskException();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// let the task do its work</span></span><br><span class="line">			isRunning = <span class="keyword">true</span>;</span><br><span class="line">			runMailboxLoop();</span><br><span class="line"></span><br><span class="line">			<span class="comment">// if this left the run() method cleanly despite the fact that this was canceled,</span></span><br><span class="line">			<span class="comment">// make sure the "clean shutdown" is not attempted</span></span><br><span class="line">			<span class="keyword">if</span> (canceled) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> CancelTaskException();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			afterInvoke();</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">finally</span> &#123;</span><br><span class="line">			cleanUpInvoke();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在<code>beforeInvoke</code>中会做一些初始化工作，包括提取出所有的operator等。<br>在<code>runMailboxLoop</code>中调用task运行<br>在<code>afterInvoke</code>中结束</p>
+<h3 id="StreamTask-With-Mailbox"><a href="#StreamTask-With-Mailbox" class="headerlink" title="StreamTask With Mailbox"></a>StreamTask With Mailbox</h3><p><img src="https://img-blog.csdnimg.cn/20200422151623683.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L3l1Y2h1YW5jaGVu,size_16,color_FFFFFF,t_70" alt></p>
+<p>读过Flink源码的都见过checkpointLock，这个主要是用来隔离不同线程对状态的操作，但是这种使用object lock的做法，使得main thread不得不将这个object传递给所有需要操作状态的线程，一来二去，就会发现源代码里出现大量的synchronize(lock)。这样对于开发和调试和源码阅读，都是及其不方便的。目前checkpoint lock主要使用在以下三个地方：</p>
+<ul>
+<li>Event Processing: Operator在初始化时使用lock来隔离TimerService的触发，在process element时隔离异步snapshot线程对状态的干扰，总之，很多地方都使用了这个checkpoint lock。</li>
+<li>Checkpoint: 自然不用说，在performCheckpoint中使用了lock。</li>
+<li>Processing Time Timers: 这个线程触发的callback常常对状态进行操作，所以也需要获取lock。</li>
+</ul>
+<p>在重构这里，社区提议使用Mailbox加单线程的方式来替代checkpoint lock。那么Mailbox就成为了StreamTask的信息来源，（大多数情况下）替代了StreamTask#run():</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">BlockingQueue&lt;Runnable&gt; mailbox = ...</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">runMailboxProcessing</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">//<span class="doctag">TODO:</span> can become a cancel-event through mailbox eventually</span></span><br><span class="line">    Runnable letter;</span><br><span class="line">    <span class="keyword">while</span> (isRunning()) &#123; </span><br><span class="line">        <span class="keyword">while</span> ((letter = mailbox.poll()) != <span class="keyword">null</span>) &#123;</span><br><span class="line">            letter.run();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        defaultAction();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">defaultAction</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="comment">// e.g. event-processing from an input</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>那么对于上面三者，异步的checkpoint和processing timer会将checkpoint lock中的逻辑变成一个Runnable，放入到Mailbox中，这样我们就将并发变成了基于Mailbox的单线程模型，整个StreamTask看起来会更加轻量。</p>
+<p>这个是任务运行的核心，即这里会产生action交由<code>MailboxProcessor</code>执行。<br><code>processInput</code>方法处理输入，是task的默认action，在输入上处理一个事件（event）。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">runMailboxLoop</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> TaskMailbox localMailbox = mailbox;</span><br><span class="line"></span><br><span class="line">		Preconditions.checkState(</span><br><span class="line">			localMailbox.isMailboxThread(),</span><br><span class="line">			<span class="string">"Method must be executed by declared mailbox thread!"</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">assert</span> localMailbox.getState() == TaskMailbox.State.OPEN : <span class="string">"Mailbox must be opened!"</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> MailboxController defaultActionContext = <span class="keyword">new</span> MailboxController(<span class="keyword">this</span>);</span><br><span class="line"></span><br><span class="line">    	<span class="comment">// 如果有 mail 需要处理，这里会进行相应的处理，处理完才会进行下面的 event processing</span></span><br><span class="line">		<span class="keyword">while</span> (processMail(localMailbox)) &#123;</span><br><span class="line">            <span class="comment">// 进行 task 的 default action，也就是调用 processInput()</span></span><br><span class="line">			mailboxDefaultAction.runDefaultAction(defaultActionContext); <span class="comment">// lock is acquired inside default action as needed</span></span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>上面的方法中，最关键的有两个地方：</p>
+<p><strong>processMail()</strong>: 它会检测 <em>MailBox</em> 中是否有 mail 需要处理，如果有的话，就做相应的处理，<strong>一直将全部的 mail 处理完才会返回</strong>，只要 loop 还在进行，这里就会返回 true，否则会返回 false</p>
+<p><strong>runDefaultAction()</strong>: 这个最终调用的 <em>StreamTask</em> 的 <em>processInput()</em> 方法，event-processing 的处理就是在这个方法中进行的</p>
+<h3 id="process-mail-处理"><a href="#process-mail-处理" class="headerlink" title="process-mail 处理"></a>process-mail 处理</h3><p>它会检测 <em>MailBox</em> 中是否有 mail 需要处理，如果有的话，就做相应的处理，<strong>一直将全部的 mail 处理完才会返回</strong>，只要 loop 还在进行，这里就会返回 true，否则会返回 false。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">processMail</span><span class="params">(TaskMailbox mailbox)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// Doing this check is an optimization to only have a volatile read in the expected hot path, locks are only</span></span><br><span class="line">		<span class="comment">// acquired after this point.</span></span><br><span class="line">        <span class="comment">// taskmailbox 会将 queue 中的消息移到 batch，然后从 batch queue 中依次 take；新 mail 写入 queue。从 batch take 时避免加锁</span></span><br><span class="line">		<span class="keyword">if</span> (!mailbox.createBatch()) &#123;</span><br><span class="line">			<span class="comment">// We can also directly return true because all changes to #isMailboxLoopRunning must be connected to</span></span><br><span class="line">			<span class="comment">// mailbox.hasMail() == true.</span></span><br><span class="line">            <span class="comment">// 消息为空时直接返回</span></span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// Take mails in a non-blockingly and execute them.</span></span><br><span class="line">		Optional&lt;Mail&gt; maybeMail;</span><br><span class="line">		<span class="keyword">while</span> (isMailboxLoopRunning() &amp;&amp; (maybeMail = mailbox.tryTakeFromBatch()).isPresent()) &#123;</span><br><span class="line">            <span class="comment">// 从 batch 获取 mail 执行，直到 batch 中的 mail 处理完</span></span><br><span class="line">			maybeMail.get().run();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// If the default action is currently not available, we can run a blocking mailbox execution until the default</span></span><br><span class="line">		<span class="comment">// action becomes available again.</span></span><br><span class="line">		<span class="keyword">while</span> (isDefaultActionUnavailable() &amp;&amp; isMailboxLoopRunning()) &#123;</span><br><span class="line">			mailbox.take(MIN_PRIORITY).run();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> isMailboxLoopRunning();</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>mail的类型:</p>
+<p>Checkpoint Trigger </p>
+<p>我们知道 TaskManager 收到 JM 的 triggerCheckpoint 消息后，会调用 SourceStreamTask 的 triggerCheckpointAsync 方法，对于非 <em>ExternallyInducedSource</em>（该类用于外部测试触发 checkpoint 使用），会直接调用 Streamtask 的 <em>triggerCheckpointAsync</em> 方法，实现如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// StreamTask.java</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> Future&lt;Boolean&gt; <span class="title">triggerCheckpointAsync</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		CheckpointMetaData checkpointMetaData,</span></span></span><br><span class="line"><span class="function"><span class="params">		CheckpointOptions checkpointOptions,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">boolean</span> advanceToEndOfEventTime)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">       <span class="comment">// checkpoint 触发时，将触发 checkpoint 的动作发送到 mail</span></span><br><span class="line">	<span class="keyword">return</span> mailboxProcessor.getMainMailboxExecutor().submit(</span><br><span class="line">			() -&gt; triggerCheckpoint(checkpointMetaData, checkpointOptions, advanceToEndOfEventTime),</span><br><span class="line">			<span class="string">"checkpoint %s with %s"</span>,</span><br><span class="line">		checkpointMetaData,</span><br><span class="line">		checkpointOptions);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>processTimer</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> ProcessingTimeService <span class="title">getProcessingTimeService</span><span class="params">(<span class="keyword">int</span> operatorIndex)</span> </span>&#123;</span><br><span class="line">		Preconditions.checkState(timerService != <span class="keyword">null</span>, <span class="string">"The timer service has not been initialized."</span>);</span><br><span class="line">		MailboxExecutor mailboxExecutor = mailboxProcessor.getMailboxExecutor(operatorIndex);</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> ProcessingTimeServiceImpl(timerService, callback -&gt; deferCallbackToMailbox(mailboxExecutor, callback));</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="event-processing-处理"><a href="#event-processing-处理" class="headerlink" title="event-processing 处理"></a>event-processing 处理</h3><p><em>event-processing</em> 现在是在 <em>processInput()</em> 方法中实现的</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">processInput</span><span class="params">(MailboxDefaultAction.Controller controller)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    </span><br><span class="line">        <span class="comment">// event 处理</span></span><br><span class="line">		InputStatus status = inputProcessor.processInput();</span><br><span class="line">		<span class="keyword">if</span> (status == InputStatus.MORE_AVAILABLE &amp;&amp; recordWriter.isAvailable()) &#123;</span><br><span class="line">            <span class="comment">// 如果输入还有数据，并且 writer 是可用的，这里就直接返回了</span></span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">if</span> (status == InputStatus.END_OF_INPUT) &#123;</span><br><span class="line">            <span class="comment">// 输入已经处理完了，会调用这个方法</span></span><br><span class="line">			controller.allActionsCompleted();</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line">		&#125;</span><br><span class="line">        <span class="comment">// 代码进行到这里说明 input 或 output 没有准备好（比如当前流中没有数据）</span></span><br><span class="line">		CompletableFuture&lt;?&gt; jointFuture = getInputOutputJointFuture(status);</span><br><span class="line">        <span class="comment">// 告诉 MailBox 先暂停 loop</span></span><br><span class="line">		MailboxDefaultAction.Suspension suspendedDefaultAction = controller.suspendDefaultAction();</span><br><span class="line">		jointFuture.thenRun(suspendedDefaultAction::resume);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>判断当前状态来决定是否要继续这个action：如果当前有更多输入，且输出（<code>recordWriter</code>）就绪，那么直接返回（因为还有更多的输入，因此不结束action）；如果输入已经结束，标记一下action为结束状态，直接返回；否则将当前的action暂停，直到有输入且输出（<code>recordWriter</code>）就绪的时候恢复执行（异步等待)</p>
+<h3 id="StreamInputProcessor"><a href="#StreamInputProcessor" class="headerlink" title="StreamInputProcessor"></a>StreamInputProcessor</h3><p><code>StreamInputProcessor</code>有三个实现类，分别是：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">StreamOneInputProcessor</span><br><span class="line">StreamTwoInputProcessor</span><br><span class="line">StreamMultipleInputProcessor</span><br></pre></td></tr></table></figure>
+<p>这三个实现类都有一个成员变量：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">private final OperatorChain&lt;?, ?&gt; operatorChain;</span><br></pre></td></tr></table></figure>
+<p>配套这个成员变量的还有两组成员变量，配套的意思是如果是<code>StreamTwoInputProcessor</code>，那么下面就有两组：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> StreamTaskInput&lt;IN&gt; input;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> DataOutput&lt;IN&gt; output;</span><br></pre></td></tr></table></figure>
+<p>这里的input负责读，读到ouput中，调用ouput的方法，例如<code>emitRecord</code>，这个方法的实现类一般是某个<code>StreamTask</code>子类的实现类，在这里会开始处理这个输入数据，例如<code>OneInputStreamTask</code>的内部类中的一个实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">emitRecord</span><span class="params">(StreamRecord&lt;IN&gt; record)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    numRecordsIn.inc();</span><br><span class="line">    operator.setKeyContextElement1(record);</span><br><span class="line">    operator.processElement(record);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>再结合 <em>MailboxProcessor</em> 中的 <em>runMailboxLoop()</em> 实现一起看，其操作的流程是：</p>
+<p>1.首先通过 <em>processMail()</em> 方法处理 MailBox 中的 mail：</p>
+<ul>
+<li>如果没有 mail 要处理，这里直接返回；</li>
+<li>先将 MailBox 中当前现存的 mail 全部处理完；</li>
+<li>通过 <em>isDefaultActionUnavailable()</em> 做一个状态检查（目的是提供一个接口方便上层控制调用，这里把这个看作一个状态检查方便讲述），如果是 true 的话，会在这里一直处理 mail 事件，不会返回，除非状态改变；</li>
+</ul>
+<p>2.然后再调用 <em>StreamTask</em> 的 <em>processInput()</em> 方法来处理 event:</p>
+<ul>
+<li>先调用 <em>StreamInputProcessor</em> 的 <em>processInput()</em> 方法来处理 event；</li>
+<li>如果上面处理结果返回的状态是 <em>MORE_AVAILABLE</em>（表示还有可用的数据等待处理）并且 <em>recordWriter</em> 可用（之前的异步操作已经处理完成），就会立马返回；</li>
+<li>如果上面处理结果返回的状态是 <em>END_OF_INPUT</em>，它表示数据处理完成，这里就会告诉 MailBox 数据已经处理完成了；</li>
+<li>否则的话，这里会等待，直到有可用的数据到来及 <em>recordWriter</em> 可用。</li>
+</ul>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="http://www.liaojiayi.com/streamtask/" target="_blank" rel="noopener">http://www.liaojiayi.com/streamtask/</a></p>
+<p><a href="https://www.jishuwen.com/d/27Oh" target="_blank" rel="noopener">https://www.jishuwen.com/d/27Oh</a></p>
+<p><a href="https://blog.csdn.net/yuchuanchen/article/details/105677408" target="_blank" rel="noopener">https://blog.csdn.net/yuchuanchen/article/details/105677408</a></p>
+<p><a href="https://caesarroot.github.io/2020/03/15/flink源码阅读和解析笔记-任务执行/" target="_blank" rel="noopener">https://caesarroot.github.io/2020/03/15/flink%E6%BA%90%E7%A0%81%E9%98%85%E8%AF%BB%E5%92%8C%E8%A7%A3%E6%9E%90%E7%AC%94%E8%AE%B0-%E4%BB%BB%E5%8A%A1%E6%89%A7%E8%A1%8C/</a></p>
+<p><a href="https://www.cnblogs.com/Leo_wl/p/11413499.html" target="_blank" rel="noopener">https://www.cnblogs.com/Leo_wl/p/11413499.html</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/31/Flink源码解析-join双流操作的实现/" rel="next" title="Flink源码解析-join双流操作的实现">
+                <i class="fa fa-chevron-left"></i> Flink源码解析-join双流操作的实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/07/Flink源码解析-Timer/" rel="prev" title="Flink源码解析-Timer">
+                Flink源码解析-Timer <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#AbstractUdfStreamOperator"><span class="nav-number">1.</span> <span class="nav-text">AbstractUdfStreamOperator</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#AbstractStreamOperator"><span class="nav-number">2.</span> <span class="nav-text">AbstractStreamOperator</span></a></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#StreamTask"><span class="nav-number"></span> <span class="nav-text">StreamTask</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#StreamTask-With-Mailbox"><span class="nav-number">1.</span> <span class="nav-text">StreamTask With Mailbox</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#process-mail-处理"><span class="nav-number">2.</span> <span class="nav-text">process-mail 处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#event-processing-处理"><span class="nav-number">3.</span> <span class="nav-text">event-processing 处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#StreamInputProcessor"><span class="nav-number">4.</span> <span class="nav-text">StreamInputProcessor</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,869 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="功能实现 123(A,B)(C,D)(E,A) 将有关联关系的数据放在同一个集合中 12(A,B,E)(C,D) 方法一通过每次添加一个数据，判断是否在集合中，并且将关联集合合并 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748import java.util.HashSe">
+<meta property="og:type" content="article">
+<meta property="og:title" content="将关联关系的数据放在同一个集合中">
+<meta property="og:url" content="http://yoursite.com/2020/03/12/将关联关系的数据放在同一个集合中/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="功能实现 123(A,B)(C,D)(E,A) 将有关联关系的数据放在同一个集合中 12(A,B,E)(C,D) 方法一通过每次添加一个数据，判断是否在集合中，并且将关联集合合并 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748import java.util.HashSe">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-03-12T14:48:46.934Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="将关联关系的数据放在同一个集合中">
+<meta name="twitter:description" content="功能实现 123(A,B)(C,D)(E,A) 将有关联关系的数据放在同一个集合中 12(A,B,E)(C,D) 方法一通过每次添加一个数据，判断是否在集合中，并且将关联集合合并 123456789101112131415161718192021222324252627282930313233343536373839404142434445464748import java.util.HashSe">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/03/12/将关联关系的数据放在同一个集合中/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>将关联关系的数据放在同一个集合中 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/03/12/将关联关系的数据放在同一个集合中/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">将关联关系的数据放在同一个集合中
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-03-12 22:37:05 / 修改时间：22:48:46" itemprop="dateCreated datePublished" datetime="2020-03-12T22:37:05+08:00">2020-03-12</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Java/" itemprop="url" rel="index"><span itemprop="name">Java</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>功能实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">(A,B)</span><br><span class="line">(C,D)</span><br><span class="line">(E,A)</span><br></pre></td></tr></table></figure>
+<p>将有关联关系的数据放在同一个集合中</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">(A,B,E)</span><br><span class="line">(C,D)</span><br></pre></td></tr></table></figure>
+<h3 id="方法一"><a href="#方法一" class="headerlink" title="方法一"></a>方法一</h3><p>通过每次添加一个数据，判断是否在集合中，并且将关联集合合并</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.util.HashSet;</span><br><span class="line"><span class="keyword">import</span> java.util.Iterator;</span><br><span class="line"><span class="keyword">import</span> java.util.Set;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClosureSet</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Set&lt;Set&lt;String&gt;&gt; set;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClosureSet</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        set = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClosureSet</span><span class="params">(<span class="keyword">int</span> size)</span> </span>&#123;</span><br><span class="line">        set = <span class="keyword">new</span> HashSet&lt;&gt;(size);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> Set&lt;Set&lt;String&gt;&gt; getSet() &#123;</span><br><span class="line">        <span class="keyword">return</span> set;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addItem</span><span class="params">(Tuple2&lt;String,String&gt; item)</span> </span>&#123;</span><br><span class="line">        Set&lt;String&gt; l1 = <span class="keyword">null</span>;</span><br><span class="line">        Set&lt;String&gt; l2 = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">for</span> (Set&lt;String&gt; ele : set) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ele.contains(item.f0)) &#123;</span><br><span class="line">                l1 = ele;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (ele.contains(item.f1)) &#123;</span><br><span class="line">                l2 = ele;</span><br><span class="line">&#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (l1 == <span class="keyword">null</span> &amp;&amp; l2 == <span class="keyword">null</span>) &#123;</span><br><span class="line">            Set&lt;String&gt; ele = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">            ele.add(item.f0);</span><br><span class="line">            ele.add(item.f1);</span><br><span class="line">            set.add(ele);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (l1 == <span class="keyword">null</span> &amp;&amp; l2 != <span class="keyword">null</span>) &#123;</span><br><span class="line">            l2.add(item.f0);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (l1 != <span class="keyword">null</span> &amp;&amp; l2 == <span class="keyword">null</span>) &#123;</span><br><span class="line">            l1.add(item.f1);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (l1 != l2) &#123;</span><br><span class="line">            l1.addAll(l2);</span><br><span class="line">            l2.clear();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>主要原理是每次添加元素，都从集合中遍历，如果出现两个set就合并set，如果只存在单个set就加入，最大的性能消耗在遍历上，set的size越大，耗时就越大。</p>
+<p>由于业务特性，只要相关的数据在同一个set即可，5组数据在3个集合还是5个集合就不影响最后的计算结果，因此可以限定一个size大小，超过阈值进行merge操作。</p>
+<h3 id="方法二"><a href="#方法二" class="headerlink" title="方法二"></a>方法二</h3><p>优化的方式是限制Set大小，如果超过一个阈值，进行resize操作。<br>resize思想是，通过random的方式，判断是否需要合并数据。<br>通过for循环遍历所有的数据，每个数据都判断是否需要合并，如果需要，合并对应的length-i（对称）的数据，然后清空被合并的数据，可以将数据的大小压缩。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> java.util.*;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClosureSetV2</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> maxSize = <span class="number">5000</span>;</span><br><span class="line">    <span class="keyword">private</span> Random random = <span class="keyword">new</span> Random();</span><br><span class="line">    <span class="keyword">private</span> List&lt;Set&lt;String&gt;&gt; list;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClosureSetV2</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        list = <span class="keyword">new</span> ArrayList&lt;&gt;(maxSize);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClosureSetV2</span><span class="params">(<span class="keyword">int</span> size)</span> </span>&#123;</span><br><span class="line">        list = <span class="keyword">new</span> ArrayList&lt;&gt;(size);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> List&lt;Set&lt;String&gt;&gt; getList() &#123;</span><br><span class="line">        <span class="keyword">return</span> list;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">resize</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (list.size() &gt;= maxSize) &#123;</span><br><span class="line">            List&lt;Set&lt;String&gt;&gt; anotherList = <span class="keyword">new</span> ArrayList&lt;&gt;(maxSize);</span><br><span class="line">            <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; maxSize ; i++) &#123;</span><br><span class="line">                Set&lt;String&gt; oneSet = list.get(i);</span><br><span class="line">                <span class="keyword">if</span> (oneSet.size() == <span class="number">0</span>) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">boolean</span> isMerge = random.nextBoolean();</span><br><span class="line">                <span class="keyword">if</span> (isMerge) &#123;</span><br><span class="line">                    <span class="keyword">int</span> index = list.size() - <span class="number">1</span> - i;</span><br><span class="line">                    <span class="keyword">if</span> (i == index) &#123;</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    Set&lt;String&gt; strings = list.get(index);</span><br><span class="line">                    oneSet.addAll(strings);</span><br><span class="line">                    strings.clear();</span><br><span class="line">                &#125;</span><br><span class="line">                anotherList.add(oneSet);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.list = anotherList;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addItem</span><span class="params">(Tuple2&lt;String,String&gt; item)</span> </span>&#123;</span><br><span class="line">        resize();</span><br><span class="line">        Set&lt;String&gt; l1 = <span class="keyword">null</span>;</span><br><span class="line">        Set&lt;String&gt; l2 = <span class="keyword">null</span>;</span><br><span class="line">        <span class="keyword">for</span> (Set&lt;String&gt; ele : list) &#123;</span><br><span class="line">            <span class="keyword">if</span> (ele.contains(item.f0)) &#123;</span><br><span class="line">                l1 = ele;</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (ele.contains(item.f1)) &#123;</span><br><span class="line">                l2 = ele;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (l1 == <span class="keyword">null</span> &amp;&amp; l2 == <span class="keyword">null</span>) &#123;</span><br><span class="line">            Set&lt;String&gt; ele = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">            ele.add(item.f0);</span><br><span class="line">            ele.add(item.f1);</span><br><span class="line">            list.add(ele);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (l1 == <span class="keyword">null</span> &amp;&amp; l2 != <span class="keyword">null</span>) &#123;</span><br><span class="line">            l2.add(item.f0);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (l1 != <span class="keyword">null</span> &amp;&amp; l2 == <span class="keyword">null</span>) &#123;</span><br><span class="line">            l1.add(item.f1);</span><br><span class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (l1 != l2) &#123;</span><br><span class="line">            l1.addAll(l2);</span><br><span class="line">            l2.clear();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可以将耗时从半小时算不完降低到高峰期可以在1分钟多算完（50w条数据）</p>
+<h3 id="方法三"><a href="#方法三" class="headerlink" title="方法三"></a>方法三</h3><p>通过倒排索引的思想，现将每个tuple进行编号，获取一份该数据的倒排索引和正排索引。</p>
+<p>正排索引如下<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">1. (A,B)</span><br><span class="line">2. (C,D)</span><br><span class="line">3. (E,A)</span><br><span class="line">4. (E,F)</span><br></pre></td></tr></table></figure></p>
+<p>对应的倒排索引如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">A ==&gt; 1,3</span><br><span class="line">B ==&gt; 1</span><br><span class="line">C ==&gt; 2 </span><br><span class="line">D ==&gt; 2 </span><br><span class="line">E ==&gt; 3,4</span><br><span class="line">F ==&gt; 4</span><br></pre></td></tr></table></figure>
+<p>需要一个队列queue，放入需要被继续深究的关系。<br>一个集合set，放置已经被搜过的索引。<br>和一个存放关系的list。</p>
+<p>在计算的时候，遍历正排索引</p>
+<ul>
+<li>遍历索引1，获取A,B是相关关系，在list中加入A和B。在queue加入A，B，在被搜过的索引集合set中加入1，此时set中是1，queue中是A和B，list中是A和B</li>
+<li>从队列中取出需要遍历的第一个数据A，获取对应的倒排索引是1和3，1已经在遍历过的索引set中，跳过，3没有，获取3中的数据E和A，E加入关系List中，E加入待深搜的队列queue中，已经被搜索的set中加入3. 此时 待深搜的queue为B和E， 已经被搜过的索引set是1和3，此时关系list是A、B和E。</li>
+<li>继续弹出队列获取B，按照上一步的步骤1已经搜过，跳过。 继续弹出E，查出对应索引为3和4，3被搜过跳过，搜索4，获取F，此时可以更新关系， list中为A、B、E、F，已经搜过的索引set为1、3、4. 待深搜的队列queue为F。 弹出F，无发现。至此，第一组关系诞生，其他数据均无联系。</li>
+<li>深搜2，按照上面的步骤，可以得出C和D是关系，无其他数据。</li>
+<li>深搜3，发现3已经被搜过</li>
+<li>深搜4同上。</li>
+<li>完结。</li>
+</ul>
+<p>上代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ClosureSet</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> List&lt;Set&lt;String&gt;&gt; resultRelationlist = <span class="keyword">new</span> LinkedList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Long index = <span class="number">0L</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * id与流的关系, 正排索引</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> Map&lt;Long, Tuple2&lt;String, String&gt;&gt; indexOfStreamMap;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 流的倒排索引</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> Map&lt;String, Set&lt;Long&gt;&gt; docValueOfSream;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 计算专用队列</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> Queue&lt;String&gt; queue = <span class="keyword">new</span> LinkedBlockingDeque&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ClosureSet</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        indexOfStreamMap = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">        docValueOfSream = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> List&lt;Set&lt;String&gt;&gt; getRelation() &#123;</span><br><span class="line">        <span class="keyword">return</span> resultRelationlist;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">    * 添加数据的时候，构建正排和倒排索引</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addItem</span><span class="params">(Tuple2&lt;String,String&gt; item)</span> </span>&#123;</span><br><span class="line">        indexOfStreamMap.put(index, Tuple2.of(item.f0, item.f1);</span><br><span class="line">        Set&lt;Long&gt; docvalueSet = Optional.ofNullable(docValueOfSream.get(item.f0))</span><br><span class="line">                .map(set -&gt; &#123;</span><br><span class="line">                    set.add(index);</span><br><span class="line">                    <span class="keyword">return</span> set;</span><br><span class="line">                &#125;).orElse(Sets.newHashSet(index));</span><br><span class="line">        docValueOfSream.put(item.f0, docvalueSet);</span><br><span class="line"></span><br><span class="line">        docvalueSet = Optional.ofNullable(docValueOfSream.get(item.f1))</span><br><span class="line">                .map(set -&gt; &#123;</span><br><span class="line">                    set.add(index);</span><br><span class="line">                    <span class="keyword">return</span> set;</span><br><span class="line">                &#125;).orElse(Sets.newHashSet(index));</span><br><span class="line">        docValueOfSream.put(item.f1, docvalueSet);</span><br><span class="line">        index++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 计算关系</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">cal</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">//已被搜索过的index,可跳过</span></span><br><span class="line">        Set&lt;Long&gt; searchedIndexSet = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;Long, Tuple2&lt;String, String&gt;&gt; indexToStreamGroupEntry : indexOfStreamMap.entrySet()) &#123;</span><br><span class="line">            Set&lt;String&gt; relations = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line">            Long index = indexToStreamGroupEntry.getKey();</span><br><span class="line">            <span class="keyword">if</span> (!searchedIndexSet.contains(index)) &#123;</span><br><span class="line">                queue.offer(indexToStreamGroupEntry.getValue().f0);</span><br><span class="line">                queue.offer(indexToStreamGroupEntry.getValue().f1);</span><br><span class="line">            &#125;</span><br><span class="line">            String stream = queue.poll();</span><br><span class="line">            <span class="keyword">while</span> (<span class="keyword">null</span> != stream) &#123;</span><br><span class="line">                <span class="comment">//将自己加入关系中</span></span><br><span class="line">                relations.add(stream);</span><br><span class="line">                <span class="comment">//获取该stream的倒排索引</span></span><br><span class="line">                Set&lt;Long&gt; indexs = docValueOfSream.get(stream);</span><br><span class="line">                <span class="comment">//遍历倒排索引，获取所有关联的stream,加入队列和关系中</span></span><br><span class="line">                <span class="keyword">for</span> (Long relationIndex : indexs) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (searchedIndexSet.contains(relationIndex)) &#123;</span><br><span class="line">                        <span class="keyword">continue</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                    Tuple2&lt;String, String&gt; tuple2 = indexOfStreamMap.get(relationIndex);</span><br><span class="line">                    queue.offer(tuple2.f0);</span><br><span class="line">                    queue.offer(tuple2.f1);</span><br><span class="line">                    relations.add(tuple2.f0);</span><br><span class="line">                    relations.add(tuple2.f1);</span><br><span class="line">                    searchedIndexSet.add(relationIndex);</span><br><span class="line">                &#125;</span><br><span class="line">                stream = queue.poll();</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (relations.size() != <span class="number">0</span>) &#123;</span><br><span class="line">                resultRelationlist.add(relations);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        StreamClosureSet set = <span class="keyword">new</span> StreamClosureSet();</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"1"</span>, <span class="string">"2"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"3"</span>, <span class="string">"4"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"10"</span>, <span class="string">"11"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"3"</span>, <span class="string">"2"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"10"</span>, <span class="string">"2"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"12"</span>, <span class="string">"12"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"3"</span>, <span class="string">"12"</span>));</span><br><span class="line">        set.addItem(<span class="keyword">new</span> Tuple2(<span class="string">"23"</span>, <span class="string">"312"</span>));</span><br><span class="line">        set.cal();</span><br><span class="line">        System.out.println(set.getRelation().size());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>跟方案二比，50w数据从1min30s，只用1.5s就可以跑完。从不完全聚合变成完全聚合。<br>灵感是从es来的。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/03/01/让es分配主索引时shard均衡/" rel="next" title="让es分配主索引时shard均衡">
+                <i class="fa fa-chevron-left"></i> 让es分配主索引时shard均衡
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/03/14/Elasticsearch-常用操作/" rel="prev" title="Elasticsearch 常用操作">
+                Elasticsearch 常用操作 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#方法一"><span class="nav-number">1.</span> <span class="nav-text">方法一</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方法二"><span class="nav-number">2.</span> <span class="nav-text">方法二</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#方法三"><span class="nav-number">3.</span> <span class="nav-text">方法三</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="一条stream sql从提交到calcite解析、优化最后到flink引擎执行，一般分为以下几个阶段: 12345671. Sql Parser: 将sql语句通过java cc解析成AST(语法树),在calcite中用SqlNode表示AST;2. Sql Validator: 结合数字字典(catalog)去验证sql语法；3. 生成Logical Plan: 将sqlNode表示的AS">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析 SQL相关">
+<meta property="og:url" content="http://yoursite.com/2019/12/14/Flink源码解析-SQL相关/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="一条stream sql从提交到calcite解析、优化最后到flink引擎执行，一般分为以下几个阶段: 12345671. Sql Parser: 将sql语句通过java cc解析成AST(语法树),在calcite中用SqlNode表示AST;2. Sql Validator: 结合数字字典(catalog)去验证sql语法；3. 生成Logical Plan: 将sqlNode表示的AS">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/94A5670201B549D2993C0AD31FF26945?method=download&shareKey=29e08697de1d1482595102a287a7da5a">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/E5D9E234D91F42E2B8B8881315B2FD45?method=download&shareKey=ef4b3e8f4bdefd274b2686f0a03178a9">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/EEC39CE3D2894B62BA7F614D0279A9E5?method=download&shareKey=41e918eb95a7d9dbd3ba14d19a3336d7">
+<meta property="og:updated_time" content="2019-12-22T04:15:15.873Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析 SQL相关">
+<meta name="twitter:description" content="一条stream sql从提交到calcite解析、优化最后到flink引擎执行，一般分为以下几个阶段: 12345671. Sql Parser: 将sql语句通过java cc解析成AST(语法树),在calcite中用SqlNode表示AST;2. Sql Validator: 结合数字字典(catalog)去验证sql语法；3. 生成Logical Plan: 将sqlNode表示的AS">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/94A5670201B549D2993C0AD31FF26945?method=download&shareKey=29e08697de1d1482595102a287a7da5a">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/12/14/Flink源码解析-SQL相关/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析 SQL相关 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/14/Flink源码解析-SQL相关/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析 SQL相关
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-12-14 17:05:38" itemprop="dateCreated datePublished" datetime="2019-12-14T17:05:38+08:00">2019-12-14</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-12-22 12:15:15" itemprop="dateModified" datetime="2019-12-22T12:15:15+08:00">2019-12-22</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><img src="https://note.youdao.com/yws/api/personal/file/94A5670201B549D2993C0AD31FF26945?method=download&amp;shareKey=29e08697de1d1482595102a287a7da5a" alt="image"></p>
+<p>一条stream sql从提交到calcite解析、优化最后到flink引擎执行，一般分为以下几个阶段:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">1. Sql Parser: 将sql语句通过java cc解析成AST(语法树),在calcite中用SqlNode表示AST;</span><br><span class="line">2. Sql Validator: 结合数字字典(catalog)去验证sql语法；</span><br><span class="line">3. 生成Logical Plan: 将sqlNode表示的AST转换成LogicalPlan, 用relNode表示;</span><br><span class="line">4. 生成 optimized LogicalPlan: 先基于calcite rules 去优化logical Plan,</span><br><span class="line">再基于flink定制的一些优化rules去优化logical Plan；</span><br><span class="line">5. 生成Flink PhysicalPlan: 这里也是基于flink里头的rules将，将optimized LogicalPlan转成成Flink的物理执行计划；</span><br><span class="line">6. 将物理执行计划转成Flink ExecutionPlan: 就是调用相应的tanslateToPlan方法转换和利用CodeGen元编程成Flink的各种算子。</span><br></pre></td></tr></table></figure>
+<p>而如果是通过table api来提交任务的话，也会经过calcite优化等阶段，基本流程和直接运行sql类似:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">1. table api parser: flink会把table api表达的计算逻辑也表示成一颗树，用treeNode去表式;</span><br><span class="line">在这棵树上的每个节点的计算逻辑用Expression来表示。</span><br><span class="line">2. Validate: 会结合数字字典(catalog)将树的每个节点的Unresolved Expression进行绑定，生成Resolved Expression；</span><br><span class="line">3. 生成Logical Plan: 依次遍历数的每个节点，调用construct方法将原先用treeNode表达的节点转成成用calcite 内部的数据结构relNode 来表达。即生成了LogicalPlan, 用relNode表示;</span><br><span class="line">4. 生成 optimized LogicalPlan: 先基于calcite rules 去优化logical Plan,</span><br><span class="line">再基于flink定制的一些优化rules去优化logical Plan；</span><br><span class="line">5. 生成Flink PhysicalPlan: 这里也是基于flink里头的rules将，将optimized LogicalPlan转成成Flink的物理执行计划；</span><br><span class="line">6. 将物理执行计划转成Flink ExecutionPlan: 就是调用相应的tanslateToPlan方法转换和利用CodeGen元编程成Flink的各种算子。</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">		StreamTableEnvironment tableEnv = TableEnvironment.getTableEnvironment(env);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">		DataStream&lt;Tuple2&lt;String, Integer&gt;&gt; tuple2DataStreamSource = env.fromElements(Tuple2.of(<span class="string">"guoyo1"</span>, <span class="number">1</span>), Tuple2.of(<span class="string">"baiyx"</span>, <span class="number">1</span>));</span><br><span class="line">		Table in = tableEnv.fromDataStream(tuple2DataStreamSource, <span class="string">"a,b"</span>);</span><br><span class="line">		tableEnv.registerTable(<span class="string">"MyTable"</span>, in);</span><br><span class="line"></span><br><span class="line">		String sqlQuery = <span class="string">"SELECT * FROM MyTable"</span>;</span><br><span class="line">		Table result = tableEnv.sqlQuery(sqlQuery);</span><br><span class="line"></span><br><span class="line">		tableEnv.toAppendStream(result, Row.class).print();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">		env.execute();</span><br></pre></td></tr></table></figure>
+<p>一行行代码来分析</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Table in = tableEnv.fromDataStream(tuple2DataStreamSource, &quot;a,b&quot;);</span><br></pre></td></tr></table></figure>
+<p>将dataStream转变为table的过程<br><figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	public &lt;<span class="type">T</span>&gt; <span class="type">Table</span> fromDataStream(<span class="type">DataStream</span>&lt;<span class="type">T</span>&gt; dataStream, <span class="type">String</span> fields) &#123;</span><br><span class="line">		<span class="type">List</span>&lt;<span class="type">Expression</span>&gt; expressions = <span class="type">ExpressionParser</span>.parseExpressionList(fields);</span><br><span class="line">		<span class="type">JavaDataStreamQueryOperation</span>&lt;<span class="type">T</span>&gt; queryOperation = asQueryOperation(</span><br><span class="line">			dataStream,</span><br><span class="line">			<span class="type">Optional</span>.of(expressions));</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> createTable(queryOperation);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ExpressionParser.parseExpressionList(fields);</span><br></pre></td></tr></table></figure>
+<p>将输入的字段名称，提取出来。</p>
+<p>asQueryOperation返回的是JavaDataStreamQueryOperation，这个类用来描述DataSteam，对应的数据的索引和Tableschema（描述数据的字段名称、字段位置、字段类型）</p>
+<p>asQueryOperation内进行了如下操作</p>
+<ul>
+<li>将字段和index还有数据类型对应，得到 a,0,String。  b,1,Int</li>
+<li>校验是否有是eventTime的流，如果是需要开启eventTime的相关配置</li>
+<li>返回JavaDataStreamQueryOperation</li>
+</ul>
+<p>然后获取到带有schema的DataStream，用于创建table  。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">createTable(queryOperation)</span><br></pre></td></tr></table></figure></p>
+<p>进去到里头，到了这层,将带有schema的DataStream转为了Table。先不细究里头的成员变量是什么用的。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> TableImpl <span class="title">createTable</span><span class="params">(QueryOperation tableOperation)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> TableImpl.createTable(</span><br><span class="line">			<span class="keyword">this</span>,</span><br><span class="line">			tableOperation,</span><br><span class="line">			operationTreeBuilder,</span><br><span class="line">			functionCatalog);</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> TableImpl <span class="title">createTable</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">			TableEnvironment tableEnvironment,</span></span></span><br><span class="line"><span class="function"><span class="params">			QueryOperation operationTree,</span></span></span><br><span class="line"><span class="function"><span class="params">			OperationTreeBuilder operationTreeBuilder,</span></span></span><br><span class="line"><span class="function"><span class="params">			FunctionLookup functionLookup)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> TableImpl(</span><br><span class="line">			tableEnvironment,</span><br><span class="line">			operationTree,</span><br><span class="line">			operationTreeBuilder,</span><br><span class="line">			<span class="keyword">new</span> LookupCallResolver(functionLookup));</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>回到我们的代码<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">tableEnv.registerTable(<span class="string">"MyTable"</span>, in);</span><br></pre></td></tr></table></figure></p>
+<p>其中重要的部分是两个</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">CatalogBaseTable tableTable = <span class="keyword">new</span> QueryOperationCatalogView(table.getQueryOperation());</span><br><span class="line">registerTableInternal(name, tableTable);</span><br></pre></td></tr></table></figure>
+<p>CatalogBaseTable是一个table的视图，以一个map维护table的键值对属性</p>
+<p>在registerTableInternam中的主要注册table的方法是<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">catalog.get().createTable(</span><br><span class="line">					path,</span><br><span class="line">					table,</span><br><span class="line">					<span class="keyword">false</span>);</span><br></pre></td></tr></table></figure></p>
+<p>这个Catalog是注册完成后数据库与数据表的原信息则存储在CataLog中。CataLog中保存了所有的表结构信息、数据目录信息等。</p>
+<p>Catalog.createTable有两个具体的实现，一个是hive，是memory。<br>GenericInMemoryCatalog 将所有元数据存储在内存中，而 HiveCatalog 则通过 HiveShim 连接 Hive Metastore 的实例，提供元数据持久化的能力。通过 HiveCatalog，可以访问到 Hive 中管理的所有表，从而在 Batch 模式下使用。另外，通过 HiveCatalog 也可以使用 Hive 中的定义的 UDF，Flink SQL 提供了对于 Hive UDF 的支持。</p>
+<p>至此，就把数据注册到catalog中。接下来就是对sql的解析了</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">String sqlQuery = <span class="string">"SELECT a,sum(b) FROM MyTable group by a"</span>;</span><br><span class="line">Table result = tableEnv.sqlQuery(sqlQuery);</span><br></pre></td></tr></table></figure>
+<p>TableEnvironmentImpl.sqlQuery中List<operation> operations = planner.parse(query);开始了对sql的转换。</operation></p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">parse</span></span>(stmt: <span class="type">String</span>): util.<span class="type">List</span>[<span class="type">Operation</span>] = &#123;</span><br><span class="line">    <span class="keyword">val</span> planner = createFlinkPlanner</span><br><span class="line">    <span class="comment">// parse the sql query  这一步解析得到 SqlNode</span></span><br><span class="line">    <span class="keyword">val</span> parsed = planner.parse(stmt)</span><br><span class="line">    <span class="comment">// SqlToOperationConverter 将 SqlNode 转化为 Operation</span></span><br><span class="line">    parsed <span class="keyword">match</span> &#123;</span><br><span class="line">      <span class="keyword">case</span> insert: <span class="type">RichSqlInsert</span> =&gt;</span><br><span class="line">        <span class="type">List</span>(<span class="type">SqlToOperationConverter</span>.convert(planner, insert))</span><br><span class="line">      <span class="keyword">case</span> query <span class="keyword">if</span> query.getKind.belongsTo(<span class="type">SqlKind</span>.<span class="type">QUERY</span>) =&gt;</span><br><span class="line">        <span class="type">List</span>(<span class="type">SqlToOperationConverter</span>.convert(planner, query)) <span class="comment">//查询语句</span></span><br><span class="line">      <span class="keyword">case</span> ddl <span class="keyword">if</span> ddl.getKind.belongsTo(<span class="type">SqlKind</span>.<span class="type">DDL</span>) =&gt;</span><br><span class="line">        <span class="type">List</span>(<span class="type">SqlToOperationConverter</span>.convert(planner, ddl))</span><br><span class="line">      <span class="keyword">case</span> _ =&gt;</span><br><span class="line">        <span class="keyword">throw</span> <span class="keyword">new</span> <span class="type">TableException</span>(<span class="string">s"Unsupported query: <span class="subst">$stmt</span>"</span>)</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<p>SQL 的解析在 PlannerBase.parse() 中实现：</p>
+<ol>
+<li>首先使用 Calcite 的解析出抽象语法树 SqlNode </li>
+<li>然后结合元数据对 SQL 语句进行验证</li>
+<li>将 SqlNode 转换为 RelNode</li>
+<li>并最终封装为 Flink 内部对查询操作的抽象 QueryOperation。</li>
+</ol>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Operation <span class="title">convert</span><span class="params">(FlinkPlannerImpl flinkPlanner, SqlNode sqlNode)</span> </span>&#123;</span><br><span class="line">		<span class="comment">// validate the query    结合元数据验证 Sql 的合法性</span></span><br><span class="line">		<span class="keyword">final</span> SqlNode validated = flinkPlanner.validate(sqlNode);</span><br><span class="line">		<span class="comment">// 将 SqlNode 转化为 Operation</span></span><br><span class="line">		SqlToOperationConverter converter = <span class="keyword">new</span> SqlToOperationConverter(flinkPlanner);</span><br><span class="line">		<span class="keyword">if</span> (validated <span class="keyword">instanceof</span> SqlCreateTable) &#123;</span><br><span class="line">			<span class="keyword">return</span> converter.convertCreateTable((SqlCreateTable) validated);</span><br><span class="line">		&#125; <span class="keyword">if</span> (validated <span class="keyword">instanceof</span> SqlDropTable) &#123;</span><br><span class="line">			<span class="keyword">return</span> converter.convertDropTable((SqlDropTable) validated);</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (validated <span class="keyword">instanceof</span> RichSqlInsert) &#123;</span><br><span class="line">			<span class="keyword">return</span> converter.convertSqlInsert((RichSqlInsert) validated);</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (validated.getKind().belongsTo(SqlKind.QUERY)) &#123;</span><br><span class="line">			<span class="keyword">return</span> converter.convertSqlQuery(validated);</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> TableException(<span class="string">"Unsupported node type "</span></span><br><span class="line">				+ validated.getClass().getSimpleName());</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	</span><br><span class="line">	<span class="comment">/** Fallback method for sql query. */</span></span><br><span class="line">	<span class="function"><span class="keyword">private</span> Operation <span class="title">convertSqlQuery</span><span class="params">(SqlNode node)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> toQueryOperation(flinkPlanner, node);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>Flink 借助于 Calcite 完成 SQl 的解析和优化，而后续的优化部分其实都是直接基于 RelNode 来完成的，那么这里为什么又多出了一个 QueryOperation 的概念呢？这主要是因为，Flink SQL 是支持 SQL 语句和 Table Api 接口混合使用的，在 Table Api 接口中，主要的操作都是基于 Operation 接口来完成的。</p>
+<p>在校验这块，使用的是FlinkCalciteSqlValidator，继承了calcite的接口SqlValidatorImpl。所以才可以跟自己的schema串在一起。</p>
+<h3 id="怎么将schema注册到calcite中"><a href="#怎么将schema注册到calcite中" class="headerlink" title="怎么将schema注册到calcite中"></a>怎么将schema注册到calcite中</h3><p>DatabaseCalciteSchema 这个类是关键，这个类主要是用于将flink的schema转为Calcite’s schema。实现了Calcite’s schema接口。</p>
+<p>CatalogManagerCalciteSchema—&gt;CatalogCalciteSchema—&gt;DatabaseCalciteSchema</p>
+<p>如何将flink schema与calcite sheme结合起来呢。主要是PlannerBase这个类,将flink的CatalogManagerCalciteSchema转为calcite的SimpleCalciteSchema类。CatalogManagerCalciteSchema中的变量CatalogManager中存有我们通过flink注册的表信息。</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">val</span> plannerContext: <span class="type">PlannerContext</span> =</span><br><span class="line">    <span class="keyword">new</span> <span class="type">PlannerContext</span>(</span><br><span class="line">      config,</span><br><span class="line">      functionCatalog,</span><br><span class="line">      asRootSchema(<span class="keyword">new</span> <span class="type">CatalogManagerCalciteSchema</span>(catalogManager, isStreamingMode)),</span><br><span class="line">      getTraitDefs.toList</span><br><span class="line">    )</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">public static <span class="type">CalciteSchema</span> asRootSchema(<span class="type">Schema</span> root) &#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> <span class="type">SimpleCalciteSchema</span>(<span class="literal">null</span>, root, <span class="string">""</span>);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="SQL-转换及优化"><a href="#SQL-转换及优化" class="headerlink" title="SQL 转换及优化"></a>SQL 转换及优化</h3><p>在将 SQL 语句解析成 Operation 后，为了得到 Flink 运行时的具体操作算子，需要进一步将 ModifyOperation 转换为 Transformation。在 Blink 之前的 SQL Planner 中，都是基于 DataStream 或 DataSet API 完成运行时逻辑的构建；而 Blink 则使用更底层的 Transformation 算子。</p>
+<p>注意，Planner.translate(List<modifyoperation> modifyOperations) 方法接收的参数是 ModifyOperation，ModifyOperation 对应的是一个 DML 的操作，在将查询结果插入到一张结果表或者转换为 DataStream 时，就会得到 ModifyOperation。</modifyoperation></p>
+<p>转换的流程主要分为四个部分，即</p>
+<ol>
+<li>将 Operation 转换为 RelNode</li>
+<li>优化 RelNode</li>
+<li>转换成 ExecNode</li>
+<li>转换为底层的 Transformation 算子。</li>
+</ol>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">PlannerBase</span>(<span class="params"></span></span></span><br><span class="line"><span class="class"><span class="params">    executor: <span class="type">Executor</span>,</span></span></span><br><span class="line"><span class="class"><span class="params">    config: <span class="type">TableConfig</span>,</span></span></span><br><span class="line"><span class="class"><span class="params">    val functionCatalog: <span class="type">FunctionCatalog</span>,</span></span></span><br><span class="line"><span class="class"><span class="params">    catalogManager: <span class="type">CatalogManager</span>,</span></span></span><br><span class="line"><span class="class"><span class="params">    isStreamingMode: <span class="type">Boolean</span></span>)</span></span><br><span class="line"><span class="class">  <span class="keyword">extends</span> <span class="title">Planner</span> </span>&#123;</span><br><span class="line">  </span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">translate</span></span>(</span><br><span class="line">      modifyOperations: util.<span class="type">List</span>[<span class="type">ModifyOperation</span>]): util.<span class="type">List</span>[<span class="type">Transformation</span>[_]] = &#123;</span><br><span class="line">    <span class="keyword">if</span> (modifyOperations.isEmpty) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="type">List</span>.empty[<span class="type">Transformation</span>[_]]</span><br><span class="line">    &#125;</span><br><span class="line">    mergeParameters()</span><br><span class="line">    <span class="comment">// 1）将 Operation 转换为 RelNode</span></span><br><span class="line">    <span class="keyword">val</span> relNodes = modifyOperations.map(translateToRel)</span><br><span class="line">    <span class="comment">// 2）优化 RelNode</span></span><br><span class="line">    <span class="keyword">val</span> optimizedRelNodes = optimize(relNodes)</span><br><span class="line">    <span class="comment">// 3）转换成 ExecNode</span></span><br><span class="line">    <span class="keyword">val</span> execNodes = translateToExecNodePlan(optimizedRelNodes)</span><br><span class="line">    <span class="comment">// 4）转换为底层的 Transformation 算子</span></span><br><span class="line">    translateToPlan(execNodes)</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>首先需要进行的操作是将 Operation 转换为 RelNode，这个转换操作借助 QueryOperationConverter 完成</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">LogicalSink#2</span><br><span class="line">  LogicalAggregate#1</span><br><span class="line">    LogicalTableScan#0</span><br></pre></td></tr></table></figure>
+<p>在得到 RelNode 后，就进入 Calcite 对 RelNode 的优化流程。例如谓词下推之类的操作就是在这边完成的。</p>
+<p><strong>在 Blink 中有一点特殊的地方在于，由于多个 RelNode 构成的树可能存在共同的“子树”（例如将相同的查询结果输出到不同的结果表中，那么两个 LogicalSink 的子树就可能是共用的），Blink 使用了一种 CommonSubGraphBasedOptimizer 优化器，将拥有共同子树的 RelNode 看作一个 DAG 结构，并将 DAG 划分成 RelNodeBlock，然后在RelNodeBlock 的基础上进行优化工作。每一个 RelNodeBlock 可以看作一个 RelNode 树进行优化，这和正常的 Calcite 处理流程还是保持一致的</strong>(转载的，有待考究)</p>
+<p>CommonSubGraphBasedOptimizer有两个实现，流的StreamCommonSubGraphBasedOptimizer和批的BatchCommonSubGraphBasedOptimizer</p>
+<figure class="highlight scala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">CommonSubGraphBasedOptimizer</span> <span class="keyword">extends</span> <span class="title">Optimizer</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">override</span> <span class="function"><span class="keyword">def</span> <span class="title">optimize</span></span>(roots: <span class="type">Seq</span>[<span class="type">RelNode</span>]): <span class="type">Seq</span>[<span class="type">RelNode</span>] = &#123;</span><br><span class="line">  </span><br><span class="line">    <span class="comment">//以RelNodeBlock为单位进行优化，在子类中实现，StreamCommonSubGraphBasedOptimizer，BatchCommonSubGraphBasedOptimizer</span></span><br><span class="line">    <span class="keyword">val</span> sinkBlocks = doOptimize(roots)</span><br><span class="line">    <span class="comment">//获得优化后的逻辑计划</span></span><br><span class="line">    <span class="keyword">val</span> optimizedPlan = sinkBlocks.map &#123; block =&gt;</span><br><span class="line">      <span class="keyword">val</span> plan = block.getOptimizedPlan</span><br><span class="line">      require(plan != <span class="literal">null</span>)</span><br><span class="line">      plan</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="comment">//将 RelNodeBlock 使用的中间表展开</span></span><br><span class="line">    expandIntermediateTableScan(optimizedPlan)</span><br><span class="line">    </span><br><span class="line">  &#125;</span><br><span class="line">  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>Caclite 对逻辑计划的优化是一套基于规则的框架，用户可以通过添加规则进行扩展，Flink 就是基于自定义规则来实现整个的优化过程。Flink 构造了一个链式的优化程序，可以按顺序使用多套规则集合完成 RelNode 的优化过程。</p>
+<p>在 FlinkStreamProgram 和 FlinkBatchProgram 中定义了一系列扩展规则，用于构造逻辑计划的优化器。与此同时，Flink 扩展了 RelNode，增加了 FlinkLogicRel 和 FlinkPhysicRel 这两类 RelNode，对应的 Convention 分别为 FlinkConventions.LOGICAL 和 FlinkConventions.STREAM_PHYSICAL (或FlinkConventions.BATCH_PHYSICAL)。在优化器的处理过程中，RelNode 会从 Calcite 内部定义的节点转换为 FlinkLogicRel 节点（FlinkConventions.LOGICAL），并最终被转换为 FlinkPhysicRel 节点（FlinkConventions.STREAM_PHYSICAL）。这两类转换规则分别对应 FlinkStreamRuleSets.LOGICAL_OPT_RULES 和 FlinkStreamRuleSets.PHYSICAL_OPT_RULES。在不考虑其它更复杂的性能优化的情况下，如果要扩展 Flink SQL 的语法规则，可以参考这两类规则来增加节点和转换规则。</p>
+<p>例如LogicSink在StreamCommonSubGraphBasedOptimizer.doOptimize会经过FlinkStreamProgram经过FlinkStreamRuleSets转为FlinkLogicalSink在转为StreamExecSinkRule。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/E5D9E234D91F42E2B8B8881315B2FD45?method=download&amp;shareKey=ef4b3e8f4bdefd274b2686f0a03178a9" alt="image"></p>
+<p>经过优化器处理后，得到的逻辑树中的所有节点都应该是 FlinkPhysicRel，这之后就可以用于生成物理执行计划了。首先要将 FlinkPhysicalRel 构成的 DAG 转换成 ExecNode 构成的 DAG，因为可能存在共用子树的情况，这里还会尝试共用相同的子逻辑计划。由于通常 FlinkPhysicalRel 的具体实现类通常也实现了 ExecNode 接口，所以这一步转换较为简单。</p>
+<p>在得到由 ExecNode 构成的 DAG 后，就可以尝试生成物理执行计划了，也就是将 ExecNode 节点转换为 Flink 内部的 Transformation 算子。不同的 ExecNode 按照各自的需求生成不同的 Transformation，基于这些 Transformation 构建 Flink 的 DAG。</p>
+<h3 id="SQL-执行"><a href="#SQL-执行" class="headerlink" title="SQL 执行"></a>SQL 执行</h3><h3 id="calcite相关"><a href="#calcite相关" class="headerlink" title="calcite相关"></a>calcite相关</h3><p><img src="https://note.youdao.com/yws/api/personal/file/EEC39CE3D2894B62BA7F614D0279A9E5?method=download&amp;shareKey=41e918eb95a7d9dbd3ba14d19a3336d7" alt="image"></p>
+<ul>
+<li>关系代数（Relational algebra）：即关系表达式。它们通常以动词命名，例如 Sort, Join, Project, Filter, Scan, Sample.</li>
+<li>行表达式（Row expressions）：例如 RexLiteral (常量), RexVariable (变量), RexCall (调用) 等，例如投影列表（Project）、过滤规则列表（Filter）、JOIN 条件列表和 ORDER BY 列表、WINDOW 表达式、函数调用等。使用 RexBuilder 来构建行表达式。</li>
+<li>表达式有各种特征（Trait）：使用 Trait 的 satisfies() 方法来测试某个表达式是否符合某 Trait 或 Convention.<br>转化特征（Convention）：属于 Trait 的子类，用于转化 RelNode 到具体平台实现（可以将下文提到的 Planner 注册到 Convention 中）. 例如 JdbcConvention，FlinkConventions.DATASTREAM 等。同一个关系表达式的输入必须来自单个数据源，各表达式之间通过 Converter 生成的 Bridge 来连接。</li>
+<li>规则（Rules）：用于将一个表达式转换（Transform）为另一个表达式。它有一个由 RelOptRuleOperand 组成的列表来决定是否可将规则应用于树的某部分。</li>
+<li>规划器（Planner） ：即请求优化器，它可以根据一系列规则和成本模型（例如基于成本的优化模型 VolcanoPlanner、启发式优化模型 HepPlanner）来将一个表达式转为语义等价（但效率更优）的另一个表达式。</li>
+</ul>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://blog.jrwang.me/2019/flink-source-code-sql-overview/" target="_blank" rel="noopener">Flink 源码阅读笔记（15）- Flink SQL 整体执行框架</a></p>
+<p><a href="https://blog.csdn.net/qq475781638/article/details/92631194" target="_blank" rel="noopener">https://blog.csdn.net/qq475781638/article/details/92631194</a></p>
+<p><a href="https://www.infoq.cn/article/flink-api-table-api-and-sql" target="_blank" rel="noopener">https://www.infoq.cn/article/flink-api-table-api-and-sql</a></p>
+<p><a href="https://www.cnblogs.com/WCFGROUP/p/9241884.html" target="_blank" rel="noopener">https://www.cnblogs.com/WCFGROUP/p/9241884.html</a></p>
+<p><a href="http://wuchong.me/blog/2017/03/30/flink-internals-table-and-sql-api/" target="_blank" rel="noopener">http://wuchong.me/blog/2017/03/30/flink-internals-table-and-sql-api/</a></p>
+<p><a href="https://www.cnblogs.com/029zz010buct/p/10142264.html" target="_blank" rel="noopener">https://www.cnblogs.com/029zz010buct/p/10142264.html</a></p>
+<p><a href="https://www.jianshu.com/p/6ed368272916" target="_blank" rel="noopener">https://www.jianshu.com/p/6ed368272916</a></p>
+<p><a href="https://cloud.tencent.com/developer/article/1243475?fromSource=waitui" target="_blank" rel="noopener">Apache Calcite 功能简析及在 Flink 的应用</a></p>
+<p><a href="https://matt33.com/2019/03/07/apache-calcite-process-flow" target="_blank" rel="noopener">Apache Calcite 处理流程详解</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/14/Flink-自定义metric监控/" rel="next" title="Flink 自定义metric监控">
+                <i class="fa fa-chevron-left"></i> Flink 自定义metric监控
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/12/14/设计模式系列-工厂模式/" rel="prev" title="设计模式系列-工厂模式">
+                设计模式系列-工厂模式 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#怎么将schema注册到calcite中"><span class="nav-number">1.</span> <span class="nav-text">怎么将schema注册到calcite中</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQL-转换及优化"><span class="nav-number">2.</span> <span class="nav-text">SQL 转换及优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQL-执行"><span class="nav-number">3.</span> <span class="nav-text">SQL 执行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#calcite相关"><span class="nav-number">4.</span> <span class="nav-text">calcite相关</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">5.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

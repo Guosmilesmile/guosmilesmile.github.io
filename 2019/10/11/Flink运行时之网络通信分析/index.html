@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="NetworkEnvironment网络环境（NetworkEnvironment）是TaskManager进行网络通信的主对象，主要用于跟踪中间结果并负责所有的数据交换。每个TaskManager的实例都包含一个网络环境对象，在TaskManager启动时创建。NetworkEnvironment管理着多个协助通信的关键部件，它们是：    part 解释     NetworkBufferPo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink运行时之网络通信分析">
+<meta property="og:url" content="http://yoursite.com/2019/10/11/Flink运行时之网络通信分析/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="NetworkEnvironment网络环境（NetworkEnvironment）是TaskManager进行网络通信的主对象，主要用于跟踪中间结果并负责所有的数据交换。每个TaskManager的实例都包含一个网络环境对象，在TaskManager启动时创建。NetworkEnvironment管理着多个协助通信的关键部件，它们是：    part 解释     NetworkBufferPo">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/9F9468B08EAE48DEA8992F82719C7DD1?method=download&shareKey=733a66b12c5e31f28d063b7f815b444d">
+<meta property="og:updated_time" content="2019-10-11T14:06:56.456Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink运行时之网络通信分析">
+<meta name="twitter:description" content="NetworkEnvironment网络环境（NetworkEnvironment）是TaskManager进行网络通信的主对象，主要用于跟踪中间结果并负责所有的数据交换。每个TaskManager的实例都包含一个网络环境对象，在TaskManager启动时创建。NetworkEnvironment管理着多个协助通信的关键部件，它们是：    part 解释     NetworkBufferPo">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/9F9468B08EAE48DEA8992F82719C7DD1?method=download&shareKey=733a66b12c5e31f28d063b7f815b444d">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/10/11/Flink运行时之网络通信分析/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink运行时之网络通信分析 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/10/11/Flink运行时之网络通信分析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink运行时之网络通信分析
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-10-11 22:06:04 / 修改时间：22:06:56" itemprop="dateCreated datePublished" datetime="2019-10-11T22:06:04+08:00">2019-10-11</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="NetworkEnvironment"><a href="#NetworkEnvironment" class="headerlink" title="NetworkEnvironment"></a>NetworkEnvironment</h3><p>网络环境（NetworkEnvironment）是TaskManager进行网络通信的主对象，主要用于跟踪中间结果并负责所有的数据交换。每个TaskManager的实例都包含一个网络环境对象，在TaskManager启动时创建。NetworkEnvironment管理着多个协助通信的关键部件，它们是：</p>
+<table>
+<thead>
+<tr>
+<th>part</th>
+<th>解释</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NetworkBufferPool</td>
+<td>网络缓冲池，负责申请一个TaskManager的所有的内存段用作缓冲池；每个ResultPartition(等价于一个task一个)都有一个localBufferPool，与全局的NetworkBufferPool进行交互申请和释放内存段。</td>
+</tr>
+<tr>
+<td>ConnectionManager</td>
+<td>连接管理器，用于管理本地（远程）通信连接；</td>
+</tr>
+<tr>
+<td>ResultPartitionManager</td>
+<td>结果分区管理器，用于跟踪一个TaskManager上所有生产/消费相关的ResultPartition；主要就是用于track所有的result partitions。</td>
+</tr>
+<tr>
+<td>TaskEventDispatcher</td>
+<td>任务事件分发器，从消费者任务分发事件给生产者任务；</td>
+</tr>
+<tr>
+<td> ResultPartitionConsumableNotifier</td>
+<td>结果分区可消费通知器，用于通知消费者生产者生产的结果分区可消费；</td>
+</tr>
+</tbody>
+</table>
+<p>当NetworkEnvironment被初始化时，它首先根据配置创建网络缓冲池（NetworkBufferPool）。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/9F9468B08EAE48DEA8992F82719C7DD1?method=download&amp;shareKey=733a66b12c5e31f28d063b7f815b444d" alt="image"></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">NetworkEnvironment</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">int</span> numBuffers,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">int</span> memorySegmentSize,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">int</span> partitionRequestInitialBackoff,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">int</span> partitionRequestMaxBackoff,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">int</span> networkBuffersPerChannel,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">int</span> extraNetworkBuffersPerGate,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">boolean</span> enableCreditBased)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">this</span>(</span><br><span class="line">			<span class="keyword">new</span> NetworkBufferPool(numBuffers, memorySegmentSize),</span><br><span class="line">			<span class="keyword">new</span> LocalConnectionManager(),</span><br><span class="line">			<span class="keyword">new</span> ResultPartitionManager(),</span><br><span class="line">			<span class="keyword">new</span> TaskEventDispatcher(),</span><br><span class="line">			<span class="keyword">new</span> KvStateRegistry(),</span><br><span class="line">			<span class="keyword">null</span>,</span><br><span class="line">			<span class="keyword">null</span>,</span><br><span class="line">			IOManager.IOMode.SYNC,</span><br><span class="line">			partitionRequestInitialBackoff,</span><br><span class="line">			partitionRequestMaxBackoff,</span><br><span class="line">			networkBuffersPerChannel,</span><br><span class="line">			extraNetworkBuffersPerGate,</span><br><span class="line">			enableCreditBased);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>初始化创建NetworkBufferPool时需要指定Buffer数目、单个Buffer的大小，并且<strong>申请的网络buffer为OffHeapMemory</strong>。使用array阻塞队列。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ArrayBlockingQueue&lt;MemorySegment&gt; availableMemorySegments;</span><br></pre></td></tr></table></figure></p>
+<p>申请流程如下<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; numberOfSegmentsToAllocate; i++) &#123;</span><br><span class="line">			availableMemorySegments.add(MemorySegmentFactory.allocateUnpooledOffHeapMemory(segmentSize, <span class="keyword">null</span>));</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (OutOfMemoryError err) &#123;</span><br></pre></td></tr></table></figure></p>
+<p>关于NetworkBufferPool相关的在本章后面介绍。</p>
+<p>在任务执行的核心逻辑中，有一个步骤是需要将自身（Task）注册到网络栈（也就是这里的NetworkEnvironment）。</p>
+<p>该步骤会调用NetworkEnvironment的实例方法registerTask进行注册，注册之后NetworkEnvironment会对任务的通信进行管理：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerTask</span><span class="params">(Task task)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="comment">//获得当前任务对象所生产的结果分区集合</span></span><br><span class="line">		<span class="keyword">final</span> ResultPartition[] producedPartitions = task.getProducedPartitions();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">synchronized</span> (lock) &#123;</span><br><span class="line">			<span class="keyword">if</span> (isShutdown) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"NetworkEnvironment is shut down"</span>);</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">for</span> (<span class="keyword">final</span> ResultPartition partition : producedPartitions) &#123;</span><br><span class="line">				setupPartition(partition);</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="comment">//同时获得所有的数据的输入分区</span></span><br><span class="line">			<span class="comment">// Setup the buffer pool for each buffer reader</span></span><br><span class="line">			<span class="keyword">final</span> SingleInputGate[] inputGates = task.getAllInputGates();</span><br><span class="line">			<span class="keyword">for</span> (SingleInputGate gate : inputGates) &#123;</span><br><span class="line">				setupInputGate(gate);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>初始化结果分区和初始化输入分区，是两个重要的核心。</p>
+<h5 id="初始化结果分区"><a href="#初始化结果分区" class="headerlink" title="初始化结果分区"></a>初始化结果分区</h5><p>核心操作是初始化localBufferPool，然后将localBufferPool注册到partition中，再将partition注册到结果分区管理器ResultPartitionManager中</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setupPartition</span><span class="params">(ResultPartition partition)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		BufferPool bufferPool = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="comment">//此分区是否使用有限数量的（网络）缓冲区,如果是最大的MemorySegments为</span></span><br><span class="line">			<span class="comment">// 当前分区的消费者数量*每个传出/传入通道使用的网络缓冲区数+每个传出/传入门使用的额外网络缓冲区数,否则为int的最大值</span></span><br><span class="line">			<span class="comment">// 默认是 消费者数量*2+8</span></span><br><span class="line">			<span class="keyword">int</span> maxNumberOfMemorySegments = partition.getPartitionType().isBounded() ?</span><br><span class="line">				partition.getNumberOfSubpartitions() * networkBuffersPerChannel +</span><br><span class="line">					extraNetworkBuffersPerGate : Integer.MAX_VALUE;</span><br><span class="line">			<span class="comment">// If the partition type is back pressure-free, we register with the buffer pool for</span></span><br><span class="line">			<span class="comment">// callbacks to release memory.</span></span><br><span class="line">			<span class="comment">//如果分区类型是无压力的，我们在缓冲池中注册回调以释放内存。</span></span><br><span class="line">			bufferPool = networkBufferPool.createBufferPool(partition.getNumberOfSubpartitions(),</span><br><span class="line">				maxNumberOfMemorySegments,</span><br><span class="line">				partition.getPartitionType().hasBackPressure() ? Optional.empty() : Optional.of(partition));</span><br><span class="line">			<span class="comment">//将本地缓冲池注册到结果分区</span></span><br><span class="line">			partition.registerBufferPool(bufferPool);</span><br><span class="line">			<span class="comment">//结果分区会被注册到结果分区管理器</span></span><br><span class="line">			resultPartitionManager.registerResultPartition(partition);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">			<span class="keyword">if</span> (bufferPool != <span class="keyword">null</span>) &#123;</span><br><span class="line">				bufferPool.lazyDestroy();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (t <span class="keyword">instanceof</span> IOException) &#123;</span><br><span class="line">				<span class="keyword">throw</span> (IOException) t;</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> IOException(t.getMessage(), t);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		taskEventDispatcher.registerPartition(partition.getPartitionId());</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="初始化输入分区"><a href="#初始化输入分区" class="headerlink" title="初始化输入分区"></a>初始化输入分区</h5><p>主要是判断是否是基于信道的通信方式，决定要申请多少的buffer，然后将创建好的localBufferPool注册到对应的inputGate中。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">@VisibleForTesting</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">setupInputGate</span><span class="params">(SingleInputGate gate)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		BufferPool bufferPool = <span class="keyword">null</span>;</span><br><span class="line">		<span class="keyword">int</span> maxNumberOfMemorySegments;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> (enableCreditBased) &#123;</span><br><span class="line">				maxNumberOfMemorySegments = gate.getConsumedPartitionType().isBounded() ?</span><br><span class="line">					extraNetworkBuffersPerGate : Integer.MAX_VALUE;</span><br><span class="line"></span><br><span class="line">				<span class="comment">// assign exclusive buffers to input channels directly and use the rest for floating buffers</span></span><br><span class="line">				gate.assignExclusiveSegments(networkBufferPool, networkBuffersPerChannel);</span><br><span class="line">				bufferPool = networkBufferPool.createBufferPool(<span class="number">0</span>, maxNumberOfMemorySegments);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				maxNumberOfMemorySegments = gate.getConsumedPartitionType().isBounded() ?</span><br><span class="line">					gate.getNumberOfInputChannels() * networkBuffersPerChannel +</span><br><span class="line">						extraNetworkBuffersPerGate : Integer.MAX_VALUE;</span><br><span class="line"></span><br><span class="line">				bufferPool = networkBufferPool.createBufferPool(gate.getNumberOfInputChannels(),</span><br><span class="line">					maxNumberOfMemorySegments);</span><br><span class="line">			&#125;</span><br><span class="line">			gate.setBufferPool(bufferPool);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">			<span class="keyword">if</span> (bufferPool != <span class="keyword">null</span>) &#123;</span><br><span class="line">				bufferPool.lazyDestroy();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			ExceptionUtils.rethrowIOException(t);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<h2 id="统一的数据交换对象"><a href="#统一的数据交换对象" class="headerlink" title="统一的数据交换对象"></a>统一的数据交换对象</h2><p>在Flink的执行引擎中，流动的元素主要有两种：缓冲（Buffer）和事件（Event）。Buffer主要针对用户数据交换，而Event则用于一些特殊的控制标识。但在实现时，为了在通信层统一数据交换，Flink提供了数据交换对象——BufferOrEvent。它是一个既可以表示Buffer又可以表示Event的类。上层使用者只需调用isBuffer和isEvent方法即可判断当前收到的这条数据是Buffer还是Event。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Either type for &#123;<span class="doctag">@link</span> Buffer&#125; or &#123;<span class="doctag">@link</span> AbstractEvent&#125; instances tagged with the channel index,</span></span><br><span class="line"><span class="comment"> * from which they were received.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BufferOrEvent</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> Buffer buffer;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> AbstractEvent event;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="缓冲-Buffer"><a href="#缓冲-Buffer" class="headerlink" title="缓冲 Buffer"></a>缓冲 Buffer</h4><p>缓冲（Buffer）是数据交换的载体，几乎所有的数据（当然事件是特殊的）交换都需要经过Buffer。Buffer底层依赖于Flink自管理内存的内存段（MemorySegment）作为数据的容器。Buffer在内存段上做了一层封装，这一层封装是为了对基于引用计数的Buffer回收机制提供支持。</p>
+<p>具体实现NetworkBuffer.java,这个类继承了netty中的AbstractReferenceCountedByteBuf并且实现了自定义的Buffer。</p>
+<p>AbstractReferenceCountedByteBuf是netty中已经实现的引用计数的功能。通过这个类，可以判断这个buffer是否需要回收。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">NetworkBuffer</span> <span class="keyword">extends</span> <span class="title">AbstractReferenceCountedByteBuf</span> <span class="keyword">implements</span> <span class="title">Buffer</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 保留此缓冲区以备将来使用，将参考计数器增加1</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> NetworkBuffer <span class="title">retainBuffer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> (NetworkBuffer) <span class="keyword">super</span>.retain();</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 释放一次该缓冲区，即减少参考计数并在参考计数达到0时回收缓冲区</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">recycleBuffer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		release();</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 回收申请的内存</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">deallocate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		recycler.recycle(memorySegment);</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>它在内部维护着一个计数器referenceCount，初始值为1。内存回收由缓冲回收器（BufferRecycler）来完成，回收的对象就是内存段（MemorySegment）。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** The recycler for the backing &#123;<span class="doctag">@link</span> MemorySegment&#125;. */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> BufferRecycler recycler;</span><br></pre></td></tr></table></figure>
+<p>BufferRecycler接口有一个名为FreeingBufferRecycler的简单实现者，它的做法是直接释放内存段。当然通常为了分配和回收的效率，会对Buffer进行预先分配然后加入到Buffer池中。所以，BufferRecycler的常规实现是基于缓冲池的。</p>
+<h4 id="BufferRecycler的具体实现"><a href="#BufferRecycler的具体实现" class="headerlink" title="BufferRecycler的具体实现"></a>BufferRecycler的具体实现</h4><h5 id="LocalBufferPool"><a href="#LocalBufferPool" class="headerlink" title="LocalBufferPool"></a>LocalBufferPool</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> NetworkBufferPool networkBufferPool;</span><br></pre></td></tr></table></figure>
+<p>拥有一个NetworkBufferPool的属性，这个NetworkBufferPool是一个全局网络buffer池，一个TaskManger只有一个。</p>
+<p><strong>NetWork BufferPool 是 TaskManager 内所有 Task 共享的 BufferPool，TaskManager 初始化时就会向堆外内存申请 NetWork BufferPool。LocalBufferPool 是每个 Task 自己的 BufferPool，假如一个 TaskManager 内运行着 5 个 Task，那么就会有 5 个 LocalBufferPool，但 TaskManager 内永远只有一个 NetWork BufferPool。</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ArrayDeque&lt;MemorySegment&gt; availableMemorySegments = <span class="keyword">new</span> ArrayDeque&lt;MemorySegment&gt;();</span><br></pre></td></tr></table></figure>
+<p>当前可用的内存段。 这些段是从网络缓冲池中请求的，目前尚未作为缓冲区实例分发。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> ArrayDeque&lt;BufferListener&gt; registeredListeners = <span class="keyword">new</span> ArrayDeque&lt;&gt;();</span><br></pre></td></tr></table></figure>
+<p>监听buffer是否可用，如果可用，通过这个队列通知。</p>
+<p>requestBuffer()调用requestMemorySegment()将获取到的MemorySegment封装成NetworkBuffer，以自身为recycler的入参。申请内存这一块是像全局NetWork BufferPool申请。</p>
+<p>requestMemorySegment()方法是申请内存块的</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> MemorySegment <span class="title">requestMemorySegment</span><span class="params">(<span class="keyword">boolean</span> isBlocking)</span> <span class="keyword">throws</span> InterruptedException, IOException </span>&#123;</span><br><span class="line">		<span class="comment">//返回多余的内存段</span></span><br><span class="line">		<span class="comment">// 如果有多余的内存段，recycle，直接add到networkBufferPool的availableMemorySegments中</span></span><br><span class="line">		returnExcessMemorySegments();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// fill availableMemorySegments with at least one element, wait if required</span></span><br><span class="line">		<span class="keyword">while</span> (<span class="keyword">true</span>) &#123;</span><br><span class="line">			<span class="comment">//请求内存段，如果有直接返回，如果没有，先释放owner中的内存，如果阻塞，那么等待2秒继续申请，如果不阻塞，返回null</span></span><br><span class="line">			<span class="comment">// 申请内存的操作是去通过  networkBufferPool的availableMemorySegments.poll去等待</span></span><br><span class="line">			Optional&lt;MemorySegment&gt; segment = internalRequestMemorySegment();</span><br><span class="line">			<span class="keyword">if</span> (segment.isPresent()) &#123;</span><br><span class="line">				<span class="keyword">return</span> segment.get();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (owner.isPresent()) &#123;</span><br><span class="line">				owner.get().releaseMemory(<span class="number">1</span>);</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">synchronized</span> (availableMemorySegments) &#123;</span><br><span class="line">				<span class="keyword">if</span> (isBlocking) &#123;</span><br><span class="line">					availableMemorySegments.wait(<span class="number">2000</span>);</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="keyword">else</span> &#123;</span><br><span class="line">					<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>deallocate是一个在netty线程执行的函数，调用自定义的recycle函数。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 回收申请的内存</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">deallocate</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		recycler.recycle(memorySegment);</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	</span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">recycle</span><span class="params">(MemorySegment segment)</span> </span>&#123;</span><br><span class="line">		BufferListener listener;</span><br><span class="line">		NotificationResult notificationResult = NotificationResult.BUFFER_NOT_USED;</span><br><span class="line">		<span class="keyword">while</span> (!notificationResult.isBufferUsed()) &#123;</span><br><span class="line">			<span class="keyword">synchronized</span> (availableMemorySegments) &#123;</span><br><span class="line">				<span class="comment">//如果是多余的内存段或者已经销毁，直接返回该内存段</span></span><br><span class="line">				<span class="keyword">if</span> (isDestroyed || numberOfRequestedMemorySegments &gt; currentPoolSize) &#123;</span><br><span class="line">					returnMemorySegment(segment);</span><br><span class="line">					<span class="keyword">return</span>;</span><br><span class="line">				&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">					<span class="comment">//获取队列中等待的listener，通过这个listener。如果没有在等待中的 ，加入可获取的队列，notify。</span></span><br><span class="line">					listener = registeredListeners.poll();</span><br><span class="line">					<span class="keyword">if</span> (listener == <span class="keyword">null</span>) &#123;</span><br><span class="line">						availableMemorySegments.add(segment);</span><br><span class="line">						availableMemorySegments.notify();</span><br><span class="line">						<span class="keyword">return</span>;</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">			notificationResult = fireBufferAvailableNotification(listener, segment);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="NetworkBufferPool"><a href="#NetworkBufferPool" class="headerlink" title="NetworkBufferPool"></a>NetworkBufferPool</h4><p>NetworkBufferPool是网络堆栈的 MemorySegment实例的固定大小的池。申请的是堆外内存。（<strong>个人猜想网络是一块需要经常进行替换数据的地方，频繁的替换会发送大量的young gc，在java中，C c = new C，  c= new C；的方式旧的实例需要通过回收才可以消除，而通过堆外内存可以直接通过put byte直接在内存空间操作，不需要回收</strong>。）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Allocates all &#123;<span class="doctag">@link</span> MemorySegment&#125; instances managed by this pool.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">NetworkBufferPool</span><span class="params">(<span class="keyword">int</span> numberOfSegmentsToAllocate, <span class="keyword">int</span> segmentSize)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">this</span>.totalNumberOfMemorySegments = numberOfSegmentsToAllocate;</span><br><span class="line">		<span class="keyword">this</span>.memorySegmentSize = segmentSize;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">long</span> sizeInLong = (<span class="keyword">long</span>) segmentSize;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="keyword">this</span>.availableMemorySegments = <span class="keyword">new</span> ArrayBlockingQueue&lt;&gt;(numberOfSegmentsToAllocate);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">catch</span> (OutOfMemoryError err) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> OutOfMemoryError(<span class="string">"Could not allocate buffer queue of length "</span></span><br><span class="line">					+ numberOfSegmentsToAllocate + <span class="string">" - "</span> + err.getMessage());</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="comment">//网络专用的buffer申请的是堆外内存</span></span><br><span class="line">			<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; numberOfSegmentsToAllocate; i++) &#123;</span><br><span class="line">				availableMemorySegments.add(MemorySegmentFactory.allocateUnpooledOffHeapMemory(segmentSize, <span class="keyword">null</span>));</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">catch</span> (OutOfMemoryError err) &#123;</span><br><span class="line">			<span class="comment">//如果对外内存不足，那么将信息全部报出来。</span></span><br><span class="line">			<span class="keyword">int</span> allocated = availableMemorySegments.size();</span><br><span class="line"></span><br><span class="line">			<span class="comment">// free some memory</span></span><br><span class="line">			availableMemorySegments.clear();</span><br><span class="line"></span><br><span class="line">			<span class="keyword">long</span> requiredMb = (sizeInLong * numberOfSegmentsToAllocate) &gt;&gt; <span class="number">20</span>;</span><br><span class="line">			<span class="keyword">long</span> allocatedMb = (sizeInLong * allocated) &gt;&gt; <span class="number">20</span>;</span><br><span class="line">			<span class="keyword">long</span> missingMb = requiredMb - allocatedMb;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> OutOfMemoryError(<span class="string">"Could not allocate enough memory segments for NetworkBufferPool "</span> +</span><br><span class="line">					<span class="string">"(required (Mb): "</span> + requiredMb +</span><br><span class="line">					<span class="string">", allocated (Mb): "</span> + allocatedMb +</span><br><span class="line">					<span class="string">", missing (Mb): "</span> + missingMb + <span class="string">"). Cause: "</span> + err.getMessage());</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">long</span> allocatedMb = (sizeInLong * availableMemorySegments.size()) &gt;&gt; <span class="number">20</span>;</span><br><span class="line"></span><br><span class="line">		LOG.info(<span class="string">"Allocated &#123;&#125; MB for network buffer pool (number of memory segments: &#123;&#125;, bytes per segment: &#123;&#125;)."</span>,</span><br><span class="line">				allocatedMb, availableMemorySegments.size(), segmentSize);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>NetworkBufferPool中申请内存段和释放内存段，都是加入和放回自身的队列中。<br>每个task对应的localBufferPool需要buffer则去networkBufferPool的队列中获取。NetworkBufferPool有用的buffer数量，在初始化的时候就限定了。（这个数量是由配置计算出来的，具体见TaskManagerServices.calculateNetworkBufferMemory）</p>
+<p>redistributeBuffers这个函数可以动态调节每个localPool的size，让手头空着的内存段，分配给更需要的本地pool中。通过<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">/需要申请的数量/总需要申请的数量 求出百分比，去掉小数点。      </span><br><span class="line">现有内存段个数 * 百分比 - 已经分配为可以分配的</span><br></pre></td></tr></table></figure></p>
+<p>需要申请的段越多  百分比就越大，优先分配给权重大的<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">redistributeBuffers</span><span class="params">()</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">assert</span> Thread.holdsLock(factoryLock);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// All buffers, which are not among the required ones</span></span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">int</span> numAvailableMemorySegment = totalNumberOfMemorySegments - numTotalRequiredBuffers;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//如果可用内存段为0，将所有的localBufferpool中申请的多余的buffer返还给队列</span></span><br><span class="line">		<span class="keyword">if</span> (numAvailableMemorySegment == <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="comment">// in this case, we need to redistribute buffers so that every pool gets its minimum</span></span><br><span class="line">			<span class="keyword">for</span> (LocalBufferPool bufferPool : allBufferPools) &#123;</span><br><span class="line">				bufferPool.setNumBuffers(bufferPool.getNumberOfRequiredMemorySegments());</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">/*</span></span><br><span class="line"><span class="comment">		 * With buffer pools being potentially limited, let's distribute the available memory</span></span><br><span class="line"><span class="comment">		 * segments based on the capacity of each buffer pool, i.e. the maximum number of segments</span></span><br><span class="line"><span class="comment">		 * an unlimited buffer pool can take is numAvailableMemorySegment, for limited buffer pools</span></span><br><span class="line"><span class="comment">		 * it may be less. Based on this and the sum of all these values (totalCapacity), we build</span></span><br><span class="line"><span class="comment">		 * a ratio that we use to distribute the buffers.</span></span><br><span class="line"><span class="comment">		 */</span></span><br><span class="line"></span><br><span class="line">		<span class="keyword">long</span> totalCapacity = <span class="number">0</span>; <span class="comment">// long to avoid int overflow</span></span><br><span class="line"></span><br><span class="line">		<span class="comment">//计算每个LocalBufferPool的还可以申请内存段之和</span></span><br><span class="line">		<span class="keyword">for</span> (LocalBufferPool bufferPool : allBufferPools) &#123;</span><br><span class="line">			<span class="keyword">int</span> excessMax = bufferPool.getMaxNumberOfMemorySegments() -</span><br><span class="line">				bufferPool.getNumberOfRequiredMemorySegments();</span><br><span class="line">			totalCapacity += Math.min(numAvailableMemorySegment, excessMax);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// no capacity to receive additional buffers?</span></span><br><span class="line">		<span class="keyword">if</span> (totalCapacity == <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span>; <span class="comment">// necessary to avoid div by zero when nothing to re-distribute</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// since one of the arguments of 'min(a,b)' is a positive int, this is actually</span></span><br><span class="line">		<span class="comment">// guaranteed to be within the 'int' domain</span></span><br><span class="line">		<span class="comment">// (we use a checked downCast to handle possible bugs more gracefully).</span></span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">int</span> memorySegmentsToDistribute = MathUtils.checkedDownCast(</span><br><span class="line">				Math.min(numAvailableMemorySegment, totalCapacity));</span><br><span class="line"></span><br><span class="line">		<span class="keyword">long</span> totalPartsUsed = <span class="number">0</span>; <span class="comment">// of totalCapacity</span></span><br><span class="line">		<span class="keyword">int</span> numDistributedMemorySegment = <span class="number">0</span>;</span><br><span class="line">		<span class="keyword">for</span> (LocalBufferPool bufferPool : allBufferPools) &#123;</span><br><span class="line">			<span class="keyword">int</span> excessMax = bufferPool.getMaxNumberOfMemorySegments() -</span><br><span class="line">				bufferPool.getNumberOfRequiredMemorySegments();</span><br><span class="line"></span><br><span class="line">			<span class="comment">// shortcut</span></span><br><span class="line">			<span class="keyword">if</span> (excessMax == <span class="number">0</span>) &#123;</span><br><span class="line">				<span class="keyword">continue</span>;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			totalPartsUsed += Math.min(numAvailableMemorySegment, excessMax);</span><br><span class="line"></span><br><span class="line">			<span class="comment">// avoid remaining buffers by looking at the total capacity that should have been</span></span><br><span class="line">			<span class="comment">// re-distributed up until here</span></span><br><span class="line">			<span class="comment">// the downcast will always succeed, because both arguments of the subtraction are in the 'int' domain</span></span><br><span class="line">			<span class="comment">//需要申请的数量/总需要申请的数量 求出百分比，去掉小数点。  * 现有内存段个数 * 百分比 - 已经分配为可以分配的</span></span><br><span class="line">			<span class="keyword">final</span> <span class="keyword">int</span> mySize = MathUtils.checkedDownCast(</span><br><span class="line">					memorySegmentsToDistribute * totalPartsUsed / totalCapacity - numDistributedMemorySegment);</span><br><span class="line"></span><br><span class="line">			numDistributedMemorySegment += mySize;</span><br><span class="line">			bufferPool.setNumBuffers(bufferPool.getNumberOfRequiredMemorySegments() + mySize);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">assert</span> (totalPartsUsed == totalCapacity);</span><br><span class="line">		<span class="keyword">assert</span> (numDistributedMemorySegment == memorySegmentsToDistribute);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> MemorySegment <span class="title">requestMemorySegment</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> availableMemorySegments.poll();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">recycle</span><span class="params">(MemorySegment segment)</span> </span>&#123;</span><br><span class="line">		<span class="comment">// Adds the segment back to the queue, which does not immediately free the memory</span></span><br><span class="line">		<span class="comment">// however, since this happens when references to the global pool are also released,</span></span><br><span class="line">		<span class="comment">// making the availableMemorySegments queue and its contained object reclaimable</span></span><br><span class="line">		availableMemorySegments.add(checkNotNull(segment));</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="配置天坑"><a href="#配置天坑" class="headerlink" title="配置天坑"></a>配置天坑</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Fraction of JVM memory to use for network buffers.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> ConfigOption&lt;Float&gt; NETWORK_BUFFERS_MEMORY_FRACTION =</span><br><span class="line">			key(<span class="string">"taskmanager.network.memory.fraction"</span>)</span><br><span class="line">			.defaultValue(<span class="number">0.1f</span>)</span><br><span class="line">			.withDescription(<span class="string">"Fraction of JVM memory to use for network buffers. This determines how many streaming"</span> +</span><br><span class="line">				<span class="string">" data exchange channels a TaskManager can have at the same time and how well buffered the channels"</span> +</span><br><span class="line">				<span class="string">" are. If a job is rejected or you get a warning that the system has not enough buffers available,"</span> +</span><br><span class="line">				<span class="string">" increase this value or the min/max values below. Also note, that \"taskmanager.network.memory.min\""</span> +</span><br><span class="line">				<span class="string">"` and \"taskmanager.network.memory.max\" may override this fraction."</span>);</span><br><span class="line">				</span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Minimum memory size for network buffers.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> ConfigOption&lt;String&gt; NETWORK_BUFFERS_MEMORY_MIN =</span><br><span class="line">			key(<span class="string">"taskmanager.network.memory.min"</span>)</span><br><span class="line">			.defaultValue(<span class="string">"64mb"</span>)</span><br><span class="line">			.withDescription(<span class="string">"Minimum memory size for network buffers."</span>);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Maximum memory size for network buffers.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> ConfigOption&lt;String&gt; NETWORK_BUFFERS_MEMORY_MAX =</span><br><span class="line">			key(<span class="string">"taskmanager.network.memory.max"</span>)</span><br><span class="line">			.defaultValue(<span class="string">"1gb"</span>)</span><br><span class="line">			.withDescription(<span class="string">"Maximum memory size for network buffers."</span>);</span><br></pre></td></tr></table></figure>
+<p>通过配比<em>内存大小与 最小大小比，取最大值，再与最大值比取较小值。。结果就是哪怕你的配比配的再大，网络buffer也是1gb。。。转为Count为 1024</em>1024/32K= 32,768。。。如果需要调整网络参数，一定要把最大值和最小值一起配上。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> <span class="keyword">long</span> networkBufBytes = Math.min(networkBufMax, Math.max(networkBufMin,</span><br><span class="line">		(<span class="keyword">long</span>) (jvmHeapNoNet / (<span class="number">1.0</span> - networkBufFraction) * networkBufFraction)));</span><br></pre></td></tr></table></figure></p>
+<h4 id="事件-Event"><a href="#事件-Event" class="headerlink" title="事件  Event"></a>事件  Event</h4><p>Flink的数据流中不仅仅只有用户的数据，还包含了一些特殊的事件，这些事件都是由算子注入到数据流中的。它们在每个流分区里伴随着其他的数据元素而被有序地分发。接收到这些事件的算子会对这些事件给出响应，典型的事件类型有：</p>
+<ul>
+<li>检查点屏障：用于隔离多个检查点之间的数据，保障快照数据的一致性；</li>
+<li>迭代屏障：标识流分区已到达了一个超级步的结尾；</li>
+<li>子分区数据结束标记：当消费任务获取到该事件时，表示其所消费的对应的分区中的数据已被全部消费完成；</li>
+</ul>
+<p>所有事件的最终基类都是AbstractEvent。AbstractEvent这一抽象类又派生出另一个抽象类RuntimeEvent，几乎所有预先内置的事件都直接派生于此。除了预定义的事件外，Flink还支持自定义的扩展事件，所有自定义的事件都继承自派生于AbstractEvent的TaskEvent。</p>
+<h4 id="ResultPartitionManager"><a href="#ResultPartitionManager" class="headerlink" title="ResultPartitionManager"></a>ResultPartitionManager</h4><p>ResultPartitionManager：结果分区管理器，用于跟踪一个TaskManager上所有生产/消费相关的ResultPartition；主要就是用于track所有的result partitions，核心结构为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Table&lt;ExecutionAttemptID, IntermediateResultPartitionID, ResultPartition&gt; registeredPartitions =HashBasedTable.create();</span><br></pre></td></tr></table></figure></p>
+<p>通过createSubpartitionView创建消费ResultSubpartition的视图ResultSubpartitionView，入参之一为BufferAvailabilityListener，是用来notify这个listener有数据到来，可以消费。</p>
+<p>所以ResultSubpartition就是消费分区，ResultSubpartitionView是消费分区与消费者绑定在一起的视图。</p>
+<h4 id="TaskEventDispatcher"><a href="#TaskEventDispatcher" class="headerlink" title="TaskEventDispatcher"></a>TaskEventDispatcher</h4><p>任务事件分发器，从消费者任务分发事件给生产者任务。</p>
+<h4 id="ConnectionManager"><a href="#ConnectionManager" class="headerlink" title="ConnectionManager"></a>ConnectionManager</h4><p>连接管理器，用于管理本地（远程）通信连接.存在两种模式，一种是本地，一种是netty远程。线上环境都是netty模式。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">NettyConfig nettyConfig = networkEnvironmentConfiguration.nettyConfig();</span><br><span class="line">		<span class="keyword">if</span> (nettyConfig != <span class="keyword">null</span>) &#123;</span><br><span class="line">			connectionManager = <span class="keyword">new</span> NettyConnectionManager(nettyConfig);</span><br><span class="line">			enableCreditBased = nettyConfig.isCreditBasedEnabled();</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			connectionManager = <span class="keyword">new</span> LocalConnectionManager();</span><br><span class="line">		&#125;</span><br></pre></td></tr></table></figure>
+<p>netty模式涉及到基于Netty的网络通信部分。后面再讲。</p>
+<h3 id="结果分区消费端"><a href="#结果分区消费端" class="headerlink" title="结果分区消费端"></a>结果分区消费端</h3><p>输入网关（InputGate）用于消费中间结果（IntermediateResult）在并行执行时由子任务生产的一个或多个结果分区（ResultPartition）。</p>
+<p>Flink当前提供了两个输入网关的实现，分别是：</p>
+<ul>
+<li>SingleInputGate：常规输入网关；</li>
+<li>UnionInputGate：联合输入网关，它允许将多个输入网关联合起来；</li>
+</ul>
+<p>我们主要分析SingleInputGate，因为它是消费ResultPartition的实体，而UnionInputGate主要充当InputGate容器的角色。</p>
+<p>作为数据的消费者，InputGate最关键的方法自然是获取生产者所生产的缓冲区，提供该功能的方法为getNextBufferOrEvent，它返回的对象是我们后面谈到的统一的数据交换对象BufferOrEvent。<br><strong><br>BufferOrEvent的直接消费对象是通信层API中的记录读取器，它会将Buffer中的数据反序列化为记录供上层任务使用。</strong></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Optional&lt;BufferOrEvent&gt; <span class="title">getNextBufferOrEvent</span><span class="params">(<span class="keyword">boolean</span> blocking)</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		<span class="comment">//如果已接收到所有EndOfPartitionEvent事件，则说明每个ResultSubpartition中的数据都被消费完成</span></span><br><span class="line">		<span class="keyword">if</span> (hasReceivedAllEndOfPartitionEvents) &#123;</span><br><span class="line">			<span class="keyword">return</span> Optional.empty();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (isReleased) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Released"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">//触发所有的输入通道向ResultSubpartition发起请求</span></span><br><span class="line">		requestPartitions();</span><br><span class="line"></span><br><span class="line">		InputChannel currentChannel;</span><br><span class="line">		<span class="keyword">boolean</span> moreAvailable;</span><br><span class="line">		Optional&lt;BufferAndAvailability&gt; result = Optional.empty();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">do</span> &#123;</span><br><span class="line">			<span class="keyword">synchronized</span> (inputChannelsWithData) &#123;</span><br><span class="line">				<span class="keyword">while</span> (inputChannelsWithData.size() == <span class="number">0</span>) &#123;</span><br><span class="line">					<span class="keyword">if</span> (isReleased) &#123;</span><br><span class="line">						<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Released"</span>);</span><br><span class="line">					&#125;</span><br><span class="line">					<span class="comment">//如果是允许阻塞，等待数据</span></span><br><span class="line">					<span class="keyword">if</span> (blocking) &#123;</span><br><span class="line">						inputChannelsWithData.wait();</span><br><span class="line">					&#125;</span><br><span class="line">					<span class="keyword">else</span> &#123;</span><br><span class="line">						<span class="keyword">return</span> Optional.empty();</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				currentChannel = inputChannelsWithData.remove();</span><br><span class="line">				enqueuedInputChannelsWithData.clear(currentChannel.getChannelIndex());</span><br><span class="line">				moreAvailable = !inputChannelsWithData.isEmpty();</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">//从输入通道中获得下一个Buffer</span></span><br><span class="line">			result = currentChannel.getNextBuffer();</span><br><span class="line">		&#125; <span class="keyword">while</span> (!result.isPresent());</span><br><span class="line"></span><br><span class="line">		<span class="comment">// this channel was now removed from the non-empty channels queue</span></span><br><span class="line">		<span class="comment">// we re-add it in case it has more data, because in that case no "non-empty" notification</span></span><br><span class="line">		<span class="comment">// will come for that channel</span></span><br><span class="line">		<span class="keyword">if</span> (result.get().moreAvailable()) &#123;</span><br><span class="line">			queueChannel(currentChannel);</span><br><span class="line">			moreAvailable = <span class="keyword">true</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> Buffer buffer = result.get().buffer();</span><br><span class="line">		<span class="comment">//如果该Buffer是用户数据，则构建BufferOrEvent对象并返回</span></span><br><span class="line">		<span class="keyword">if</span> (buffer.isBuffer()) &#123;</span><br><span class="line">			<span class="keyword">return</span> Optional.of(<span class="keyword">new</span> BufferOrEvent(buffer, currentChannel.getChannelIndex(), moreAvailable));</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="comment">//否则把它当作事件来处理</span></span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="keyword">final</span> AbstractEvent event = EventSerializer.fromBuffer(buffer, getClass().getClassLoader());</span><br><span class="line"></span><br><span class="line">			<span class="comment">//如果获取到的是标识某ResultSubpartition已经生产完数据的事件</span></span><br><span class="line">			<span class="keyword">if</span> (event.getClass() == EndOfPartitionEvent.class) &#123;</span><br><span class="line">				<span class="comment">//对获取该ResultSubpartition的通道进行标记</span></span><br><span class="line">				channelsWithEndOfPartitionEvents.set(currentChannel.getChannelIndex());</span><br><span class="line">				<span class="comment">//如果所有信道都被标记了，置全部通道获取数据完成</span></span><br><span class="line">				<span class="keyword">if</span> (channelsWithEndOfPartitionEvents.cardinality() == numberOfInputChannels) &#123;</span><br><span class="line">					<span class="comment">// Because of race condition between:</span></span><br><span class="line">					<span class="comment">// 1. releasing inputChannelsWithData lock in this method and reaching this place</span></span><br><span class="line">					<span class="comment">// 2. empty data notification that re-enqueues a channel</span></span><br><span class="line">					<span class="comment">// we can end up with moreAvailable flag set to true, while we expect no more data.</span></span><br><span class="line">					checkState(!moreAvailable || !pollNextBufferOrEvent().isPresent());</span><br><span class="line">					moreAvailable = <span class="keyword">false</span>;</span><br><span class="line">					hasReceivedAllEndOfPartitionEvents = <span class="keyword">true</span>;</span><br><span class="line">				&#125;</span><br><span class="line">				<span class="comment">//对外发出ResultSubpartition已被消费的通知同时释放资源</span></span><br><span class="line">				currentChannel.notifySubpartitionConsumed();</span><br><span class="line"></span><br><span class="line">				currentChannel.releaseAllResources();</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="comment">//以事件来构建BufferOrEvent对象</span></span><br><span class="line">			<span class="keyword">return</span> Optional.of(<span class="keyword">new</span> BufferOrEvent(event, currentChannel.getChannelIndex(), moreAvailable));</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>由于requestPartitions只是起到触发其内部的InputChannel去请求的作用，这个调用可能并不会阻塞等待远程数据被返回。因为不同的InputChannel其请求的机制并不相同，RemoteChannel就是利用Netty异步请求的</p>
+<p>SingleInputGate.requestPartitions<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">for</span> (InputChannel inputChannel : inputChannels.values()) &#123;</span><br><span class="line">	inputChannel.requestSubpartition(consumedSubpartitionIndex);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>所以SingleInputGate采用阻塞等待以及事件回调的方式来等待InputChannel上的数据可用。具体而言，它在while代码块中循环阻塞等待有可获取数据的InputChannel。而可用的InputChannel则由它们自己通过回调SingleInputGate的onAvailableBuffer添加到阻塞队列inputChannelsWithData中来。当有可获取数据的InputChannel之后，即可获取到Buffer。</p>
+<h4 id="UnionInputGate"><a href="#UnionInputGate" class="headerlink" title="UnionInputGate"></a>UnionInputGate</h4><p>UnionInputGate，它更像一个包含SingleInputGate的容器，同时可以这些SingleInputGate拥有的InputChannel联合起来。并且多数InputGate约定的接口方法的实现，都被委托给了每个SingleInputGate。</p>
+<p>那么它在实现getNextBufferOrEvent方法的时候，到底从哪个InputGate来获得缓冲区呢。它采用的是事件通知机制，所有加入UnionInputGate的InputGate都会将自己注册到InputGateListener。当某个InputGate上有数据可获取，该InputGate将会被加入一个阻塞队列。接着我们再来看getNextBufferOrEvent方法的实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Optional&lt;BufferOrEvent&gt; <span class="title">getNextBufferOrEvent</span><span class="params">()</span> <span class="keyword">throws</span> IOException, InterruptedException </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (inputGatesWithRemainingData.isEmpty()) &#123;</span><br><span class="line">			<span class="keyword">return</span> Optional.empty();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//遍历每个InputGate，依次调用其requestPartitions方法</span></span><br><span class="line">		<span class="comment">// Make sure to request the partitions, if they have not been requested before.</span></span><br><span class="line">		requestPartitions();</span><br><span class="line"></span><br><span class="line">		<span class="comment">//阻塞等待输入网关队列中有可获取数据的输入网关</span></span><br><span class="line">		InputGateWithData inputGateWithData = waitAndGetNextInputGate();</span><br><span class="line">		<span class="comment">//获取对应的输入网关和数据</span></span><br><span class="line">		InputGate inputGate = inputGateWithData.inputGate;</span><br><span class="line">		BufferOrEvent bufferOrEvent = inputGateWithData.bufferOrEvent;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (bufferOrEvent.moreAvailable()) &#123;</span><br><span class="line">			<span class="comment">// this buffer or event was now removed from the non-empty gates queue</span></span><br><span class="line">			<span class="comment">// we re-add it in case it has more data, because in that case no "non-empty" notification</span></span><br><span class="line">			<span class="comment">// will come for that gate</span></span><br><span class="line">			queueInputGate(inputGate);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//如果获取到的是事件且该事件为EndOfPartitionEvent且输入网关已完成</span></span><br><span class="line">		<span class="keyword">if</span> (bufferOrEvent.isEvent()</span><br><span class="line">			&amp;&amp; bufferOrEvent.getEvent().getClass() == EndOfPartitionEvent.class</span><br><span class="line">			&amp;&amp; inputGate.isFinished()) &#123;</span><br><span class="line"></span><br><span class="line">			checkState(!bufferOrEvent.moreAvailable());</span><br><span class="line">			<span class="comment">//尝试将该输入网关从仍然可消费数据的输入网关集合中删除</span></span><br><span class="line">			<span class="keyword">if</span> (!inputGatesWithRemainingData.remove(inputGate)) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Couldn't find input gate in set of remaining "</span> +</span><br><span class="line">					<span class="string">"input gates."</span>);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//获得通道索引偏移</span></span><br><span class="line">		<span class="comment">// Set the channel index to identify the input channel (across all unioned input gates)</span></span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">int</span> channelIndexOffset = inputGateToIndexOffsetMap.get(inputGate);</span><br><span class="line"></span><br><span class="line">		<span class="comment">//计算真实通道索引</span></span><br><span class="line">		bufferOrEvent.setChannelIndex(channelIndexOffset + bufferOrEvent.getChannelIndex());</span><br><span class="line">		bufferOrEvent.setMoreAvailable(bufferOrEvent.moreAvailable() || inputGateWithData.moreInputGatesAvailable);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> Optional.of(bufferOrEvent);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="输入通道"><a href="#输入通道" class="headerlink" title="输入通道"></a>输入通道</h3><p>一个InputGate包含多个输入通道（InputChannel），输入通道用于请求ResultSubpartitionView，并从中消费数据。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">所谓的ResultSubpartitionView是由ResultSubpartition所创建的用于供消费者任务消费数据的视图对象。</span><br></pre></td></tr></table></figure>
+<p>对于每个InputChannel，消费的生命周期会经历如下的方法调用过程：</p>
+<ul>
+<li>requestSubpartition：请求ResultSubpartition；</li>
+<li>getNextBuffer：获得下一个Buffer；</li>
+<li>releaseAllResources：释放所有的相关资源；</li>
+</ul>
+<p>InputChannel根据ResultPartitionLocation提供了三种实现：</p>
+<ul>
+<li>LocalInputChannel：用于请求同实例中生产者任务所生产的ResultSubpartitionView的输入通道；</li>
+<li>RemoteInputChannel：用于请求远程生产者任务所生产的ResultSubpartitionView的输入通道；</li>
+<li>UnknownInputChannel：一种用于占位目的的输入通道，需要占位通道是因为暂未确定相对于生产者任务位置，但最终要么被替换为RemoteInputChannel，要么被替换为LocalInputChannel。</li>
+</ul>
+<p>LocalInputChannel会从相同的JVM实例中消费生产者任务所生产的Buffer。因此，这种模式是直接借助于方法调用和对象共享的机制完成消费，无需跨节点网络通信。具体而言，它是通过ResultPartitionManager来直接创建对应的ResultSubpartitionView的实例，这种通道相对简单。</p>
+<p>RemoteInputChannel是我们重点关注的输入通道，因为它涉及到远程请求结果子分区。远程数据交换的通信机制建立在Netty框架的基础之上，因此会有一个主交互对象PartitionRequestClient来衔接通信层跟输入通道。</p>
+<p>我们以请求子分区的requestSubpartition为入口来进行分析。首先，通过一个ConnectionManager根据连接编号（对应着目的主机）来创建PartitionRequestClient实例。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">partitionRequestClient = connectionManager</span><br><span class="line">				.createPartitionRequestClient(connectionId);</span><br></pre></td></tr></table></figure></p>
+<p>接着具体的请求工作被委托给PartitionRequestClient的实例：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">partitionRequestClient.requestSubpartition(partitionId, subpartitionIndex, <span class="keyword">this</span>, <span class="number">0</span>);</span><br></pre></td></tr></table></figure>
+<p>Netty以异步的方式处理请求。因此，上面的代码段中会看到将代表当前RemoteChannel实例的this对象作为参数注入到Netty的特定的ChannelHandler中去，在处理时根据特定的处理逻辑会触发RemoteChannel中相应的回调方法。</p>
+<p>在RemoteChannel中定义了多个“onXXX”回调方法来衔接Netty的事件回调。其中，较为关键的自然是接收到数据的onBuffer方法：</p>
+<p>RemoteInputChannel.java<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onBuffer</span><span class="params">(Buffer buffer, <span class="keyword">int</span> sequenceNumber, <span class="keyword">int</span> backlog)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">boolean</span> recycleBuffer = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">final</span> <span class="keyword">boolean</span> wasEmpty;</span><br><span class="line">			<span class="keyword">synchronized</span> (receivedBuffers) &#123;</span><br><span class="line">				<span class="comment">// Similar to notifyBufferAvailable(), make sure that we never add a buffer</span></span><br><span class="line">				<span class="comment">// after releaseAllResources() released all buffers from receivedBuffers</span></span><br><span class="line">				<span class="comment">// (see above for details).</span></span><br><span class="line">				<span class="keyword">if</span> (isReleased.get()) &#123;</span><br><span class="line">					<span class="keyword">return</span>;</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				<span class="comment">//如果实际序列号跟所期待的序列号不一致，则会触发onError回调，并相应以一个特定的异常对象</span></span><br><span class="line">				<span class="comment">//该方法调用在成功设置完错误原因后，同样会触发notifyAvailableBuffer方法调用</span></span><br><span class="line">				<span class="keyword">if</span> (expectedSequenceNumber != sequenceNumber) &#123;</span><br><span class="line">					onError(<span class="keyword">new</span> BufferReorderingException(expectedSequenceNumber, sequenceNumber));</span><br><span class="line">					<span class="keyword">return</span>;</span><br><span class="line">				&#125;</span><br><span class="line"></span><br><span class="line">				wasEmpty = receivedBuffers.isEmpty();</span><br><span class="line">				<span class="comment">//将数据加入接收队列同时将预期序列号计数器加一</span></span><br><span class="line">				receivedBuffers.add(buffer);</span><br><span class="line">				recycleBuffer = <span class="keyword">false</span>;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			++expectedSequenceNumber;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (wasEmpty) &#123;</span><br><span class="line">				notifyChannelNonEmpty();</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (backlog &gt;= <span class="number">0</span>) &#123;</span><br><span class="line">				onSenderBacklog(backlog);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> (recycleBuffer) &#123;</span><br><span class="line">				buffer.recycleBuffer();</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>onBuffer方法的执行处于Netty的I/O线程上，但RemoteInputChannel中getNextBuffer却不会在Netty的I/O线程上被调用，所以必须有一个数据共享的容器，这个容器就是receivedBuffers队列。getNextBuffer就是直接从receivedBuffers队列中出队一条数据然后返回。</p>
+<h4 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h4><p><a href="https://zhuanlan.zhihu.com/p/35008079" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/35008079</a></p>
+<p><a href="https://blog.csdn.net/yanghua_kobe/article/details/53648748" target="_blank" rel="noopener">https://blog.csdn.net/yanghua_kobe/article/details/53648748</a></p>
+<p><a href="https://blog.csdn.net/yanghua_kobe/article/details/53946640" target="_blank" rel="noopener">https://blog.csdn.net/yanghua_kobe/article/details/53946640</a></p>
+<p><a href="https://blog.csdn.net/yanghua_kobe/article/details/54089128" target="_blank" rel="noopener">https://blog.csdn.net/yanghua_kobe/article/details/54089128</a></p>
+<p><a href="https://www.jianshu.com/p/2779e73abcb8" target="_blank" rel="noopener">https://www.jianshu.com/p/2779e73abcb8</a></p>
+<p><a href="https://www.jianshu.com/p/c261307757c4" target="_blank" rel="noopener">https://www.jianshu.com/p/c261307757c4</a></p>
+<p>基于netty通信</p>
+<p><a href="https://blog.csdn.net/yanghua_kobe/article/details/54233945" target="_blank" rel="noopener">https://blog.csdn.net/yanghua_kobe/article/details/54233945</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/09/25/java堆外内存/" rel="next" title="java堆外内存">
+                <i class="fa fa-chevron-left"></i> java堆外内存
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/16/Kubernetes-、Docker-和-Dashboard-安装文档/" rel="prev" title="Kubernetes 、Docker环境搭建">
+                Kubernetes 、Docker环境搭建 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#NetworkEnvironment"><span class="nav-number">1.</span> <span class="nav-text">NetworkEnvironment</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#初始化结果分区"><span class="nav-number">1.0.1.</span> <span class="nav-text">初始化结果分区</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#初始化输入分区"><span class="nav-number">1.0.2.</span> <span class="nav-text">初始化输入分区</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#统一的数据交换对象"><span class="nav-number"></span> <span class="nav-text">统一的数据交换对象</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#缓冲-Buffer"><span class="nav-number">0.1.</span> <span class="nav-text">缓冲 Buffer</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#BufferRecycler的具体实现"><span class="nav-number">0.2.</span> <span class="nav-text">BufferRecycler的具体实现</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#LocalBufferPool"><span class="nav-number">0.2.1.</span> <span class="nav-text">LocalBufferPool</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#NetworkBufferPool"><span class="nav-number">0.3.</span> <span class="nav-text">NetworkBufferPool</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#配置天坑"><span class="nav-number">0.4.</span> <span class="nav-text">配置天坑</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#事件-Event"><span class="nav-number">0.5.</span> <span class="nav-text">事件  Event</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ResultPartitionManager"><span class="nav-number">0.6.</span> <span class="nav-text">ResultPartitionManager</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#TaskEventDispatcher"><span class="nav-number">0.7.</span> <span class="nav-text">TaskEventDispatcher</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#ConnectionManager"><span class="nav-number">0.8.</span> <span class="nav-text">ConnectionManager</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#结果分区消费端"><span class="nav-number">1.</span> <span class="nav-text">结果分区消费端</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#UnionInputGate"><span class="nav-number">1.1.</span> <span class="nav-text">UnionInputGate</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#输入通道"><span class="nav-number">2.</span> <span class="nav-text">输入通道</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Reference"><span class="nav-number">2.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

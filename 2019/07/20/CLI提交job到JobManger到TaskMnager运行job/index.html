@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="CLI提交Job启动Job1./bin/flink run examples/streaming/SocketWindowWordCount.jar 跟踪Flink的脚本代码就会发现，最终会执行以下命令：1exec $JAVA_RUN $JVM_ARGS &amp;quot;$&amp;#123;log_setting[@]&amp;#125;&amp;quot; -classpath &amp;quot;`manglePathList">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析 CLI提交job到JobManger到TaskMnager运行job">
+<meta property="og:url" content="http://yoursite.com/2019/07/20/CLI提交job到JobManger到TaskMnager运行job/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="CLI提交Job启动Job1./bin/flink run examples/streaming/SocketWindowWordCount.jar 跟踪Flink的脚本代码就会发现，最终会执行以下命令：1exec $JAVA_RUN $JVM_ARGS &amp;quot;$&amp;#123;log_setting[@]&amp;#125;&amp;quot; -classpath &amp;quot;`manglePathList">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/56744FB7B89448F2A58698D5D6151587?method=download&shareKey=c4dddaf0898abdac28d4123cd0a4d33c">
+<meta property="og:updated_time" content="2019-08-04T08:43:45.757Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析 CLI提交job到JobManger到TaskMnager运行job">
+<meta name="twitter:description" content="CLI提交Job启动Job1./bin/flink run examples/streaming/SocketWindowWordCount.jar 跟踪Flink的脚本代码就会发现，最终会执行以下命令：1exec $JAVA_RUN $JVM_ARGS &amp;quot;$&amp;#123;log_setting[@]&amp;#125;&amp;quot; -classpath &amp;quot;`manglePathList">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/56744FB7B89448F2A58698D5D6151587?method=download&shareKey=c4dddaf0898abdac28d4123cd0a4d33c">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/07/20/CLI提交job到JobManger到TaskMnager运行job/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析 CLI提交job到JobManger到TaskMnager运行job | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/07/20/CLI提交job到JobManger到TaskMnager运行job/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析 CLI提交job到JobManger到TaskMnager运行job
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-07-20 16:56:49" itemprop="dateCreated datePublished" datetime="2019-07-20T16:56:49+08:00">2019-07-20</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-08-04 16:43:45" itemprop="dateModified" datetime="2019-08-04T16:43:45+08:00">2019-08-04</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="CLI提交Job"><a href="#CLI提交Job" class="headerlink" title="CLI提交Job"></a>CLI提交Job</h2><h4 id="启动Job"><a href="#启动Job" class="headerlink" title="启动Job"></a>启动Job</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bin/flink run examples/streaming/SocketWindowWordCount.jar</span><br></pre></td></tr></table></figure>
+<p>跟踪Flink的脚本代码就会发现，最终会执行以下命令：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">exec $JAVA_RUN $JVM_ARGS &quot;$&#123;log_setting[@]&#125;&quot; -classpath &quot;`manglePathList &quot;$CC_CLASSPATH:$INTERNAL_HADOOP_CLASSPATHS&quot;`&quot; org.apache.flink.client.CliFrontend &quot;$@&quot;</span><br></pre></td></tr></table></figure></p>
+<p>实际上调用了CliFrontend这个类，这个类的main方法，主要是处理接到的参数，根据参数决定要执行上面函数。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Submits the job based on the arguments.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(<span class="keyword">final</span> String[] args)</span> </span>&#123;</span><br><span class="line">		EnvironmentInformation.logEnvironmentInfo(LOG, <span class="string">"Command Line Client"</span>, args);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 1. find the configuration directory</span></span><br><span class="line">		<span class="keyword">final</span> String configurationDirectory = getConfigurationDirectoryFromEnv();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 2. load the global configuration</span></span><br><span class="line">		<span class="keyword">final</span> Configuration configuration = GlobalConfiguration.loadConfiguration(configurationDirectory);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// 3. load the custom command lines</span></span><br><span class="line">		<span class="keyword">final</span> List&lt;CustomCommandLine&lt;?&gt;&gt; customCommandLines = loadCustomCommandLines(</span><br><span class="line">			configuration,</span><br><span class="line">			configurationDirectory);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="keyword">final</span> CliFrontend cli = <span class="keyword">new</span> CliFrontend(</span><br><span class="line">				configuration,</span><br><span class="line">				customCommandLines);</span><br><span class="line"></span><br><span class="line">			SecurityUtils.install(<span class="keyword">new</span> SecurityConfiguration(cli.configuration));</span><br><span class="line">			<span class="keyword">int</span> retCode = SecurityUtils.getInstalledContext()</span><br><span class="line">					.runSecured(() -&gt; cli.parseParameters(args));</span><br><span class="line">			System.exit(retCode);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">			<span class="keyword">final</span> Throwable strippedThrowable = ExceptionUtils.stripException(t, UndeclaredThrowableException.class);</span><br><span class="line">			LOG.error(<span class="string">"Fatal error while running command line interface."</span>, strippedThrowable);</span><br><span class="line">			strippedThrowable.printStackTrace();</span><br><span class="line">			System.exit(<span class="number">31</span>);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>其中核心的部分在于cli.parseParameters(args)<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Parses the command line arguments and starts the requested action.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> args command line arguments of the client.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> The return code of the program</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">parseParameters</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// check for action</span></span><br><span class="line">        <span class="keyword">if</span> (args.length &lt; <span class="number">1</span>) &#123;</span><br><span class="line">            CliFrontendParser.printHelp();</span><br><span class="line">            System.out.println(<span class="string">"Please specify an action."</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// get action</span></span><br><span class="line">        String action = args[<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line">        <span class="comment">// remove action from parameters</span></span><br><span class="line">        <span class="keyword">final</span> String[] params = Arrays.copyOfRange(args, <span class="number">1</span>, args.length);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// do action</span></span><br><span class="line">        <span class="keyword">switch</span> (action) &#123;</span><br><span class="line">            <span class="keyword">case</span> ACTION_RUN:</span><br><span class="line">                <span class="keyword">return</span> run(params);</span><br><span class="line">            <span class="keyword">case</span> ACTION_LIST:</span><br><span class="line">                <span class="keyword">return</span> list(params);</span><br><span class="line">            <span class="keyword">case</span> ACTION_INFO:</span><br><span class="line">                <span class="keyword">return</span> info(params);</span><br><span class="line">            <span class="keyword">case</span> ACTION_CANCEL:</span><br><span class="line">                <span class="keyword">return</span> cancel(params);</span><br><span class="line">            <span class="keyword">case</span> ACTION_STOP:</span><br><span class="line">                <span class="keyword">return</span> stop(params);</span><br><span class="line">            <span class="keyword">case</span> ACTION_SAVEPOINT:</span><br><span class="line">                <span class="keyword">return</span> savepoint(params);</span><br><span class="line">            <span class="keyword">case</span> <span class="string">"-h"</span>:</span><br><span class="line">            <span class="keyword">case</span> <span class="string">"--help"</span>:</span><br><span class="line">                CliFrontendParser.printHelp();</span><br><span class="line">                <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">case</span> <span class="string">"-v"</span>:</span><br><span class="line">            <span class="keyword">case</span> <span class="string">"--version"</span>:</span><br><span class="line">                String version = EnvironmentInformation.getVersion();</span><br><span class="line">                String commitID = EnvironmentInformation.getRevisionInformation().commitId;</span><br><span class="line">                System.out.print(<span class="string">"Version: "</span> + version);</span><br><span class="line">                System.out.println(!commitID.equals(EnvironmentInformation.UNKNOWN) ? <span class="string">", Commit ID: "</span> + commitID : <span class="string">""</span>);</span><br><span class="line">                <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">            <span class="keyword">default</span>:</span><br><span class="line">                System.out.printf(<span class="string">"\"%s\" is not a valid action.\n"</span>, action);</span><br><span class="line">                System.out.println();</span><br><span class="line">                System.out.println(<span class="string">"Valid actions are \"run\", \"list\", \"info\", \"savepoint\", \"stop\", or \"cancel\"."</span>);</span><br><span class="line">                System.out.println();</span><br><span class="line">                System.out.println(<span class="string">"Specify the version option (-v or --version) to print Flink version."</span>);</span><br><span class="line">                System.out.println();</span><br><span class="line">                System.out.println(<span class="string">"Specify the help option (-h or --help) to get help on the command."</span>);</span><br><span class="line">                <span class="keyword">return</span> <span class="number">1</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>根据第一个参数作为action，调用不同的方法。jar包的运行的入参是run，往下看run方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		LOG.info(<span class="string">"Running 'run' command."</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> Options commandOptions = CliFrontendParser.getRunCommandOptions();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> Options commandLineOptions = CliFrontendParser.mergeOptions(commandOptions, customCommandLineOptions);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> CommandLine commandLine = CliFrontendParser.parse(commandLineOptions, args, <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> RunOptions runOptions = <span class="keyword">new</span> RunOptions(commandLine);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// evaluate help flag</span></span><br><span class="line">		<span class="keyword">if</span> (runOptions.isPrintHelp()) &#123;</span><br><span class="line">			CliFrontendParser.printHelpForRun(customCommandLines);</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (runOptions.getJarFilePath() == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> CliArgsException(<span class="string">"The program JAR file was not specified."</span>);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//创建一个实例：PackagedProgram, 封装入口类、jar文件、classpath路径、用户配置参数</span></span><br><span class="line">		<span class="keyword">final</span> PackagedProgram program;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			LOG.info(<span class="string">"Building program from JAR file"</span>);</span><br><span class="line">			program = buildProgram(runOptions);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">catch</span> (FileNotFoundException e) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> CliArgsException(<span class="string">"Could not build the program from JAR file."</span>, e);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> CustomCommandLine&lt;?&gt; customCommandLine = getActiveCustomCommandLine(commandLine);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			runProgram(customCommandLine, commandLine, runOptions, program);</span><br><span class="line">		&#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">			program.deleteExtractedLibraries();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>核心代码主要是runProgram(customCommandLine, commandLine, runOptions, program);<br>而runProgram中调用了executeProgram(program, client, userParallelism);这个函数，这个函数主要是与JobManager进行交互。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">executeProgram</span><span class="params">(PackagedProgram program, ClusterClient&lt;?&gt; client, <span class="keyword">int</span> parallelism)</span> <span class="keyword">throws</span> ProgramMissingJobException, ProgramInvocationException </span>&#123;</span><br><span class="line">		logAndSysout(<span class="string">"Starting execution of program"</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> JobSubmissionResult result = client.run(program, parallelism);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (<span class="keyword">null</span> == result) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> ProgramMissingJobException(<span class="string">"No JobSubmissionResult returned, please make sure you called "</span> +</span><br><span class="line">				<span class="string">"ExecutionEnvironment.execute()"</span>);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (result.isJobExecutionResult()) &#123;</span><br><span class="line">			logAndSysout(<span class="string">"Program execution finished"</span>);</span><br><span class="line">			JobExecutionResult execResult = result.getJobExecutionResult();</span><br><span class="line">			System.out.println(<span class="string">"Job with JobID "</span> + execResult.getJobID() + <span class="string">" has finished."</span>);</span><br><span class="line">			System.out.println(<span class="string">"Job Runtime: "</span> + execResult.getNetRuntime() + <span class="string">" ms"</span>);</span><br><span class="line">			Map&lt;String, Object&gt; accumulatorsResult = execResult.getAllAccumulatorResults();</span><br><span class="line">			<span class="keyword">if</span> (accumulatorsResult.size() &gt; <span class="number">0</span>) &#123;</span><br><span class="line">				System.out.println(<span class="string">"Accumulator Results: "</span>);</span><br><span class="line">				System.out.println(AccumulatorHelper.getResultsFormatted(accumulatorsResult));</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			logAndSysout(<span class="string">"Job has been submitted with JobID "</span> + result.getJobID());</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>与jobManager的交互结果全部都封装在了JobSubmissionResult实体中，<br>client.run的主要代码如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"> * 在client连接的Flink集群运行一个程序，这个调用会等待运行完成并返回结果。</span><br><span class="line"> * Runs a program on the Flink cluster to which <span class="keyword">this</span> client is connected. The call blocks until the</span><br><span class="line"> * execution is complete, and returns afterwards.</span><br><span class="line"> *</span><br><span class="line"> * <span class="meta">@param</span> jobWithJars The program to be executed.</span><br><span class="line"> * <span class="meta">@param</span> parallelism The <span class="keyword">default</span> parallelism to use when running the program. The <span class="keyword">default</span> parallelism is used</span><br><span class="line"> *                    when the program does not set a parallelism by itself.</span><br><span class="line"> *</span><br><span class="line"> * <span class="meta">@throws</span> CompilerException Thrown, <span class="keyword">if</span> the compiler encounters an illegal situation.</span><br><span class="line"> * <span class="meta">@throws</span> ProgramInvocationException Thrown, <span class="keyword">if</span> the program could not be instantiated from its jar file,</span><br><span class="line"> *                                    or <span class="keyword">if</span> the submission failed. That might be either due to an I/O problem,</span><br><span class="line"> *                                    i.e. the job-manager is unreachable, or due to the fact that the</span><br><span class="line"> *                                    parallel execution failed.</span><br><span class="line"> */</span><br><span class="line"><span class="function"><span class="keyword">public</span> JobSubmissionResult <span class="title">run</span><span class="params">(JobWithJars jobWithJars, <span class="keyword">int</span> parallelism, SavepointRestoreSettings savepointSettings)</span></span></span><br><span class="line"><span class="function">		<span class="keyword">throws</span> CompilerException, ProgramInvocationException </span>&#123;</span><br><span class="line">	ClassLoader classLoader = jobWithJars.getUserCodeClassLoader();</span><br><span class="line">	<span class="keyword">if</span> (classLoader == <span class="keyword">null</span>) &#123;</span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"The given JobWithJars does not provide a usercode class loader."</span>);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">//  获取优化计划JobGraph</span></span><br><span class="line">	OptimizedPlan optPlan = getOptimizedPlan(compiler, jobWithJars, parallelism);</span><br><span class="line">	<span class="keyword">return</span> run(optPlan, jobWithJars.getJarFiles(), jobWithJars.getClasspaths(), classLoader, savepointSettings);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>run(optPlan, jobWithJars.getJarFiles(), jobWithJars.getClasspaths(), classLoader, savepointSettings)中会调用submitJob方法，这个方法实现有两个MiniCluserClient.submitJob和RestClusterClient.submitJob。</p>
+<p>MiniCluserClient.submitJob通过miniCluster.submitJob(jobGraph)提交作业，以本地模式运行。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> CompletableFuture&lt;JobSubmissionResult&gt; <span class="title">submitJob</span><span class="params">(@Nonnull JobGraph jobGraph)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> miniCluster.submitJob(jobGraph);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>RestClusterClient.submitJob发送RPC请求到JobManager</p>
+<p>到这里，已经完成了通过CLI提交作业的过程，CLI通过RCP的方式与JobManger交互，实现job的提交。</p>
+<h3 id="JobMaster接收job-submit请求"><a href="#JobMaster接收job-submit请求" class="headerlink" title="JobMaster接收job submit请求"></a>JobMaster接收job submit请求</h3><ul>
+<li>本地环境下，MiniCluster完成了大部分任务，直接把任务委派给了MiniDispatcher；</li>
+<li>远程环境下，启动了一个RestClusterClient，这个类会以HTTP Rest的方式把用户代码提交到集群上；</li>
+<li>远程环境下，请求发到集群上之后，必然有个handler去处理，在这里是JobSubmitHandler。这个类接手了请求后，委派StandaloneDispatcher启动job，到这里之后，本地提交和远程提交的逻辑往后又统一了；</li>
+<li>Dispatcher接手job之后，会实例化一个JobManagerRunner，然后用这个runner启动job；</li>
+<li>JobManagerRunner接下来把job交给了JobMaster去处理；</li>
+<li>JobMaster使用ExecutionGraph的方法启动了整个执行图，将Task天交给TaskManger，整个任务就启动起来了。</li>
+</ul>
+<h4 id="attention"><a href="#attention" class="headerlink" title="attention"></a>attention</h4><p>JobManagerRunner负责作业的运行，和对JobMaster的管理。 不是集群级别的JobManager。这个是历史原因。JobManager是老的runtime框架，JobMaster是社区 flip-6引入的新的runtime框架。目前起作用的应该是JobMaster。因此这个类应该叫做和对JobMasterRunner比较合适。</p>
+<p>从 flip-6起，开始通过使用JobMaster，以Flink Dispatcher分发到JobManagerRunner将JobGraph发给JobMaster，JobMaster再将JobGraph实现万ExecutionGraph，传递给TaskManager工作。</p>
+<p>首先来看下Flink的四种图 </p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/56744FB7B89448F2A58698D5D6151587?method=download&amp;shareKey=c4dddaf0898abdac28d4123cd0a4d33c" alt="image"></p>
+<p>flink总共提供了三种图的抽象，StreamGraph和JobGraph，还有一种是ExecutionGraph，是用于调度的基本数据结构。 </p>
+<p>在JobGraph转换到ExecutionGraph的过程中，主要发生了以下转变： </p>
+<ul>
+<li>加入了并行度的概念，成为真正可调度的图结构</li>
+<li>生成了与JobVertex对应的ExecutionJobVertex，ExecutionVertex，与IntermediateDataSet对应的IntermediateResult和IntermediateResultPartition等，并行将通过这些类实现</li>
+</ul>
+<p>ExecutionGraph已经可以用于调度任务。我们可以看到，flink根据该图生成了一一对应的Task，每个task对应一个ExecutionGraph的一个Execution。Task用InputGate、InputChannel和ResultPartition对应了上面图中的IntermediateResult和ExecutionEdge。</p>
+<p>Dispatcher.submitJob是提交job的主要处理方法<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> CompletableFuture&lt;Acknowledge&gt; <span class="title">submitJob</span><span class="params">(JobGraph jobGraph, Time timeout)</span> </span>&#123;</span><br><span class="line">		log.info(<span class="string">"Received JobGraph submission &#123;&#125; (&#123;&#125;)."</span>, jobGraph.getJobID(), jobGraph.getName());</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> (isDuplicateJob(jobGraph.getJobID())) &#123;</span><br><span class="line">				<span class="keyword">return</span> FutureUtils.completedExceptionally(</span><br><span class="line">					<span class="keyword">new</span> JobSubmissionException(jobGraph.getJobID(), <span class="string">"Job has already been submitted."</span>));</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				<span class="keyword">return</span> internalSubmitJob(jobGraph);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">catch</span> (FlinkException e) &#123;</span><br><span class="line">			<span class="keyword">return</span> FutureUtils.completedExceptionally(e);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>主要运行的是Dispatcher中的submitJob—&gt;internalSubmitJob—&gt;persistAndRunJob  –&gt; runJob–&gt;createJobManagerRunner–&gt;startJobManagerRunner</p>
+<p>下面是runJob方法<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompletableFuture&lt;Void&gt; <span class="title">runJob</span><span class="params">(JobGraph jobGraph)</span> </span>&#123;</span><br><span class="line">		<span class="comment">//判断这个job是否已经运行，避免重复提交</span></span><br><span class="line">		Preconditions.checkState(!jobManagerRunnerFutures.containsKey(jobGraph.getJobID()));</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> CompletableFuture&lt;JobManagerRunner&gt; jobManagerRunnerFuture = createJobManagerRunner(jobGraph);</span><br><span class="line"></span><br><span class="line">		jobManagerRunnerFutures.put(jobGraph.getJobID(), jobManagerRunnerFuture);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> jobManagerRunnerFuture</span><br><span class="line">			.thenApply(FunctionUtils.nullFn())</span><br><span class="line">			.whenCompleteAsync(</span><br><span class="line">				(ignored, throwable) -&gt; &#123;</span><br><span class="line">					<span class="keyword">if</span> (throwable != <span class="keyword">null</span>) &#123;</span><br><span class="line">						jobManagerRunnerFutures.remove(jobGraph.getJobID());</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;,</span><br><span class="line">				getMainThreadExecutor());</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在createJobManagerRunner中会调用<br>DefaultJobManagerRunnerFactory.createJobManagerRunner创建一个JobManagerRunner，调用Dispatcher.startJobManagerRunner;–&gt;jobManagerRunner.start();</p>
+<p>jobManagerRunner.start()中调用了StandaloneHaServices.start</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			leaderElectionService.start(<span class="keyword">this</span>);<span class="comment">//======&gt;StandaloneHaServices</span></span><br><span class="line">		&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">			log.error(<span class="string">"Could not start the JobManager because the leader election service did not start."</span>, e);</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> Exception(<span class="string">"Could not start the leader election service."</span>, e);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>StandaloneLeaderElectionService实际调用了JobManagerRunner.grantLeadership</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">(LeaderContender newContender)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (contender != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="comment">// Service was already started</span></span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"Leader election service cannot be started multiple times."</span>);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		contender = Preconditions.checkNotNull(newContender);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// directly grant leadership to the given contender</span></span><br><span class="line">		contender.grantLeadership(HighAvailabilityServices.DEFAULT_LEADER_ID);<span class="comment">//==&gt; 调用JobManagerRunner.grantLeadership</span></span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>JobManagerRunner.grantLeadership中的核心部分为verifyJobSchedulingStatusAndStartJobManager</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompletableFuture&lt;Void&gt; <span class="title">verifyJobSchedulingStatusAndStartJobManager</span><span class="params">(UUID leaderSessionId)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> CompletableFuture&lt;JobSchedulingStatus&gt; jobSchedulingStatusFuture = getJobSchedulingStatus();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> jobSchedulingStatusFuture.thenCompose(</span><br><span class="line">			jobSchedulingStatus -&gt; &#123;</span><br><span class="line">				<span class="keyword">if</span> (jobSchedulingStatus == JobSchedulingStatus.DONE) &#123;<span class="comment">//任务已完成</span></span><br><span class="line">					<span class="keyword">return</span> jobAlreadyDone();</span><br><span class="line">				&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">					<span class="keyword">return</span> startJobMaster(leaderSessionId);<span class="comment">//启动任务</span></span><br><span class="line">				&#125;</span><br><span class="line">			&#125;);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompletionStage&lt;Void&gt; <span class="title">startJobMaster</span><span class="params">(UUID leaderSessionId)</span> </span>&#123;</span><br><span class="line">		log.info(<span class="string">"JobManager runner for job &#123;&#125; (&#123;&#125;) was granted leadership with session id &#123;&#125; at &#123;&#125;."</span>,</span><br><span class="line">			jobGraph.getName(), jobGraph.getJobID(), leaderSessionId, getAddress());</span><br><span class="line"></span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			runningJobsRegistry.setJobRunning(jobGraph.getJobID());</span><br><span class="line">		&#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">			<span class="keyword">return</span> FutureUtils.completedExceptionally(</span><br><span class="line">				<span class="keyword">new</span> FlinkException(</span><br><span class="line">					String.format(<span class="string">"Failed to set the job %s to running in the running jobs registry."</span>, jobGraph.getJobID()),</span><br><span class="line">					e));</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> CompletableFuture&lt;Acknowledge&gt; startFuture;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="comment">//实际调用JobMaster.start</span></span><br><span class="line">			startFuture = jobMasterService.start(<span class="keyword">new</span> JobMasterId(leaderSessionId));</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">			<span class="keyword">return</span> FutureUtils.completedExceptionally(<span class="keyword">new</span> FlinkException(<span class="string">"Failed to start the JobMaster."</span>, e));</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> CompletableFuture&lt;JobMasterGateway&gt; currentLeaderGatewayFuture = leaderGatewayFuture;</span><br><span class="line">		<span class="keyword">return</span> startFuture.thenAcceptAsync(</span><br><span class="line">			(Acknowledge ack) -&gt; confirmLeaderSessionIdIfStillLeader(leaderSessionId, currentLeaderGatewayFuture),</span><br><span class="line">			executor);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>接着JobMaster的启动，继续往下看</p>
+<p>JobMaster.start ===&gt; startJobExecution<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> CompletableFuture&lt;Acknowledge&gt; <span class="title">start</span><span class="params">(<span class="keyword">final</span> JobMasterId newJobMasterId)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="comment">// make sure we receive RPC and async calls</span></span><br><span class="line">		start();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> callAsyncWithoutFencing(() -&gt; startJobExecution(newJobMasterId), RpcUtils.INF_TIMEOUT);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//-- job starting and stopping  -----------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> Acknowledge <span class="title">startJobExecution</span><span class="params">(JobMasterId newJobMasterId)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">		validateRunsInMainThread();</span><br><span class="line"></span><br><span class="line">		checkNotNull(newJobMasterId, <span class="string">"The new JobMasterId must not be null."</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (Objects.equals(getFencingToken(), newJobMasterId)) &#123;</span><br><span class="line">			log.info(<span class="string">"Already started the job execution with JobMasterId &#123;&#125;."</span>, newJobMasterId);</span><br><span class="line"></span><br><span class="line">			<span class="keyword">return</span> Acknowledge.get();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		setNewFencingToken(newJobMasterId);</span><br><span class="line"></span><br><span class="line">		<span class="comment">//包含了slotPoll启动 resourceManager的连接(后续用于request slot)</span></span><br><span class="line">		startJobMasterServices();</span><br><span class="line"></span><br><span class="line">		log.info(<span class="string">"Starting execution of job &#123;&#125; (&#123;&#125;) under job master id &#123;&#125;."</span>, jobGraph.getName(), jobGraph.getJobID(), newJobMasterId);</span><br><span class="line"></span><br><span class="line">		<span class="comment">//执行job</span></span><br><span class="line">		resetAndScheduleExecutionGraph();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> Acknowledge.get();</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>这里将JobMastert中的slotpool启动，并和JM的ResourceManager通信<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">startJobMasterServices</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="comment">// start the slot pool make sure the slot pool now accepts messages for this leader</span></span><br><span class="line">		slotPool.start(getFencingToken(), getAddress(), getMainThreadExecutor());<span class="comment">//slotPool是一个Rpc服务</span></span><br><span class="line">		scheduler.start(getMainThreadExecutor());</span><br><span class="line"></span><br><span class="line">		<span class="comment">//<span class="doctag">TODO:</span> Remove once the ZooKeeperLeaderRetrieval returns the stored address upon start</span></span><br><span class="line">		<span class="comment">// try to reconnect to previously known leader</span></span><br><span class="line">		reconnectToResourceManager(<span class="keyword">new</span> FlinkException(<span class="string">"Starting JobMaster component."</span>));<span class="comment">//连接resourceManager</span></span><br><span class="line"></span><br><span class="line">		<span class="comment">// job is ready to go, try to establish connection with resource manager</span></span><br><span class="line">		<span class="comment">//   - activate leader retrieval for the resource manager</span></span><br><span class="line">		<span class="comment">//   - on notification of the leader, the connection will be established and</span></span><br><span class="line">		<span class="comment">//     the slot pool will start requesting slots</span></span><br><span class="line">		resourceManagerLeaderRetriever.start(<span class="keyword">new</span> ResourceManagerLeaderListener());<span class="comment">//告知resourceManager启动正常</span></span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在slotPool和resourcemanager通信完毕后 开始执行job ，resetAndScheduleExecutionGraph();//执行job</p>
+<p>这里会将JobGraph转为ExecutionGraph并执行<br>===&gt;<br>scheduleExecutionGraph()<br>===&gt;ExecutionGraph.scheduleForExecution();</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">resetAndScheduleExecutionGraph</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">	validateRunsInMainThread();</span><br><span class="line"></span><br><span class="line">	<span class="keyword">final</span> CompletableFuture&lt;Void&gt; executionGraphAssignedFuture;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (executionGraph.getState() == JobStatus.CREATED) &#123;</span><br><span class="line">		executionGraphAssignedFuture = CompletableFuture.completedFuture(<span class="keyword">null</span>);</span><br><span class="line">		executionGraph.start(getMainThreadExecutor());</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		suspendAndClearExecutionGraphFields(<span class="keyword">new</span> FlinkException(<span class="string">"ExecutionGraph is being reset in order to be rescheduled."</span>));</span><br><span class="line">		<span class="keyword">final</span> JobManagerJobMetricGroup newJobManagerJobMetricGroup = jobMetricGroupFactory.create(jobGraph);</span><br><span class="line">		<span class="keyword">final</span> ExecutionGraph newExecutionGraph = createAndRestoreExecutionGraph(newJobManagerJobMetricGroup);</span><br><span class="line"></span><br><span class="line">		executionGraphAssignedFuture = executionGraph.getTerminationFuture().handle(</span><br><span class="line">			(JobStatus ignored, Throwable throwable) -&gt; &#123;</span><br><span class="line">				newExecutionGraph.start(getMainThreadExecutor());</span><br><span class="line">				assignExecutionGraph(newExecutionGraph, newJobManagerJobMetricGroup);</span><br><span class="line">				<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">			&#125;);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	executionGraphAssignedFuture.thenRun(<span class="keyword">this</span>::scheduleExecutionGraph);<span class="comment">//执行executionGraph</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">scheduleExecutionGraph</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	checkState(jobStatusListener == <span class="keyword">null</span>);</span><br><span class="line">	<span class="comment">// register self as job status change listener</span></span><br><span class="line">	jobStatusListener = <span class="keyword">new</span> JobManagerJobStatusListener();</span><br><span class="line">	executionGraph.registerJobStatusListener(jobStatusListener);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		executionGraph.scheduleForExecution();</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">		executionGraph.failGlobal(t);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>==&gt;scheduleEager(slotProvider, allocationTimeout);//立即执行<br>===&gt;执行任务的核心方法<br>申请资源。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompletableFuture&lt;Void&gt; <span class="title">scheduleEager</span><span class="params">(SlotProvider slotProvider, <span class="keyword">final</span> Time timeout)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">..............</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> (ExecutionJobVertex ejv : getVerticesTopologically()) &#123;</span><br><span class="line">			<span class="comment">// these calls are not blocking, they only return futures</span></span><br><span class="line">			Collection&lt;CompletableFuture&lt;Execution&gt;&gt; allocationFutures = ejv.allocateResourcesForAll(</span><br><span class="line">				slotProvider,</span><br><span class="line">				queued,</span><br><span class="line">				LocationPreferenceConstraint.ALL,</span><br><span class="line">				allPreviousAllocationIds,</span><br><span class="line">				timeout);<span class="comment">//申请slot</span></span><br><span class="line"></span><br><span class="line">			allAllocationFutures.addAll(allocationFutures);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">.............</span><br></pre></td></tr></table></figure>
+<p>execution.deploy();//任务触发执行</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deploy</span><span class="params">()</span> <span class="keyword">throws</span> JobException </span>&#123;</span><br><span class="line"></span><br><span class="line">................</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> TaskDeploymentDescriptor deployment = vertex.createDeploymentDescriptor(</span><br><span class="line">				attemptId,</span><br><span class="line">				slot,</span><br><span class="line">				taskRestore,</span><br><span class="line">				attemptNumber);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">...............</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">taskManagerGateway.submitTask(deployment, rpcTimeout)<span class="comment">////==》AkkaInvocationHandler通过rpc调用，然后TM收到服务调用RpcTaskManagerGateway.submitTask</span></span><br></pre></td></tr></table></figure>
+<p>到这里JobManger通过AkkaInvocationHandler调用rpc服务将任务提交到分配的TM上。</p>
+<h3 id="TM接收submitTask请求运行Task"><a href="#TM接收submitTask请求运行Task" class="headerlink" title="TM接收submitTask请求运行Task"></a>TM接收submitTask请求运行Task</h3><p>AkkaInvocationHandler通过rpc调用，然后TM收到服务调用RpcTaskManagerGateway.submitTask</p>
+<p>RpcTaskManagerGateway.submitTask</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> CompletableFuture&lt;Acknowledge&gt; <span class="title">submitTask</span><span class="params">(TaskDeploymentDescriptor tdd, Time timeout)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> taskExecutorGateway.submitTask(tdd, jobMasterId, timeout);<span class="comment">//==&gt;TaskExecutor.submitTask</span></span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>TaskExecutor.submitTask</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">Task task = <span class="keyword">new</span> Task(</span><br><span class="line">			jobInformation,</span><br><span class="line">			taskInformation,</span><br><span class="line">			tdd.getExecutionAttemptId(),</span><br><span class="line">			tdd.getAllocationId(),</span><br><span class="line">			tdd.getSubtaskIndex(),</span><br><span class="line">			tdd.getAttemptNumber(),</span><br><span class="line">			tdd.getProducedPartitions(),</span><br><span class="line">			tdd.getInputGates(),</span><br><span class="line">			tdd.getTargetSlotNumber(),</span><br><span class="line">			taskExecutorServices.getMemoryManager(),</span><br><span class="line">			taskExecutorServices.getIOManager(),</span><br><span class="line">			taskExecutorServices.getNetworkEnvironment(),</span><br><span class="line">			taskExecutorServices.getBroadcastVariableManager(),</span><br><span class="line">			taskStateManager,</span><br><span class="line">			taskManagerActions,</span><br><span class="line">			inputSplitProvider,</span><br><span class="line">			checkpointResponder,</span><br><span class="line">			aggregateManager,</span><br><span class="line">			blobCacheService,</span><br><span class="line">			libraryCache,</span><br><span class="line">			fileCache,</span><br><span class="line">			taskManagerConfiguration,</span><br><span class="line">			taskMetricGroup,</span><br><span class="line">			resultPartitionConsumableNotifier,</span><br><span class="line">			partitionStateChecker,</span><br><span class="line">			getRpcService().getExecutor());</span><br><span class="line">			</span><br><span class="line">			</span><br><span class="line">   	task.startTaskThread();<span class="comment">//任务真正执行</span></span><br></pre></td></tr></table></figure>
+<h4 id="申请资源"><a href="#申请资源" class="headerlink" title="申请资源"></a>申请资源</h4><p>申请资源就得从ejv.allocateResourcesForAll 即 ExecutionJobVertex的allocateResourcesForAll 方法说起。</p>
+<p>未完待续</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.jianshu.com/p/4a5017f20641" target="_blank" rel="noopener">https://www.jianshu.com/p/4a5017f20641</a></p>
+<p><a href="https://www.jianshu.com/p/7b4af44eb3f3" target="_blank" rel="noopener">https://www.jianshu.com/p/7b4af44eb3f3</a></p>
+<p><a href="https://blog.csdn.net/qq475781638/article/details/90923673" target="_blank" rel="noopener">https://blog.csdn.net/qq475781638/article/details/90923673</a></p>
+<p><a href="https://www.cnblogs.com/ooffff/p/9486451.html" target="_blank" rel="noopener">https://www.cnblogs.com/ooffff/p/9486451.html</a></p>
+<p><a href="https://www.cnblogs.com/bethunebtj/p/9168274.html#3-%E4%BB%BB%E5%8A%A1%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%E6%89%A7%E8%A1%8C" target="_blank" rel="noopener">https://www.cnblogs.com/bethunebtj/p/9168274.html#3-%E4%BB%BB%E5%8A%A1%E7%9A%84%E8%B0%83%E5%BA%A6%E4%B8%8E%E6%89%A7%E8%A1%8C</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/07/10/Kafka消息格式的演变/" rel="next" title="Kafka消息格式的演变">
+                <i class="fa fa-chevron-left"></i> Kafka消息格式的演变
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/07/27/Flink-使用调优-二/" rel="prev" title="Flink 使用调优(二)">
+                Flink 使用调优(二) <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#CLI提交Job"><span class="nav-number">1.</span> <span class="nav-text">CLI提交Job</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#启动Job"><span class="nav-number">1.0.1.</span> <span class="nav-text">启动Job</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#JobMaster接收job-submit请求"><span class="nav-number">1.1.</span> <span class="nav-text">JobMaster接收job submit请求</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#attention"><span class="nav-number">1.1.1.</span> <span class="nav-text">attention</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TM接收submitTask请求运行Task"><span class="nav-number">1.2.</span> <span class="nav-text">TM接收submitTask请求运行Task</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#申请资源"><span class="nav-number">1.2.1.</span> <span class="nav-text">申请资源</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">1.3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="有状态与无状态 无状态：数据的计算与上一次的计算结果无关。例如map,flatMap 有状态: 数据的计算与上一次的计算结果有关，例如时间窗口内的sum，需要累加求和。  无状态计算的例子  比如：我们只是进行一个字符串拼接，输入 a，输出 a_666,输入b，输出 b_666输出的结果跟之前的状态没关系，符合幂等性。  幂等性：就是用户对于同一操作发起的一次请求或者多次请求的结果是一致的，不会因">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK">
+<meta property="og:url" content="http://yoursite.com/2019/08/10/Flink-的-Exactly-Once-和-At-Least-Once-和-Jstorm的ACK/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="有状态与无状态 无状态：数据的计算与上一次的计算结果无关。例如map,flatMap 有状态: 数据的计算与上一次的计算结果有关，例如时间窗口内的sum，需要累加求和。  无状态计算的例子  比如：我们只是进行一个字符串拼接，输入 a，输出 a_666,输入b，输出 b_666输出的结果跟之前的状态没关系，符合幂等性。  幂等性：就是用户对于同一操作发起的一次请求或者多次请求的结果是一致的，不会因">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/DACDA0D36E65409599BBB080EA633019?method=download&shareKey=9adc9bb6af2b7599ff382a0408b0c26f">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/27D1AD836DC04280A2E3D7C7FACE35F9?method=download&shareKey=4ef1e56e0b3924ad270a9b45c756fa6f">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AFC5592903304F76BC9C3632FBDCCD02?method=download&shareKey=b16fc1c90a635ee142d5d2fbe1422679">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/CF040D5C0C084F4CA96BBDEDEC7642DA?method=download&shareKey=82ed7ec2664971e9522dd892c443b0ed">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/5AB07951DFFD49BCAB1894A7B8C18541?method=download&shareKey=2f7f878f15c086fb4f7d6d1a00201b73">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AB184338C3094C9C98D897D864B1F865?method=download&shareKey=f6858815be435fd9706076899e26f39a">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/25DED52D106A49E89E0F7D2229919F6D?method=download&shareKey=6943719a8084298b1f6fd4db28326802">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/4F2FD952BD414B81A43DF0E0821BD34D?method=download&shareKey=d6df6aa9ad7390bf00dc872b8f3a6a41">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/49500B5399F342E5BA4BFA5FBB487B4C?method=download&shareKey=63b01ba174583757b860b379e9a6800b">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/F4FBF9FDB7E644CCB270891DF8AD9415?method=download&shareKey=14ef4a48b8fcfcf6dbd5a521ffbbc343">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/3DF290A566CB458687E51539F0C07061?method=download&shareKey=7ba23b905d82733fdce6f5dcc6678f25">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/94984CC673A04EC288358F3316A09395?method=download&shareKey=36a3f508a92609bac47bebc409ac207d">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/50CED120A8D848FBA99FDEDEB7038546?method=download&shareKey=86148fc758742fb66dc035c5f81f6e37">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/4F6F3541D36244C181EB20E170F9AEA9?method=download&shareKey=9b766e0b06cb195588162670274a4d10">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/C1FD3C170A274409876E17780D2DCA61?method=download&shareKey=c54b4e51f221381dd3a376dac8c03cf1">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/369928E45EDF4C0AB7500302AE0B2303?method=download&shareKey=e98f93e47bdbb75dbbfd16eec9bd2b55">
+<meta property="og:updated_time" content="2019-09-18T15:11:05.747Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK">
+<meta name="twitter:description" content="有状态与无状态 无状态：数据的计算与上一次的计算结果无关。例如map,flatMap 有状态: 数据的计算与上一次的计算结果有关，例如时间窗口内的sum，需要累加求和。  无状态计算的例子  比如：我们只是进行一个字符串拼接，输入 a，输出 a_666,输入b，输出 b_666输出的结果跟之前的状态没关系，符合幂等性。  幂等性：就是用户对于同一操作发起的一次请求或者多次请求的结果是一致的，不会因">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/DACDA0D36E65409599BBB080EA633019?method=download&shareKey=9adc9bb6af2b7599ff382a0408b0c26f">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/08/10/Flink-的-Exactly-Once-和-At-Least-Once-和-Jstorm的ACK/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/10/Flink-的-Exactly-Once-和-At-Least-Once-和-Jstorm的ACK/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-08-10 23:21:26" itemprop="dateCreated datePublished" datetime="2019-08-10T23:21:26+08:00">2019-08-10</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-09-18 23:11:05" itemprop="dateModified" datetime="2019-09-18T23:11:05+08:00">2019-09-18</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="有状态与无状态"><a href="#有状态与无状态" class="headerlink" title="有状态与无状态"></a>有状态与无状态</h3><ul>
+<li>无状态：数据的计算与上一次的计算结果无关。例如map,flatMap</li>
+<li>有状态: 数据的计算与上一次的计算结果有关，例如时间窗口内的sum，需要累加求和。</li>
+</ul>
+<p>无状态计算的例子</p>
+<ul>
+<li>比如：我们只是进行一个字符串拼接，输入 a，输出 a_666,输入b，输出 b_666<br>输出的结果跟之前的状态没关系，符合幂等性。</li>
+<li><ul>
+<li>幂等性：就是用户对于同一操作发起的一次请求或者多次请求的结果是一致的，不会因为多次点击而产生了副作用</li>
+</ul>
+</li>
+</ul>
+<p>有状态计算的例子</p>
+<ul>
+<li>计算pv、uv</li>
+<li>输出的结果跟之前的状态有关系，不符合幂等性，访问多次，pv会增加</li>
+</ul>
+<h3 id="Flink的CheckPoint功能简介"><a href="#Flink的CheckPoint功能简介" class="headerlink" title="Flink的CheckPoint功能简介"></a>Flink的CheckPoint功能简介</h3><p>Flink CheckPoint 的存在就是为了解决flink任务failover掉之后，能够正常恢复任务。</p>
+<p>CheckPoint是通过给程序快照的方式使得将历史某些时刻的状态保存下来，当任务挂掉之后，默认从最近一次保存的完整快照处进行恢复任务。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/DACDA0D36E65409599BBB080EA633019?method=download&amp;shareKey=9adc9bb6af2b7599ff382a0408b0c26f" alt="image"></p>
+<h3 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h3><p>app的pv，flink该怎么统计呢？</p>
+<p>从Kafka读取到一条条的日志，从日志中解析出app_id，然后将统计的结果放到内存中一个Map集合，app_id做为key，对应的pv做为value，每次只需要将相应app_id 的pv值+1后put到Map中即可</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/27D1AD836DC04280A2E3D7C7FACE35F9?method=download&amp;shareKey=4ef1e56e0b3924ad270a9b45c756fa6f" alt="image"></p>
+<p>flink的Source task记录了当前消费到kafka test topic的所有partition的offset，为了方便理解CheckPoint的作用，这里先用一个partition进行讲解，假设名为 “test”的 topic只有一个partition0</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">例：（0，1000）</span><br><span class="line">表示0号partition目前消费到offset为1000的数据</span><br></pre></td></tr></table></figure>
+<p>flink的pv task记录了当前计算的各app的pv值</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">例：（app1，50000）（app2，10000）</span><br><span class="line">表示app1当前pv值为50000</span><br><span class="line">表示app2当前pv值为10000</span><br></pre></td></tr></table></figure>
+<p>每来一条数据，只需要确定相应app_id，将相应的value值+1后put到map中即可</p>
+<h4 id="checkPoint的作用"><a href="#checkPoint的作用" class="headerlink" title="checkPoint的作用"></a>checkPoint的作用</h4><p>checkPoint记录了第n次CheckPoint消费的offset信息和各app的pv值信息，记录一下发生CheckPoint当前的状态信息，并将该状态信息保存到相应的状态后端</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">chk-100</span><br><span class="line">offset：（0，1000）</span><br><span class="line">pv：（app1，50000）（app2，10000）</span><br></pre></td></tr></table></figure>
+<p>该状态信息表示第100次CheckPoint的时候， partition 0 offset消费到了1000，pv统计结果为（app1，50000）（app2，10000）</p>
+<h4 id="任务挂了如何恢复"><a href="#任务挂了如何恢复" class="headerlink" title="任务挂了如何恢复"></a>任务挂了如何恢复</h4><p>如果任务挂了flink只需要从最近一次成功的CheckPoint保存的offset（0，1000）处接着消费即可，当然pv值也要按照状态里的pv值（app1，50000）（app2，10000）进行累加。</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><img src="https://note.youdao.com/yws/api/personal/file/AFC5592903304F76BC9C3632FBDCCD02?method=download&amp;shareKey=b16fc1c90a635ee142d5d2fbe1422679" alt="image"></p>
+<ul>
+<li>barrier从Source Task处生成，一直流到Sink Task，期间所有的Task只要碰到barrier，就会触发自身进行快照</li>
+<li><ul>
+<li>CheckPoint barrier n-1处做的快照就是指Job从开始处理到 barrier n-1所有的状态数据</li>
+</ul>
+</li>
+<li><ul>
+<li>barrier n 处做的快照就是指从Job开始到处理到 barrier n所有的状态数据</li>
+</ul>
+</li>
+</ul>
+<h3 id="多并行度、多Operator情况下，CheckPoint过程"><a href="#多并行度、多Operator情况下，CheckPoint过程" class="headerlink" title="多并行度、多Operator情况下，CheckPoint过程"></a>多并行度、多Operator情况下，CheckPoint过程</h3><p>所有的Operator运行过程中遇到barrier后，都对自身的状态进行一次快照，保存到相应状态后端</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/CF040D5C0C084F4CA96BBDEDEC7642DA?method=download&amp;shareKey=82ed7ec2664971e9522dd892c443b0ed" alt="image"></p>
+<p>多Operator状态恢复</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/5AB07951DFFD49BCAB1894A7B8C18541?method=download&amp;shareKey=2f7f878f15c086fb4f7d6d1a00201b73" alt="image"></p>
+<p>JobManager向Source Task发送CheckPointTrigger，Source Task会在数据流中安插CheckPoint barrier</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/AB184338C3094C9C98D897D864B1F865?method=download&amp;shareKey=f6858815be435fd9706076899e26f39a" alt="image"></p>
+<p>Source Task自身做快照，并保存到状态后端，Source Task将barrier跟数据流一块往下游发送。当下游的Operator实例接收到CheckPoint barrier后，对自身做快照。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/25DED52D106A49E89E0F7D2229919F6D?method=download&amp;shareKey=6943719a8084298b1f6fd4db28326802" alt="image"><br>上述图中，有4个带状态的Operator实例，相应的状态后端就可以想象成填4个格子。整个CheckPoint 的过程可以当做Operator实例填自己格子的过程，Operator实例将自身的状态写到状态后端中相应的格子，当所有的格子填满可以简单的认为一次完整的CheckPoint做完了</p>
+<h4 id="整个CheckPoint执行过程如下"><a href="#整个CheckPoint执行过程如下" class="headerlink" title="整个CheckPoint执行过程如下"></a>整个CheckPoint执行过程如下</h4><ol>
+<li>JobManager端的 CheckPointCoordinator向所有SourceTask发送CheckPointTrigger，Source Task会在数据流中安插CheckPoint barrier</li>
+<li>当task收到所有的barrier后，向自己的下游继续传递barrier，然后自身执行快照，并将自己的状态异步写入到持久化存储中<br>增量CheckPoint只是把最新的一部分更新写入到 外部存储<br>为了下游尽快做CheckPoint，所以会先发送barrier到下游，自身再同步进行快照</li>
+</ol>
+<ul>
+<li>增量CheckPoint只是把最新的一部分更新写入到 外部存储(例如时间窗口内等所有数据汇聚完在做计算的算子，增量比全量好)</li>
+<li>为了下游尽快做CheckPoint，所以会先发送barrier到下游，自身再同步进行快照</li>
+</ul>
+<ol start="3">
+<li>当task完成备份后，会将备份数据的地址（state handle）通知给JobManager的CheckPointCoordinator</li>
+</ol>
+<ul>
+<li>如果CheckPoint的持续时长超过 了CheckPoint设定的超时时间，CheckPointCoordinator 还没有收集完所有的 State Handle，CheckPointCoordinator就会认为本次CheckPoint失败，会把这次CheckPoint产生的所有 状态数据全部删除</li>
+</ul>
+<ol start="4">
+<li>最后 CheckPoint Coordinator 会把整个 StateHandle 封装成 completed CheckPoint Meta，写入到hdfs</li>
+</ol>
+<h3 id="barrier对齐"><a href="#barrier对齐" class="headerlink" title="barrier对齐"></a>barrier对齐</h3><p><img src="https://note.youdao.com/yws/api/personal/file/4F2FD952BD414B81A43DF0E0821BD34D?method=download&amp;shareKey=d6df6aa9ad7390bf00dc872b8f3a6a41" alt="image"></p>
+<ul>
+<li>一旦Operator从输入流接收到CheckPoint barrier n，它就不能处理来自该流的任何数据记录，直到它从其他所有输入接收到barrier n为止。否则，它会混合属于快照n的记录和属于快照n + 1的记录</li>
+<li>接收到barrier n的流暂时被搁置。从这些流接收的记录不会被处理，而是放入输入缓冲区。</li>
+<li><ul>
+<li>上图中第2个图，虽然数字流对应的barrier已经到达了，但是barrier之后的1、2、3这些数据只能放到buffer中，等待字母流的barrier到达</li>
+</ul>
+</li>
+<li>一旦最后所有输入流都接收到barrier n，Operator就会把缓冲区中pending 的输出数据发出去，然后把CheckPoint barrier n接着往下游发送</li>
+<li>之后，Operator将继续处理来自所有输入流的记录，在处理来自流的记录之前先处理来自输入缓冲区的记录</li>
+</ul>
+<h5 id="什么是barrier不对齐？"><a href="#什么是barrier不对齐？" class="headerlink" title="什么是barrier不对齐？"></a>什么是barrier不对齐？</h5><p>barrier不对齐就是指当还有其他流的barrier还没到达时，为了不影响性能，也不用理会，直接处理barrier之后的数据。等到所有流的barrier的都到达后，就可以对该Operator做CheckPoint了</p>
+<p>Exactly Once时必须barrier对齐，如果barrier不对齐就变成了At Least Once</p>
+<h3 id="Flink端到端的Exactly-Once"><a href="#Flink端到端的Exactly-Once" class="headerlink" title="Flink端到端的Exactly-Once"></a>Flink端到端的Exactly-Once</h3><p>要使数据输出端提供Exactly-Once保证，它必须将所有数据通过一个事务提交给外部系统，在这种情况下，为了提供Exactly-Once保证，外部系统必须支持事务，这样才能和两阶段提交协议集成。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/49500B5399F342E5BA4BFA5FBB487B4C?method=download&amp;shareKey=63b01ba174583757b860b379e9a6800b" alt="image"></p>
+<p>当checkpoint barrier在所有operator都传递了一遍，并且触发的checkpoint回调成功完成时，预提交阶段就结束了。所有触发的状态快照都被视为该checkpoint的一部分。checkpoint是整个应用程序状态的快照，包括预先提交的外部状态。如果发生故障，我们可以回滚到上次成功完成快照的时间点。</p>
+<p>下一步是通知所有operator，checkpoint已经成功了。这是两阶段提交协议的提交阶段，JobManager为应用程序中的每个operator发出checkpoint已完成的回调。</p>
+<p>数据源和widnow operator没有外部状态，因此在提交阶段，这些operator不必执行任何操作。但是，数据输出端（Data Sink）拥有外部状态，此时应该提交外部事务。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/F4FBF9FDB7E644CCB270891DF8AD9415?method=download&amp;shareKey=14ef4a48b8fcfcf6dbd5a521ffbbc343" alt="image"></p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/3DF290A566CB458687E51539F0C07061?method=download&amp;shareKey=7ba23b905d82733fdce6f5dcc6678f25" alt="image"></p>
+<h3 id="CheckPoint-调优"><a href="#CheckPoint-调优" class="headerlink" title="CheckPoint 调优"></a>CheckPoint 调优</h3><h4 id="超时原因"><a href="#超时原因" class="headerlink" title="超时原因"></a>超时原因</h4><p>超时的原因会是什么呢？主要是一下两种:</p>
+<ul>
+<li>Barrier对齐</li>
+<li>异步状态遍历和写hdfs</li>
+</ul>
+<p>StreamTask收集到相应的inputChannel的barrier，收集齐之后就将barrier下发，并开始自己task的checkpoint逻辑，如果上下游是rescale或者forward的形式，下游只需要等待1个并发的barrier，因为是point-to-point的形式，如果是hash或者rebalance，下游的每一个task开始checkpoint的前提就是要收集齐上游所有并发的barrier。</p>
+<h4 id="相邻Checkpoint的间隔时间设置"><a href="#相邻Checkpoint的间隔时间设置" class="headerlink" title="相邻Checkpoint的间隔时间设置"></a>相邻Checkpoint的间隔时间设置</h4><p>在极大规模状态数据集下，应用每次的checkpoint时长都超过系统设定的最大时间（也就是checkpoint间隔时长），那么会发生什么样的事情</p>
+<p>答案是应用会一直在做checkpoint，因为当应用发现它刚刚做完一次checkpoint后，又已经到了下次checkpoint的时间了，由于需要对齐barrier，因此在极限的情况下，会停止消费数据，但是checkpoint每隔一段时间又会不停的向下发送，使得会有一堆checkpoint往下发，导致用户程序无法运行。</p>
+<h4 id="Checkpoint的资源设置"><a href="#Checkpoint的资源设置" class="headerlink" title="Checkpoint的资源设置"></a>Checkpoint的资源设置</h4><p>当我们对越多的状态数据集做checkpoint时，需要消耗越多的资源。因为Flink在checkpoint时是首先在每个task上做数据checkpoint，然后在外部存储中做checkpoint持久化。在这里的一个优化思路是：在总状态数据固定的情况下，当每个task平均所checkpoint的数据越少，那么相应地checkpoint的总时间也会变短。所以我们可以为每个task设置更多的并行度（即分配更多的资源）来加速checkpoint的执行过程。</p>
+<h5 id="Checkpoint的task本地性恢复"><a href="#Checkpoint的task本地性恢复" class="headerlink" title="Checkpoint的task本地性恢复"></a>Checkpoint的task本地性恢复</h5><p>为了快速的状态恢复，每个task会同时写checkpoint数据到本地磁盘和远程分布式存储，也就是说，这是一份双拷贝。只要task本地的checkpoint数据没有被破坏，系统在应用恢复时会首先加载本地的checkpoint数据，这样就大大减少了远程拉取状态数据的过程。此过程如下图所示：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/94984CC673A04EC288358F3316A09395?method=download&amp;shareKey=36a3f508a92609bac47bebc409ac207d" alt="image"></p>
+<h4 id="外部State的存储选择"><a href="#外部State的存储选择" class="headerlink" title="外部State的存储选择"></a>外部State的存储选择</h4><p>使用RocksDB来作为增量checkpoint的存储，并在其中不是持续增大，可以进行定期合并清楚历史状态。</p>
+<h3 id="Jstorm-消息可靠性"><a href="#Jstorm-消息可靠性" class="headerlink" title="Jstorm 消息可靠性"></a>Jstorm 消息可靠性</h3><h4 id="消息树"><a href="#消息树" class="headerlink" title="消息树"></a>消息树</h4><p><img src="https://note.youdao.com/yws/api/personal/file/50CED120A8D848FBA99FDEDEB7038546?method=download&amp;shareKey=86148fc758742fb66dc035c5f81f6e37" alt="image"></p>
+<h4 id="一个消息被完整处理是什么意思？"><a href="#一个消息被完整处理是什么意思？" class="headerlink" title="一个消息被完整处理是什么意思？"></a>一个消息被完整处理是什么意思？</h4><p>指一个从Spout发出的元组（tuple）所触发的消息树中所有的消息都被Storm处理了。如果在指定的超时时间里，这个Spout元组触发的消息树中有任何一个消息没有处理完，就认为这个Spout元组处理失败了。这个超时时间是通过每个拓扑的Config.TOPOLOGY_MESSAGE_TIMEOUT_SECS配置项来进行配置的，默认是30秒</p>
+<p>在前面消息树的例子里，只有消息树中所有的消息(包含一条Spout消息，六条split Bolt消息,六条count Bolt消息)都被Storm处理完了，才算是这条Spout消息被完整处理了。</p>
+<p>在Storm消息树(元组树)中添加一个子结点的操作叫做锚定(anchoring)。在应用程序发送一个新元组时候，Storm会在幕后做锚定。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//锚定</span></span><br><span class="line">_collector.emit(tuple, <span class="keyword">new</span> Values(word));</span><br><span class="line"><span class="comment">//不锚定</span></span><br><span class="line">_collector.emit(<span class="keyword">new</span> Values(word));</span><br></pre></td></tr></table></figure></p>
+<p>如果你不在意某个消息派生出来的子孙消息的可靠性，则此消息派生出来的子消息在发送时不要做锚定，即在emit方法中不指定输入消息。因为这些子孙消息没有被锚定在任何tuple tree中，因此他们的失败不会引起任何spout重新发送消息。</p>
+<h3 id="元组处理完后通知Storm"><a href="#元组处理完后通知Storm" class="headerlink" title="元组处理完后通知Storm"></a>元组处理完后通知Storm</h3><p>锚定的作用就是指定元组树的结构–下一步是当元组树中某个元组已经处理完成时，通知Storm。通知是通过OutputCollector中的ack和fail函数来完成的。例如上面流式计算单词个数例子中的split Bolt的实现SplitSentence类，可以看到句子被切分成单词后，当所有的单词元组都被发射后，会确认(ack)输入的元组处理完成。</p>
+<p>可以利用OutputCollector的fail函数来立即通知Storm，当前消息树的根元组处理失败了。例如，应用程序可能捕捉到了数据库客户端的一个异常，就显示地通知Storm输入元组处理失败。通过显示地通知Storm元组处理失败，这个Spout元组就不用等待超时而能更快地被重新处理。</p>
+<p>Storm需要占用内存来跟踪每个元组，所以每个被处理的元组都必须被确认。因为如果不对每个元组进行确认，任务最终会耗光可用的内存。</p>
+<p>做聚合或者合并操作的Bolt可能会延迟确认一个元组，直到根据一堆元组计算出了一个结果后，才会确认。聚合或者合并操作的Bolt，通常也会对他们的输出元组进行多锚定。</p>
+<p>一个Storm拓扑有一组特殊的”acker”任务，它们负责跟踪由每个Spout元组触发的消息的处理状态。当一个”acker”看到一个Spout元组产生的有向无环图中的消息被完全处理，就通知当初创建这个Spout元组的Spout任务，这个元组被成功处理。可以通过拓扑配置项Config.TOPOLOGY_ACKER_EXECUTORS来设置一个拓扑中acker任务executor的数量。</p>
+<p>假设”D”元组和”E”元组是基于“C”元组产生的，那么下图描述了确认“C”元组成功处理后，元组树的变化。图中虚线框表示的元组代表已经在消息树上被删除了：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/4F6F3541D36244C181EB20E170F9AEA9?method=download&amp;shareKey=9b766e0b06cb195588162670274a4d10" alt="image"></p>
+<p>由于在“C”从消息树中删除(通过acker函数确认成功处理)的同时，“D”和“E”也被添加到(通过emit函数来锚定的)元组树中，所以这棵树从来不会被提早处理完。</p>
+<h3 id="实现细节"><a href="#实现细节" class="headerlink" title="实现细节"></a>实现细节</h3><p>一个acker任务存储了从一个Spout元组message-id到一对值的映射关系。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">spout-message-id--&gt;&lt;spout-task-id, ack-val&gt;</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>第一个值是创建了这个Spout元组的任务id，用来后续处理完成时通知到这个Spout任务</li>
+<li>第二个值是一个64比特的叫做“ack val”的数值。它是简单的把消息树中所有被创建或者被确认的元组message-id异或起来的值。每个消息创建和被确认处理后都会异或到”ack val”上，A xor A = 0，所以当一个“ack val”变成了0，说明整个元组树都完全被处理了。</li>
+</ul>
+<h4 id="Storm如何避免数据丢失："><a href="#Storm如何避免数据丢失：" class="headerlink" title="Storm如何避免数据丢失："></a>Storm如何避免数据丢失：</h4><ul>
+<li>Bolt任务挂掉：导致一个元组没有被确认，这种场景下，这个元组所在的消息树中的根节点Spout元组会超时并被重新处理</li>
+<li>acker任务挂掉：这种场景下，这个acker挂掉时正在跟踪的所有的Spout元组都会超时并被重新处理</li>
+<li>Spout任务挂掉：这种场景下，需要应用自己实现检查点机制，记录当前Spout成功处理的进度，当Spout任务挂掉之后重启时，继续从当前检查点处理，这样就能重新处理失败的那些元组了</li>
+</ul>
+<p><img src="https://note.youdao.com/yws/api/personal/file/C1FD3C170A274409876E17780D2DCA61?method=download&amp;shareKey=c54b4e51f221381dd3a376dac8c03cf1" alt="image"></p>
+<h3 id="对比"><a href="#对比" class="headerlink" title="对比"></a>对比</h3><p><img src="https://note.youdao.com/yws/api/personal/file/369928E45EDF4C0AB7500302AE0B2303?method=download&amp;shareKey=e98f93e47bdbb75dbbfd16eec9bd2b55" alt="image"></p>
+<p>左边的图展示的是Storm的Ack机制。Spout每发送一条数据到Bolt，就会产生一条ack的信息给acker，当Bolt处理完这条数据后也会发送ack信息给acker。当acker收到这条数据的所有ack信息时，会回复Spout一条ack信息。也就是说，对于一个只有两级（spout+bolt）的拓扑来说，每发送一条数据，就会传输3条ack信息。这3条ack信息则是为了保证可靠性所需要的开销。</p>
+<p>右边的图展示的是Flink的Checkpoint机制。Flink中Checkpoint信息的发起者是JobManager。它不像Storm中那样，每条信息都会有ack信息的开销，而且按时间来计算花销。用户可以设置做checkpoint的频率，比如10秒钟做一次checkpoint。每做一次checkpoint，花销只有从Source发往map的1条checkpoint信息（JobManager发出来的checkpoint信息走的是控制流，与数据流无关）。与storm相比，Flink的可靠性机制开销要低得多。这也就是为什么保证可靠性对Flink的性能影响较小，而storm的影响确很大的原因。</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.jianshu.com/p/8d6569361999" target="_blank" rel="noopener">https://www.jianshu.com/p/8d6569361999</a></p>
+<p><a href="https://zhoukaibo.com/2019/01/10/flink-kafka-exactly-once/" target="_blank" rel="noopener">https://zhoukaibo.com/2019/01/10/flink-kafka-exactly-once/</a></p>
+<p><a href="https://cloud.tencent.com/developer/article/1478170" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1478170</a></p>
+<p><a href="https://www.jianshu.com/p/dff71581b63b" target="_blank" rel="noopener">https://www.jianshu.com/p/dff71581b63b</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/08/03/Flink-LocalAgg/" rel="next" title="Flink LocalAgg">
+                <i class="fa fa-chevron-left"></i> Flink LocalAgg
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/08/28/Flink源码解析-TaskManager启动与运行Task/" rel="prev" title="Flink源码解析 TaskManager启动与运行Task">
+                Flink源码解析 TaskManager启动与运行Task <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#有状态与无状态"><span class="nav-number">1.</span> <span class="nav-text">有状态与无状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Flink的CheckPoint功能简介"><span class="nav-number">2.</span> <span class="nav-text">Flink的CheckPoint功能简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#案例"><span class="nav-number">3.</span> <span class="nav-text">案例</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#checkPoint的作用"><span class="nav-number">3.1.</span> <span class="nav-text">checkPoint的作用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#任务挂了如何恢复"><span class="nav-number">3.2.</span> <span class="nav-text">任务挂了如何恢复</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原理"><span class="nav-number">4.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多并行度、多Operator情况下，CheckPoint过程"><span class="nav-number">5.</span> <span class="nav-text">多并行度、多Operator情况下，CheckPoint过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#整个CheckPoint执行过程如下"><span class="nav-number">5.1.</span> <span class="nav-text">整个CheckPoint执行过程如下</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#barrier对齐"><span class="nav-number">6.</span> <span class="nav-text">barrier对齐</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#什么是barrier不对齐？"><span class="nav-number">6.0.1.</span> <span class="nav-text">什么是barrier不对齐？</span></a></li></ol></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#Flink端到端的Exactly-Once"><span class="nav-number">7.</span> <span class="nav-text">Flink端到端的Exactly-Once</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CheckPoint-调优"><span class="nav-number">8.</span> <span class="nav-text">CheckPoint 调优</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#超时原因"><span class="nav-number">8.1.</span> <span class="nav-text">超时原因</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#相邻Checkpoint的间隔时间设置"><span class="nav-number">8.2.</span> <span class="nav-text">相邻Checkpoint的间隔时间设置</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Checkpoint的资源设置"><span class="nav-number">8.3.</span> <span class="nav-text">Checkpoint的资源设置</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#Checkpoint的task本地性恢复"><span class="nav-number">8.3.1.</span> <span class="nav-text">Checkpoint的task本地性恢复</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#外部State的存储选择"><span class="nav-number">8.4.</span> <span class="nav-text">外部State的存储选择</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Jstorm-消息可靠性"><span class="nav-number">9.</span> <span class="nav-text">Jstorm 消息可靠性</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#消息树"><span class="nav-number">9.1.</span> <span class="nav-text">消息树</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#一个消息被完整处理是什么意思？"><span class="nav-number">9.2.</span> <span class="nav-text">一个消息被完整处理是什么意思？</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#元组处理完后通知Storm"><span class="nav-number">10.</span> <span class="nav-text">元组处理完后通知Storm</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现细节"><span class="nav-number">11.</span> <span class="nav-text">实现细节</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Storm如何避免数据丢失："><span class="nav-number">11.1.</span> <span class="nav-text">Storm如何避免数据丢失：</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#对比"><span class="nav-number">12.</span> <span class="nav-text">对比</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">13.</span> <span class="nav-text">Reference</span></a></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

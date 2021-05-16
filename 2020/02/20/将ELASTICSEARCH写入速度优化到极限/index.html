@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="转载自https://www.easyice.cn/archives/207 综合来说,提升写入速度从以下几方面入手:  加大 translog flush ,目的是降低 iops,writeblock 加大 index refresh间隔, 目的除了降低 io, 更重要的降低了 segment merge 频率 调整 bulk 线程池和队列 优化磁盘间的任务均匀情况,将 shard 尽量均匀分布">
+<meta property="og:type" content="article">
+<meta property="og:title" content="将ELASTICSEARCH写入速度优化到极限">
+<meta property="og:url" content="http://yoursite.com/2020/02/20/将ELASTICSEARCH写入速度优化到极限/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="转载自https://www.easyice.cn/archives/207 综合来说,提升写入速度从以下几方面入手:  加大 translog flush ,目的是降低 iops,writeblock 加大 index refresh间隔, 目的除了降低 io, 更重要的降低了 segment merge 频率 调整 bulk 线程池和队列 优化磁盘间的任务均匀情况,将 shard 尽量均匀分布">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-02-20T08:16:21.969Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="将ELASTICSEARCH写入速度优化到极限">
+<meta name="twitter:description" content="转载自https://www.easyice.cn/archives/207 综合来说,提升写入速度从以下几方面入手:  加大 translog flush ,目的是降低 iops,writeblock 加大 index refresh间隔, 目的除了降低 io, 更重要的降低了 segment merge 频率 调整 bulk 线程池和队列 优化磁盘间的任务均匀情况,将 shard 尽量均匀分布">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/02/20/将ELASTICSEARCH写入速度优化到极限/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>将ELASTICSEARCH写入速度优化到极限 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/20/将ELASTICSEARCH写入速度优化到极限/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">将ELASTICSEARCH写入速度优化到极限
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-02-20 16:15:48 / 修改时间：16:16:21" itemprop="dateCreated datePublished" datetime="2020-02-20T16:15:48+08:00">2020-02-20</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Elasticsearch/" itemprop="url" rel="index"><span itemprop="name">Elasticsearch</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="转载自"><a href="#转载自" class="headerlink" title="转载自"></a>转载自</h3><p><a href="https://www.easyice.cn/archives/207" target="_blank" rel="noopener">https://www.easyice.cn/archives/207</a></p>
+<p>综合来说,提升写入速度从以下几方面入手:</p>
+<ul>
+<li>加大 translog flush ,目的是降低 iops,writeblock</li>
+<li>加大 index refresh间隔, 目的除了降低 io, 更重要的降低了 segment merge 频率</li>
+<li>调整 bulk 线程池和队列</li>
+<li>优化磁盘间的任务均匀情况,将 shard 尽量均匀分布到物理主机的各磁盘</li>
+<li>优化节点间的任务分布,将任务尽量均匀的发到各节点</li>
+<li>优化 lucene 层建立索引的过程,目的是降低 CPU 占用率及 IO</li>
+</ul>
+<h3 id="translog-flush-间隔调整"><a href="#translog-flush-间隔调整" class="headerlink" title="translog flush 间隔调整"></a>translog flush 间隔调整</h3><p>从 es 2.x 开始, 默认设置下,translog 的持久化策略为:每个请求都flush.对应配置项为:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">index.translog.durability: request</span><br></pre></td></tr></table></figure>
+<p><strong>这是影响 es 写入速度的最大因素</strong>.但是只有这样,写操作才有可能是可靠的,原因参考写入流程.</p>
+<p>如果系统可以接受一定几率的数据丢失,调整 translog 持久化策略为周期性和一定大小的时候 flush:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">index.translog.durability: async</span><br><span class="line">index.translog.sync_interval: 120s</span><br><span class="line">index.translog.flush_threshold_size: 1024mb</span><br><span class="line">index.translog.flush_threshold_period: 120m</span><br></pre></td></tr></table></figure>
+<h3 id="索引刷新间隔调整-refresh-interval"><a href="#索引刷新间隔调整-refresh-interval" class="headerlink" title="索引刷新间隔调整: refresh_interval"></a>索引刷新间隔调整: refresh_interval</h3><h4 id="refresh-interval"><a href="#refresh-interval" class="headerlink" title="refresh_interval"></a>refresh_interval</h4><p>默认情况下索引的refresh_interval为1秒,这意味着数据写1秒后就可以被搜索到,每次索引的 refresh 会产生一个新的 lucene 段,这会导致频繁的 segment merge 行为,如果你不需要这么高的搜索实时性,应该降低索引refresh 周期,如:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">index.refresh_interval: 120s</span><br></pre></td></tr></table></figure>
+<h4 id="segment-merge"><a href="#segment-merge" class="headerlink" title="segment merge"></a>segment merge</h4><p>segment merge 操作对系统 CPU 和 IO 占用都比较高,从es 2.0开始,merge 行为不再由 es 控制,而是转由 lucene 控制,因此以下配置已被删除:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">indices.store.throttle.type</span><br><span class="line">indices.store.throttle.max_bytes_per_sec</span><br><span class="line">index.store.throttle.type</span><br><span class="line">index.store.throttle.max_bytes_per_sec</span><br></pre></td></tr></table></figure>
+<p>改为以下调整开关:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">index.merge.scheduler.max_thread_count</span><br><span class="line">index.merge.policy.*</span><br></pre></td></tr></table></figure>
+<p>最大线程数的默认值为:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Math.max(1, Math.min(4, Runtime.getRuntime().availableProcessors() / 2))</span><br></pre></td></tr></table></figure></p>
+<p>是一个比较理想的值,如果你只有一块硬盘并且非 SSD, 应该把他设置为1,因为在旋转存储介质上并发写,由于寻址的原因,不会提升,只会降低写入速度.</p>
+<p>merge 策略有三种:</p>
+<ul>
+<li>tiered</li>
+<li>log_byete_size</li>
+<li>log_doc</li>
+</ul>
+<p>默认情况下:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">index.merge.polcy.type: tiered</span><br></pre></td></tr></table></figure>
+<p>索引创建时合并策略就已确定,不能更改,但是可以动态更新策略参数,一般情况下,不需要调整.如果堆栈经常有很多 merge, 可以尝试调整以下配置:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">index.merge.policy.floor_segment</span><br></pre></td></tr></table></figure>
+<p>该属性用于阻止segment 的频繁flush, 小于此值将考虑优先合并,默认为2M,可考虑适当降低此值</p>
+<p>index.merge.policy.segments_per_tier</p>
+<p>该属性指定了每层分段的数量,取值约小最终segment 越少,因此需要 merge 的操作更多,可以考虑适当增加此值.默认为10,他应该大于等于 index.merge.policy.max_merge_at_once </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">index.merge.policy.max_merged_segment</span><br></pre></td></tr></table></figure>
+<p>指定了单个 segment 的最大容量,默认为5GB,可以考虑适当降低此值</p>
+<h4 id="Indexing-Buffer"><a href="#Indexing-Buffer" class="headerlink" title="Indexing Buffer"></a>Indexing Buffer</h4><p>indexing buffer在为 doc 建立索引时使用,当缓冲满时会刷入磁盘,生成一个新的 segment, 这是除refresh_interval外另外一个刷新索引,生成新 segment 的机会. 每个 shard 有自己的 indexing buffer,下面的关于这个 buffer 大小的配置需要除以这个节点上所有的 shard 数量</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">indices.memory.index_buffer_size</span><br></pre></td></tr></table></figure>
+<p>默认为整个堆空间的10%</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">indices.memory.min_index_buffer_size</span><br></pre></td></tr></table></figure>
+<p>默认48mb</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">indices.memory.max_index_buffer_size</span><br></pre></td></tr></table></figure>
+<p>默认无限制</p>
+<p>在大量的索引操作时,indices.memory.index_buffer_size默认设置可能不够,这和可用堆内存,单节点上的 shard 数量相关,可以考虑适当增大.</p>
+<h4 id="bulk-线程池和队列大小"><a href="#bulk-线程池和队列大小" class="headerlink" title="bulk 线程池和队列大小"></a>bulk 线程池和队列大小</h4><p>建立索引的过程偏计算密集型任务,应该使用固定大小的线程池配置,来不及处理的放入队列,线程数量配置为 CPU 核心数+1,避免过多的上下文切换.队列大小可以适当增加</p>
+<h3 id="磁盘间的任务均衡"><a href="#磁盘间的任务均衡" class="headerlink" title="磁盘间的任务均衡"></a>磁盘间的任务均衡</h3><p>如果你的部署方案是为path.data 配置多个路径来使用多块磁盘, es 在分配 shard 时,落到各磁盘上的 shard 可能并不均匀,这种不均匀可能会导致某些磁盘繁忙,利用率达到100%,这种不均匀达到一定程度可能会对写入性能产生负面影响.</p>
+<p>es 在处理多路径时,优先将 shard 分配到可用空间百分比最多的磁盘,因此短时间内创建的 shard 可能被集中分配到这个磁盘,即使可用空间是99%和98%的差别.后来 es 在2.x 版本中开始解决这个问题的方式是:预估一下这个 shard 会使用的空间,从磁盘可用空间中减去这部分,直到现在6.x beta 版也是这种处理方式.但是实现也存在一些问题:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">从可用空间减去预估大小</span><br></pre></td></tr></table></figure>
+<p>这种机制只存在于一次索引创建的过程中,下一次的索引创建,磁盘可用空间并不是上次做完减法以后的结果,这也可以理解,毕竟预估是不准的,一直减下去很快就减没了.</p>
+<p>但是最终的效果是,这种机制并没有从根本上解决问题,即使没有完美的解决方案,这种机制的效果也不够好.</p>
+<p>如果单一的机制不能解决所有的场景,至少应该为不同场景准备多种选择.</p>
+<h3 id="节点间的任务均衡"><a href="#节点间的任务均衡" class="headerlink" title="节点间的任务均衡"></a>节点间的任务均衡</h3><p>为了在节点间任务尽量均衡,数据写入客户端应该把 bulk 请求轮询发送到各个节点.</p>
+<p>当使用 java api ,或者 rest api 的 bulk 接口发送数据时,客户端将会轮询的发送的集群节点,节点列表取决于:</p>
+<p>当client.transport.sniff为 true,(默认为 false),列表为所有数据节点<br>否则,列表为初始化客户端对象时添加进去的节点.</p>
+<p>java api 的 TransportClient 和 rest api 的 RestClient 都是线程安全的,当写入程序自己创建线程池控制并发,应该使用同一个 Client 对象.在此建议使用 rest api,兼容性好,只有吞吐量非常大才值得考虑序列化的开销,显然搜索并不是高吞吐量的业务.</p>
+<p>观察bulk 请求在不同节点上的处理情况,通过cat 接口观察 bulk 线程池和队列情况,是否存在不均:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">GET _cat/thread_pool?v</span><br></pre></td></tr></table></figure>
+<h3 id="索引过程调整和优化"><a href="#索引过程调整和优化" class="headerlink" title="索引过程调整和优化"></a>索引过程调整和优化</h3><h4 id="自动生成-doc-ID"><a href="#自动生成-doc-ID" class="headerlink" title="自动生成 doc ID"></a>自动生成 doc ID</h4><p>分析 es 写入流程可以看到,写入 doc 时如果是外部指定了 id,es 会先尝试读取原来doc的版本号, 判断是否需要更新,使用自动生成 doc id 可以避免这个环节.</p>
+<h4 id="调整字段-Mappings"><a href="#调整字段-Mappings" class="headerlink" title="调整字段 Mappings"></a>调整字段 Mappings</h4><p><strong>字段的 index 属性设置为: not_analyzed,或者 no</strong></p>
+<p>对字段不分词,或者不索引,可以节省很多运算,降低 CPU 占用.尤其是 binary 类型,默认情况下占用 CPU 非常高,而这种类型根本不需要进行分词做索引.</p>
+<p>单个 doc 在建立索引时的运算复杂度,最大的因素 不在于 doc 的字节数或者说某个字段 value 的长度,而是字段的数量. 例如在满负载的写入压力测试中,mapping 相同的情况下,一个有10个字段,200字节的 doc, 通过增加某些字段 value 的长度到500字节,写入 es 时速度下降很少,而如果字段数增加到20,即使整个 doc 字节数没增加多少,写入速度也会降低一倍.</p>
+<p><strong>使用不同的分析器:analyzer</strong></p>
+<p>不同的分析器在索引过程中运算复杂度也有较大的差异</p>
+<h4 id="调整-source-字段"><a href="#调整-source-字段" class="headerlink" title="调整_source 字段"></a>调整_source 字段</h4><p>_source 字段用于存储 doc 原始数据,对于部分不需要存储的字段,可以通过 includes excludes 来过滤,或者将 _source 禁用,一般用于索引和数据分离</p>
+<p>这样可以降低 io 的压力,不过实际场景大多数情况不会禁用 _source ,而即使过滤掉某些字段,对于写入速度的提示效果也不大,满负荷写入情况下,基本是CPU 先跑满了,瓶颈在于 CPU.</p>
+<h4 id="对于-Analyzed-的字段禁用-Norms"><a href="#对于-Analyzed-的字段禁用-Norms" class="headerlink" title="对于 Analyzed 的字段禁用 Norms"></a>对于 Analyzed 的字段禁用 Norms</h4><p>Norms 用于在搜索时计算 doc 的评分,如果不需要评分,可以禁用他:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">&quot;title&quot;: &#123;&quot;type&quot;: &quot;string&quot;,&quot;norms&quot;: &#123;&quot;enabled&quot;: false&#125;&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="index-options-设置"><a href="#index-options-设置" class="headerlink" title="index_options 设置"></a>index_options 设置</h4><p>index_options 用于控制在建立倒排索引过程中,哪些内容会被添加到倒排,例如 doc数量,词频,positions,offsets等信息,优化这些设置可以一定程度降低索引过程中运算任务,节省 CPU 占用率</p>
+<p>不过实际场景中,通常很难确定业务将来会不会用到这些信息,除非一开始方案就明确这样设计的</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/02/15/Flink-1-10-前后内存模型对比/" rel="next" title="Flink 1.10 前后内存模型对比">
+                <i class="fa fa-chevron-left"></i> Flink 1.10 前后内存模型对比
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/02/20/Elasticsearch-索引设计实战指南/" rel="prev" title="Elasticsearch 索引设计实战指南">
+                Elasticsearch 索引设计实战指南 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#转载自"><span class="nav-number">1.</span> <span class="nav-text">转载自</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#translog-flush-间隔调整"><span class="nav-number">2.</span> <span class="nav-text">translog flush 间隔调整</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#索引刷新间隔调整-refresh-interval"><span class="nav-number">3.</span> <span class="nav-text">索引刷新间隔调整: refresh_interval</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#refresh-interval"><span class="nav-number">3.1.</span> <span class="nav-text">refresh_interval</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#segment-merge"><span class="nav-number">3.2.</span> <span class="nav-text">segment merge</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Indexing-Buffer"><span class="nav-number">3.3.</span> <span class="nav-text">Indexing Buffer</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#bulk-线程池和队列大小"><span class="nav-number">3.4.</span> <span class="nav-text">bulk 线程池和队列大小</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#磁盘间的任务均衡"><span class="nav-number">4.</span> <span class="nav-text">磁盘间的任务均衡</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#节点间的任务均衡"><span class="nav-number">5.</span> <span class="nav-text">节点间的任务均衡</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#索引过程调整和优化"><span class="nav-number">6.</span> <span class="nav-text">索引过程调整和优化</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#自动生成-doc-ID"><span class="nav-number">6.1.</span> <span class="nav-text">自动生成 doc ID</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#调整字段-Mappings"><span class="nav-number">6.2.</span> <span class="nav-text">调整字段 Mappings</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#调整-source-字段"><span class="nav-number">6.3.</span> <span class="nav-text">调整_source 字段</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#对于-Analyzed-的字段禁用-Norms"><span class="nav-number">6.4.</span> <span class="nav-text">对于 Analyzed 的字段禁用 Norms</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#index-options-设置"><span class="nav-number">6.5.</span> <span class="nav-text">index_options 设置</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

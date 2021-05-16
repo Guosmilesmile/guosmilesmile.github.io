@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析-Timer">
+<meta property="og:url" content="http://yoursite.com/2020/06/07/Flink源码解析-Timer/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&shareKey=8ac8a0de69cbddd4233cd6706889388d">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/1FFD942ED9C14290871ADD39747BB686?method=download&shareKey=45f1b15991d2d142485056eff53b5709">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/E8EB673BDD764441AE96D762F4C25EB3?method=download&shareKey=e0b6e01649f7b6c264b1d59d67a534b7">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/1D2EB7C7AEBA4C4391ED232D245AD43A?method=download&shareKey=2654e662d1730a1ecaffd9c92104cb8c">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/30C5525A0DA74625B75E068B488E36FD?method=download&shareKey=5c53c7709352fa11a7e0a3ec2f27a8bc">
+<meta property="og:updated_time" content="2020-06-12T11:47:26.338Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析-Timer">
+<meta name="twitter:description" content="Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。  来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。 123456789101112131415161718@Override	public TriggerResult onElement(Object element, long timestamp, TimeWi">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&shareKey=8ac8a0de69cbddd4233cd6706889388d">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/06/07/Flink源码解析-Timer/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析-Timer | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/07/Flink源码解析-Timer/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析-Timer
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-06-07 16:28:48" itemprop="dateCreated datePublished" datetime="2020-06-07T16:28:48+08:00">2020-06-07</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-06-12 19:47:26" itemprop="dateModified" datetime="2020-06-12T19:47:26+08:00">2020-06-12</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Timer在窗口机制中也有重要的地位。提起窗口自然就能想到Trigger，即触发器。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/B6314B8813F54E19ACF301EFE6D9194D?method=download&amp;shareKey=8ac8a0de69cbddd4233cd6706889388d" alt="image"></p>
+<p>来看下Flink自带的EventTimeTrigger的部分代码，它是事件时间特征下的默认触发器。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onElement</span><span class="params">(Object element, <span class="keyword">long</span> timestamp, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (window.maxTimestamp() &lt;= ctx.getCurrentWatermark()) &#123;</span><br><span class="line">			<span class="comment">// if the watermark is already past the window fire immediately</span></span><br><span class="line">			<span class="comment">// allowedLateness的存在，会出现来的数据比水位线小，那么就直接出发计算</span></span><br><span class="line">			<span class="keyword">return</span> TriggerResult.FIRE;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			ctx.registerEventTimeTimer(window.maxTimestamp());</span><br><span class="line">			<span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onEventTime</span><span class="params">(<span class="keyword">long</span> time, TimeWindow window, TriggerContext ctx)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> time == window.maxTimestamp() ?</span><br><span class="line">			TriggerResult.FIRE :</span><br><span class="line">			TriggerResult.CONTINUE;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>ctx.registerEventTimeTimer(window.maxTimestamp());的内部调用了internalTimerService.registerEventTimeTimer(window, time);</p>
+<p>internalTimerService是一个接口</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">InternalTimerService</span>&lt;<span class="title">N</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">currentProcessingTime</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">long</span> <span class="title">currentWatermark</span><span class="params">()</span></span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">deleteProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">deleteEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span></span>;</span><br><span class="line"> </span><br><span class="line">    <span class="comment">// ...</span></span><br></pre></td></tr></table></figure>
+<p>对应的实现类InternalTimerServiceImpl</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> ProcessingTimeService processingTimeService;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">final</span> KeyGroupedInternalPriorityQueue&lt;TimerHeapInternalTimer&lt;K, N&gt;&gt; processingTimeTimersQueue;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">final</span> KeyGroupedInternalPriorityQueue&lt;TimerHeapInternalTimer&lt;K, N&gt;&gt; eventTimeTimersQueue;</span><br><span class="line">   <span class="keyword">private</span> ScheduledFuture&lt;?&gt; nextTimer;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       InternalTimer&lt;K, N&gt; oldHead = processingTimeTimersQueue.peek();</span><br><span class="line">       <span class="keyword">if</span> (processingTimeTimersQueue.add(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace))) &#123;</span><br><span class="line">           <span class="keyword">long</span> nextTriggerTime = oldHead != <span class="keyword">null</span> ? oldHead.getTimestamp() : Long.MAX_VALUE;</span><br><span class="line">           <span class="keyword">if</span> (time &lt; nextTriggerTime) &#123;</span><br><span class="line">               <span class="keyword">if</span> (nextTimer != <span class="keyword">null</span>) &#123;</span><br><span class="line">                   nextTimer.cancel(<span class="keyword">false</span>);</span><br><span class="line">               &#125;</span><br><span class="line">               nextTimer = processingTimeService.registerTimer(time, <span class="keyword">this</span>);</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">registerEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       eventTimeTimersQueue.add(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace));</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deleteProcessingTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       processingTimeTimersQueue.remove(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace));</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">deleteEventTimeTimer</span><span class="params">(N namespace, <span class="keyword">long</span> time)</span> </span>&#123;</span><br><span class="line">       eventTimeTimersQueue.remove(<span class="keyword">new</span> TimerHeapInternalTimer&lt;&gt;(time, (K) keyContext.getCurrentKey(), namespace));</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>注册Timer实际上就是为它们赋予对应的时间戳、key和命名空间，并将它们加入对应的优先队列。</p>
+<p>特别地，当注册基于处理时间的Timer时，会先检查要注册的Timer时间戳与当前在最小堆堆顶的Timer的时间戳的大小关系。如果前者比后者要早，就会用前者替代掉后者，因为处理时间是永远线性增长的，得先处理时间比较靠前的。</p>
+<h3 id="Timer注册好了之后是如何触发的呢？"><a href="#Timer注册好了之后是如何触发的呢？" class="headerlink" title="Timer注册好了之后是如何触发的呢？"></a>Timer注册好了之后是如何触发的呢？</h3><h4 id="eventTime"><a href="#eventTime" class="headerlink" title="eventTime"></a>eventTime</h4><p>事件时间与内部时间戳无关，而与水印有关.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">advanceWatermark</span><span class="params">(<span class="keyword">long</span> time)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		currentWatermark = time;</span><br><span class="line"></span><br><span class="line">		InternalTimer&lt;K, N&gt; timer;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">while</span> ((timer = eventTimeTimersQueue.peek()) != <span class="keyword">null</span> &amp;&amp; timer.getTimestamp() &lt;= time) &#123;</span><br><span class="line">			eventTimeTimersQueue.poll();</span><br><span class="line">			keyContext.setCurrentKey(timer.getKey());</span><br><span class="line">			triggerTarget.onEventTime(timer);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>从队列头一个个取，如果获取的时间小于水位线，该任务需要处理，那就poll出来，调用trigger的onEvnetTime函数，执行方法。</p>
+<p>向上追溯，回到InternalTimeServiceManager的同名方法。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">advanceWatermark</span><span class="params">(Watermark watermark)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (InternalTimerServiceImpl&lt;?, ?&gt; service : timerServices.values()) &#123;</span><br><span class="line">            service.advanceWatermark(watermark.getTimestamp());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>继续向上追溯，到达终点：算子基类AbstractStreamOperator中处理水印的方法processWatermark()。当水印到来时，就会按着上述调用链流转到InternalTimerServiceImpl中，并触发所有早于水印时间戳的Timer了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processWatermark</span><span class="params">(Watermark mark)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (timeServiceManager != <span class="keyword">null</span>) &#123;</span><br><span class="line">            timeServiceManager.advanceWatermark(mark);</span><br><span class="line">        &#125;</span><br><span class="line">        output.emitWatermark(mark);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h4 id="processTime"><a href="#processTime" class="headerlink" title="processTime"></a>processTime</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> time)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="comment">// null out the timer in case the Triggerable calls registerProcessingTimeTimer()</span></span><br><span class="line">		<span class="comment">// inside the callback.</span></span><br><span class="line">		nextTimer = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">		InternalTimer&lt;K, N&gt; timer;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">while</span> ((timer = processingTimeTimersQueue.peek()) != <span class="keyword">null</span> &amp;&amp; timer.getTimestamp() &lt;= time) &#123;</span><br><span class="line">			processingTimeTimersQueue.poll();</span><br><span class="line">			keyContext.setCurrentKey(timer.getKey());</span><br><span class="line">			triggerTarget.onProcessingTime(timer);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (timer != <span class="keyword">null</span> &amp;&amp; nextTimer == <span class="keyword">null</span>) &#123;</span><br><span class="line">			nextTimer = processingTimeService.registerTimer(timer.getTimestamp(), <span class="keyword">this</span>::onProcessingTime);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>当onProcessingTime()方法被触发回调时，就会按顺序从队列中获取到比时间戳time小的所有Timer，并挨个执行Triggerable.onProcessingTime()方法</p>
+<p>然后从获取的最新的赋值给nextTimer。</p>
+<p>这个方法用于构造函数的时候</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">processingTimeService.registerTimer(headTimer.getTimestamp(), <span class="keyword">this</span>::onProcessingTime);</span><br></pre></td></tr></table></figure>
+<p>来到ProcessingTimeService的实现类SystemProcessingTimeService，它是用调度线程池实现回调的。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="keyword">public</span> ScheduledFuture&lt;?&gt; registerTimer(<span class="keyword">long</span> timestamp, ProcessingTimeCallback callback) &#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// delay the firing of the timer by 1 ms to align the semantics with watermark. A watermark</span></span><br><span class="line">	<span class="comment">// T says we won't see elements in the future with a timestamp smaller or equal to T.</span></span><br><span class="line">	<span class="comment">// With processing time, we therefore need to delay firing the timer by one ms.</span></span><br><span class="line">	<span class="keyword">long</span> delay = Math.max(timestamp - getCurrentProcessingTime(), <span class="number">0</span>) + <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// we directly try to register the timer and only react to the status on exception</span></span><br><span class="line">	<span class="comment">// that way we save unnecessary volatile accesses for each timer</span></span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		<span class="keyword">return</span> timerService.schedule(wrapOnTimerCallback(callback, timestamp), delay, TimeUnit.MILLISECONDS);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">catch</span> (RejectedExecutionException e) &#123;</span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">int</span> status = <span class="keyword">this</span>.status.get();</span><br><span class="line">		<span class="keyword">if</span> (status == STATUS_QUIESCED) &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">new</span> NeverCompleteFuture(delay);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (status == STATUS_SHUTDOWN) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Timer service is shut down"</span>);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// something else happened, so propagate the exception</span></span><br><span class="line">			<span class="keyword">throw</span> e;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>ScheduledTask</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line">      <span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">if</span> (serviceStatus.get() != STATUS_ALIVE) &#123;</span><br><span class="line">		<span class="keyword">return</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		callback.onProcessingTime(nextTimestamp);</span><br><span class="line">	&#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">		exceptionHandler.handleException(ex);</span><br><span class="line">	&#125;</span><br><span class="line">	nextTimestamp += period;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>onProcessingTime()在TriggerTask线程中被回调，而TriggerTask线程按照Timer的时间戳来调度。到这里，处理时间Timer的情况就讲述完毕了。</p>
+<p>两个模式，其实主要是有一个TimersQueue的队列，将对应的window加入队列中，如果是processTime，就会在ScheduledThreadPoolExecutor中调度一个又一个线程，每个线程的以延迟时间作为调度的条件。event不需要调度线程，根据watermark来调度，新的watermark到来就会触发。</p>
+<p>如果出现timer的取消，就会删除TimersQueue的队列中的数据，但是ScheduledThreadPoolExecutor不会调出对应的数据，触发了找不到合适的数据而已。</p>
+<h3 id="TimerHeapInternalTimer"><a href="#TimerHeapInternalTimer" class="headerlink" title="TimerHeapInternalTimer"></a>TimerHeapInternalTimer</h3><p>在InternalTimerServiceImpl中有这么一个类TimerHeapInternalTimer。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** The key for which the timer is scoped. */</span></span><br><span class="line">	<span class="meta">@Nonnull</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> K key;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** The namespace for which the timer is scoped. */</span></span><br><span class="line">	<span class="meta">@Nonnull</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> N namespace;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** The expiration timestamp. */</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">long</span> timestamp;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * This field holds the current physical index of this timer when it is managed by a timer heap so that we can</span></span><br><span class="line"><span class="comment">	 * support fast deletes.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">transient</span> <span class="keyword">int</span> timerHeapIndex;</span><br></pre></td></tr></table></figure>
+<p>可见，Timer的scope有两个，一是数据的key，二是命名空间。但是用户不会感知到命名空间的存在，所以我们可以简单地认为Timer是以key级别注册的（Timer四大特点之1）。正确估计key的量可以帮助我们控制Timer的量。</p>
+<p>timerHeapIndex是这个Timer在优先队列里存储的下标。优先队列通常用二叉堆实现，而二叉堆可以直接用数组存储，所以让Timer持有其对应的下标可以较快地从队列里删除它。</p>
+<p>comparePriorityTo()方法则用于确定Timer的优先级，显然Timer的优先队列是一个按Timer时间戳为关键字排序的最小堆。下面粗略看看该最小堆的实现。</p>
+<h3 id="HeapPriorityQueueSet"><a href="#HeapPriorityQueueSet" class="headerlink" title="HeapPriorityQueueSet"></a>HeapPriorityQueueSet</h3><p>在InternalTimeServiceManager用于管理各个InternalTimeService。</p>
+<p>有一个工厂用于创建各种Timer队列，根据设置的状态后台而定。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> &lt;N&gt; KeyGroupedInternalPriorityQueue&lt;TimerHeapInternalTimer&lt;K, N&gt;&gt; createTimerPriorityQueue(</span><br><span class="line">		String name,</span><br><span class="line">		TimerSerializer&lt;K, N&gt; timerSerializer) &#123;</span><br><span class="line">		<span class="keyword">return</span> priorityQueueSetFactory.create(</span><br><span class="line">			name,</span><br><span class="line">			timerSerializer);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>PriorityQueueSetFactory目前有heap和rockersdb，主要看heap的。</p>
+<p>要搞懂它，必须解释一下KeyGroup和KeyGroupRange。KeyGroup是Flink内部KeyedState的原子单位，亦即一些key的组合。一个Flink App的KeyGroup数量与最大并行度相同，将key分配到KeyGroup的操作则是经典的取hashCode+取模。而KeyGroupRange则是一些连续KeyGroup的范围，每个Flink sub-task都只包含一个KeyGroupRange。也就是说，KeyGroupRange可以看做当前sub-task在本地维护的所有key。</p>
+<p>解释完毕。容易得知，上述代码中的那个HashMap&lt;T, T&gt;[]数组就是在KeyGroup级别对key进行去重的容器，数组中每个元素对应一个KeyGroup。以插入一个Timer的流程为例：</p>
+<ul>
+<li>从Timer中取出key，计算该key属于哪一个KeyGroup；</li>
+<li>计算出该KeyGroup在整个KeyGroupRange中的偏移量，按该偏移量定位到HashMap&lt;T, T&gt;[]数组的下标；</li>
+<li>根据putIfAbsent()方法的语义，只有当对应HashMap不存在该Timer的key时，才将Timer插入最小堆中。</li>
+</ul>
+<h3 id="二叉堆"><a href="#二叉堆" class="headerlink" title="二叉堆"></a>二叉堆</h3><p>二叉堆是完全二元树或者是近似完全二元树，按照数据的排列方式可以分为两种：最大堆和最小堆。<br>最大堆：父结点的键值总是大于或等于任何一个子节点的键值；最小堆：父结点的键值总是小于或等于任何一个子节点的键值。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/1FFD942ED9C14290871ADD39747BB686?method=download&amp;shareKey=45f1b15991d2d142485056eff53b5709" alt="image"></p>
+<p>图文解析是以”最大堆”来进行介绍的。</p>
+<p>最大堆的核心内容是”添加”和”删除”，理解这两个算法，二叉堆也就基本掌握了</p>
+<h4 id="1-添加"><a href="#1-添加" class="headerlink" title="1. 添加"></a>1. 添加</h4><p>假设在最大堆[90,80,70,60,40,30,20,10,50]种添加85，需要执行的步骤如下：<br><img src="https://note.youdao.com/yws/api/personal/file/E8EB673BDD764441AE96D762F4C25EB3?method=download&amp;shareKey=e0b6e01649f7b6c264b1d59d67a534b7" alt="image"></p>
+<p>如上图所示，当向最大堆中添加数据时：先将数据加入到最大堆的最后，然后尽可能把这个元素往上挪，直到挪不动为止！<br>将85添加到[90,80,70,60,40,30,20,10,50]中后，最大堆变成了[90,85,70,60,80,30,20,10,50,40]。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 最大堆的向上调整算法(从start开始向上直到0，调整堆)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 注：数组实现的堆中，第N个节点的左孩子的索引值是(2N+1)，右孩子的索引是(2N+2)。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 参数说明：</span></span><br><span class="line"><span class="comment"> *     start -- 被上调节点的起始位置(一般为数组中最后一个元素的索引)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">filterup</span><span class="params">(<span class="keyword">int</span> start)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> c = start;            <span class="comment">// 当前节点(current)的位置</span></span><br><span class="line">    <span class="keyword">int</span> p = (c-<span class="number">1</span>)/<span class="number">2</span>;        <span class="comment">// 父(parent)结点的位置 </span></span><br><span class="line">    T tmp = mHeap.get(c);        <span class="comment">// 当前节点(current)的大小</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(c &gt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="keyword">int</span> cmp = mHeap.get(p).compareTo(tmp);</span><br><span class="line">        <span class="keyword">if</span>(cmp &gt;= <span class="number">0</span>)</span><br><span class="line">            <span class="keyword">break</span>;</span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            mHeap.set(c, mHeap.get(p));</span><br><span class="line">            c = p;</span><br><span class="line">            p = (p-<span class="number">1</span>)/<span class="number">2</span>;   </span><br><span class="line">        &#125;       </span><br><span class="line">    &#125;</span><br><span class="line">    mHeap.set(c, tmp);</span><br><span class="line">&#125;</span><br><span class="line">  </span><br><span class="line"><span class="comment">/* </span></span><br><span class="line"><span class="comment"> * 将data插入到二叉堆中</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">insert</span><span class="params">(T data)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> size = mHeap.size();</span><br><span class="line"></span><br><span class="line">    mHeap.add(data);    <span class="comment">// 将"数组"插在表尾</span></span><br><span class="line">    filterup(size);        <span class="comment">// 向上调整堆</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>insert(data)的作用：将数据data添加到最大堆中。mHeap是动态数组ArrayList对象。<br>当堆已满的时候，添加失败；否则data添加到最大堆的末尾。然后通过上调算法重新调整数组，使之重新成为最大堆。</p>
+<h4 id="2-删除"><a href="#2-删除" class="headerlink" title="2. 删除"></a>2. 删除</h4><p>假设从最大堆[90,85,70,60,80,30,20,10,50,40]中删除90，需要执行的步骤如下：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/1D2EB7C7AEBA4C4391ED232D245AD43A?method=download&amp;shareKey=2654e662d1730a1ecaffd9c92104cb8c" alt="image"></p>
+<p>如上图所示，当从最大堆中删除数据时：先删除该数据，然后用最大堆中最后一个的元素插入这个空位；接着，把这个“空位”尽量往上挪，直到剩余的数据变成一个最大堆。<br>从[90,85,70,60,80,30,20,10,50,40]删除90之后，最大堆变成了[85,80,70,60,40,30,20,10,50]。</p>
+<p>注意：考虑从最大堆[90,85,70,60,80,30,20,10,50,40]中删除60，执行的步骤不能单纯的用它的字节点来替换；而必须考虑到”替换后的树仍然要是最大堆”！</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/30C5525A0DA74625B75E068B488E36FD?method=download&amp;shareKey=5c53c7709352fa11a7e0a3ec2f27a8bc" alt="image"></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/* </span></span><br><span class="line"><span class="comment"> * 最大堆的向下调整算法</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 注：数组实现的堆中，第N个节点的左孩子的索引值是(2N+1)，右孩子的索引是(2N+2)。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 参数说明：</span></span><br><span class="line"><span class="comment"> *     start -- 被下调节点的起始位置(一般为0，表示从第1个开始)</span></span><br><span class="line"><span class="comment"> *     end   -- 截至范围(一般为数组中最后一个元素的索引)</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">filterdown</span><span class="params">(<span class="keyword">int</span> start, <span class="keyword">int</span> end)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">int</span> c = start;          <span class="comment">// 当前(current)节点的位置</span></span><br><span class="line">    <span class="keyword">int</span> l = <span class="number">2</span>*c + <span class="number">1</span>;     <span class="comment">// 左(left)孩子的位置</span></span><br><span class="line">    T tmp = mHeap.get(c);    <span class="comment">// 当前(current)节点的大小</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">while</span>(l &lt;= end) &#123;</span><br><span class="line">        <span class="keyword">int</span> cmp = mHeap.get(l).compareTo(mHeap.get(l+<span class="number">1</span>));</span><br><span class="line">        <span class="comment">// "l"是左孩子，"l+1"是右孩子</span></span><br><span class="line">        <span class="keyword">if</span>(l &lt; end &amp;&amp; cmp&lt;<span class="number">0</span>)</span><br><span class="line">            l++;        <span class="comment">// 左右两孩子中选择较大者，即mHeap[l+1]</span></span><br><span class="line">        cmp = tmp.compareTo(mHeap.get(l));</span><br><span class="line">        <span class="keyword">if</span>(cmp &gt;= <span class="number">0</span>)</span><br><span class="line">            <span class="keyword">break</span>;        <span class="comment">//调整结束</span></span><br><span class="line">        <span class="keyword">else</span> &#123;</span><br><span class="line">            mHeap.set(c, mHeap.get(l));</span><br><span class="line">            c = l;</span><br><span class="line">            l = <span class="number">2</span>*l + <span class="number">1</span>;   </span><br><span class="line">        &#125;       </span><br><span class="line">    &#125;   </span><br><span class="line">    mHeap.set(c, tmp);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 删除最大堆中的data</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 返回值：</span></span><br><span class="line"><span class="comment"> *      0，成功</span></span><br><span class="line"><span class="comment"> *     -1，失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">remove</span><span class="params">(T data)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 如果"堆"已空，则返回-1</span></span><br><span class="line">    <span class="keyword">if</span>(mHeap.isEmpty() == <span class="keyword">true</span>)</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 获取data在数组中的索引</span></span><br><span class="line">    <span class="keyword">int</span> index = mHeap.indexOf(data);</span><br><span class="line">    <span class="keyword">if</span> (index==-<span class="number">1</span>)</span><br><span class="line">        <span class="keyword">return</span> -<span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">int</span> size = mHeap.size();</span><br><span class="line">    mHeap.set(index, mHeap.get(size-<span class="number">1</span>));<span class="comment">// 用最后元素填补</span></span><br><span class="line">    mHeap.remove(size - <span class="number">1</span>);                <span class="comment">// 删除最后的元素</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (mHeap.size() &gt; <span class="number">1</span>)</span><br><span class="line">        filterdown(index, mHeap.size()-<span class="number">1</span>);    <span class="comment">// 从index号位置开始自上向下调整为最小堆</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="最小堆的实现HeapPriorityQueue"><a href="#最小堆的实现HeapPriorityQueue" class="headerlink" title="最小堆的实现HeapPriorityQueue"></a>最小堆的实现HeapPriorityQueue</h3><p>在flink中因为要获取的是最小的Timer，用的是小顶堆。</p>
+<p>如下是flink中添加数据的实现<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line">   <span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">addInternal</span><span class="params">(@Nonnull T element)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 用数组实现的，需要先扩容</span></span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> newSize = increaseSizeByOne();</span><br><span class="line">	<span class="comment">// 将数据放入新扩容的位置，堆尾</span></span><br><span class="line">	moveElementToIdx(element, newSize);</span><br><span class="line">	<span class="comment">// 开始调整堆</span></span><br><span class="line">	siftUp(newSize);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">siftUp</span><span class="params">(<span class="keyword">int</span> idx)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">final</span> T[] heap = <span class="keyword">this</span>.queue;</span><br><span class="line">	<span class="keyword">final</span> T currentElement = heap[idx];</span><br><span class="line">	<span class="keyword">int</span> parentIdx = idx &gt;&gt;&gt; <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (parentIdx &gt; <span class="number">0</span> &amp;&amp; isElementPriorityLessThen(currentElement, heap[parentIdx])) &#123;</span><br><span class="line">		moveElementToIdx(heap[parentIdx], idx);</span><br><span class="line">		idx = parentIdx;</span><br><span class="line">		parentIdx &gt;&gt;&gt;= <span class="number">1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	moveElementToIdx(currentElement, idx);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">isElementPriorityLessThen</span><span class="params">(T a, T b)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> elementPriorityComparator.comparePriority(a, b) &lt; <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">increaseSizeByOne</span><span class="params">()</span> </span>&#123;</span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> oldArraySize = queue.length;</span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> minRequiredNewSize = ++size;</span><br><span class="line">	<span class="keyword">if</span> (minRequiredNewSize &gt;= oldArraySize) &#123;</span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">int</span> grow = (oldArraySize &lt; <span class="number">64</span>) ? oldArraySize + <span class="number">2</span> : oldArraySize &gt;&gt; <span class="number">1</span>;</span><br><span class="line">		resizeQueueArray(oldArraySize + grow, minRequiredNewSize);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="comment">// TODO implement shrinking as well?</span></span><br><span class="line">	<span class="keyword">return</span> minRequiredNewSize;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>删除数据</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line">   <span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">protected</span> T <span class="title">removeInternal</span><span class="params">(<span class="keyword">int</span> removeIdx)</span> </span>&#123;</span><br><span class="line">	T[] heap = <span class="keyword">this</span>.queue;</span><br><span class="line">	T removedValue = heap[removeIdx];</span><br><span class="line"></span><br><span class="line">	<span class="keyword">assert</span> removedValue.getInternalIndex() == removeIdx;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> oldSize = size;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (removeIdx != oldSize) &#123;</span><br><span class="line">		T element = heap[oldSize];</span><br><span class="line">		moveElementToIdx(element, removeIdx);</span><br><span class="line">		adjustElementAtIndex(element, removeIdx);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	heap[oldSize] = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">	--size;</span><br><span class="line">	<span class="keyword">return</span> removedValue;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">adjustElementAtIndex</span><span class="params">(T element, <span class="keyword">int</span> index)</span> </span>&#123;</span><br><span class="line">	siftDown(index);</span><br><span class="line">	<span class="keyword">if</span> (queue[index] == element) &#123;</span><br><span class="line">		siftUp(index);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">siftDown</span><span class="params">(<span class="keyword">int</span> idx)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">final</span> T[] heap = <span class="keyword">this</span>.queue;</span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">int</span> heapSize = <span class="keyword">this</span>.size;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">final</span> T currentElement = heap[idx];</span><br><span class="line">	<span class="keyword">int</span> firstChildIdx = idx &lt;&lt; <span class="number">1</span>;</span><br><span class="line">	<span class="keyword">int</span> secondChildIdx = firstChildIdx + <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (isElementIndexValid(secondChildIdx, heapSize) &amp;&amp;</span><br><span class="line">		isElementPriorityLessThen(heap[secondChildIdx], heap[firstChildIdx])) &#123;</span><br><span class="line">		firstChildIdx = secondChildIdx;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">while</span> (isElementIndexValid(firstChildIdx, heapSize) &amp;&amp;</span><br><span class="line">		isElementPriorityLessThen(heap[firstChildIdx], currentElement)) &#123;</span><br><span class="line">		moveElementToIdx(heap[firstChildIdx], idx);</span><br><span class="line">		idx = firstChildIdx;</span><br><span class="line">		firstChildIdx = idx &lt;&lt; <span class="number">1</span>;</span><br><span class="line">		secondChildIdx = firstChildIdx + <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (isElementIndexValid(secondChildIdx, heapSize) &amp;&amp;</span><br><span class="line">			isElementPriorityLessThen(heap[secondChildIdx], heap[firstChildIdx])) &#123;</span><br><span class="line">			firstChildIdx = secondChildIdx;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	moveElementToIdx(currentElement, idx);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="timer-on-RocksDb"><a href="#timer-on-RocksDb" class="headerlink" title="timer on RocksDb"></a>timer on RocksDb</h3><p>在InternalTimeServiceManager中存在一个工厂PriorityQueueSetFactory，根据选择的状态后端决定Timer是heap还是rocksdb，rocksdb对应的工厂为RocksDBPriorityQueueSetFactory。</p>
+<p>对应的队列实现RocksDBCachingPriorityQueueSet中，</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Cache for the head element in de-serialized form. */</span></span><br><span class="line"><span class="comment">// 关于head元素的缓存。这个是维护的全局变量，只有在堆顶改变后在会置为null</span></span><br><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="keyword">private</span> E peekCache;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 保存了在rocksdb的头部的元素缓存</span></span><br><span class="line"><span class="comment">/** In memory cache that holds a head-subset of the elements stored in RocksDB. */</span></span><br><span class="line"><span class="meta">@Nonnull</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> OrderedByteArraySetCache orderedCache;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> E <span class="title">peek</span><span class="params">()</span> </span>&#123;</span><br><span class="line">   </span><br><span class="line">   checkRefillCacheFromStore();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 如果全局peekCache有，直接返回，如果没有为null</span></span><br><span class="line">   <span class="keyword">if</span> (peekCache != <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> peekCache;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 直接获取第一次元素，逆序列化后返回</span></span><br><span class="line">   <span class="keyword">byte</span>[] firstBytes = orderedCache.peekFirst();</span><br><span class="line">   <span class="keyword">if</span> (firstBytes != <span class="keyword">null</span>) &#123;</span><br><span class="line">      peekCache = deserializeElement(firstBytes);</span><br><span class="line">      <span class="keyword">return</span> peekCache;</span><br><span class="line">   &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="comment">// 如果peekCache有，那么返回的peekCache，并删除rocksdb头部。如果没有peek，将获取的头部逆序列化返回</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> E <span class="title">poll</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   checkRefillCacheFromStore();</span><br><span class="line">	<span class="comment">// poll最新的数据</span></span><br><span class="line">   <span class="keyword">final</span> <span class="keyword">byte</span>[] firstBytes = orderedCache.pollFirst();</span><br><span class="line"></span><br><span class="line">   <span class="keyword">if</span> (firstBytes == <span class="keyword">null</span>) &#123;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="comment">// write-through sync</span></span><br><span class="line">    <span class="comment">// 从rocksdb中删除</span></span><br><span class="line">   removeFromRocksDB(firstBytes);</span><br><span class="line"></span><br><span class="line">   <span class="keyword">if</span> (orderedCache.isEmpty()) &#123;</span><br><span class="line">      seekHint = firstBytes;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">if</span> (peekCache != <span class="keyword">null</span>) &#123;</span><br><span class="line">      E fromCache = peekCache;</span><br><span class="line">      peekCache = <span class="keyword">null</span>;</span><br><span class="line">      <span class="keyword">return</span> fromCache;</span><br><span class="line">   &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">      <span class="keyword">return</span> deserializeElement(firstBytes);</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">add</span><span class="params">(@Nonnull E toAdd)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   checkRefillCacheFromStore();</span><br><span class="line"></span><br><span class="line">   <span class="keyword">final</span> <span class="keyword">byte</span>[] toAddBytes = serializeElement(toAdd);</span><br><span class="line"></span><br><span class="line">   <span class="keyword">final</span> <span class="keyword">boolean</span> cacheFull = orderedCache.isFull();</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 如果cache没满并且之前所有元素都在cache中了 </span></span><br><span class="line">   <span class="keyword">if</span> ((!cacheFull &amp;&amp; allElementsInCache) ||</span><br><span class="line">       <span class="comment">// 新加入的元素的优先级通过byte数组的优先级比较发现应该在堆顶</span></span><br><span class="line">      LEXICOGRAPHIC_BYTE_COMPARATOR.compare(toAddBytes, orderedCache.peekLast()) &lt; <span class="number">0</span>) &#123;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (cacheFull) &#123;</span><br><span class="line">         <span class="comment">// we drop the element with lowest priority from the cache</span></span><br><span class="line">         orderedCache.pollLast();</span><br><span class="line">         <span class="comment">// the dropped element is now only in the store</span></span><br><span class="line">         allElementsInCache = <span class="keyword">false</span>;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">       <span class="comment">// 用来判重</span></span><br><span class="line">      <span class="keyword">if</span> (orderedCache.add(toAddBytes)) &#123;</span><br><span class="line">         <span class="comment">// write-through sync</span></span><br><span class="line">         addToRocksDB(toAddBytes);</span><br><span class="line">         <span class="keyword">if</span> (toAddBytes == orderedCache.peekFirst()) &#123;</span><br><span class="line">             <span class="comment">// 说明新的写入导致了堆顶变化</span></span><br><span class="line">            peekCache = <span class="keyword">null</span>;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">         &#125;</span><br><span class="line">      &#125;</span><br><span class="line">   &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">       <span class="comment">// 如果cache满了，或者不是所有的元素都在cache中，说明新来的数据一定不是堆顶的数据</span></span><br><span class="line">      <span class="comment">// we only added to the store</span></span><br><span class="line">      addToRocksDB(toAddBytes);</span><br><span class="line">      allElementsInCache = <span class="keyword">false</span>;</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Referenece"><a href="#Referenece" class="headerlink" title="Referenece"></a>Referenece</h3><p><a href="https://blog.csdn.net/nazeniwaresakini/article/details/104220113" target="_blank" rel="noopener">https://blog.csdn.net/nazeniwaresakini/article/details/104220113</a></p>
+<p><a href="http://aitozi.com/flink-timerservice-based-on-rocksdb.html" target="_blank" rel="noopener">http://aitozi.com/flink-timerservice-based-on-rocksdb.html</a></p>
+<p><a href="https://www.jianshu.com/p/7e8ff8675639" target="_blank" rel="noopener">https://www.jianshu.com/p/7e8ff8675639</a></p>
+<p><a href="https://www.cnblogs.com/skywang12345/p/3610390.html" target="_blank" rel="noopener">https://www.cnblogs.com/skywang12345/p/3610390.html</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/03/Flink基于mailbox实现的streamTask模型/" rel="next" title="Flink源码解析-基于mailbox实现的streamTask模型">
+                <i class="fa fa-chevron-left"></i> Flink源码解析-基于mailbox实现的streamTask模型
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/10/Flink链路延迟监控的LatencyMarker机制实现/" rel="prev" title="Flink链路延迟监控的LatencyMarker机制实现">
+                Flink链路延迟监控的LatencyMarker机制实现 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Timer注册好了之后是如何触发的呢？"><span class="nav-number">1.</span> <span class="nav-text">Timer注册好了之后是如何触发的呢？</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#eventTime"><span class="nav-number">1.1.</span> <span class="nav-text">eventTime</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#processTime"><span class="nav-number">1.2.</span> <span class="nav-text">processTime</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TimerHeapInternalTimer"><span class="nav-number">2.</span> <span class="nav-text">TimerHeapInternalTimer</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HeapPriorityQueueSet"><span class="nav-number">3.</span> <span class="nav-text">HeapPriorityQueueSet</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#二叉堆"><span class="nav-number">4.</span> <span class="nav-text">二叉堆</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-添加"><span class="nav-number">4.1.</span> <span class="nav-text">1. 添加</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-删除"><span class="nav-number">4.2.</span> <span class="nav-text">2. 删除</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最小堆的实现HeapPriorityQueue"><span class="nav-number">5.</span> <span class="nav-text">最小堆的实现HeapPriorityQueue</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#timer-on-RocksDb"><span class="nav-number">6.</span> <span class="nav-text">timer on RocksDb</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Referenece"><span class="nav-number">7.</span> <span class="nav-text">Referenece</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

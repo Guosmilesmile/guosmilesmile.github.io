@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="什么是查询优化器查询优化器是传统数据库的核心模块，也是大数据计算引擎的核心模块，开源大数据引擎如 Impala、Presto、Drill、HAWQ、 Spark、Hive 等都有自己的查询优化器。Calcite 就是从 Hive 的优化器演化而来的。 优化器的作用：将解析器生成的关系代数表达式转换成执行计划，供执行引擎执行，在这个过程中，会应用一些规则优化，以帮助生成更高效的执行计划。 基于成本优">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Calcite RBO rule 解析和自定义">
+<meta property="og:url" content="http://yoursite.com/2020/08/11/Calcite-RBO-rule-解析和自定义/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="什么是查询优化器查询优化器是传统数据库的核心模块，也是大数据计算引擎的核心模块，开源大数据引擎如 Impala、Presto、Drill、HAWQ、 Spark、Hive 等都有自己的查询优化器。Calcite 就是从 Hive 的优化器演化而来的。 优化器的作用：将解析器生成的关系代数表达式转换成执行计划，供执行引擎执行，在这个过程中，会应用一些规则优化，以帮助生成更高效的执行计划。 基于成本优">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/F9E42F67D82149FEA470F837FABD8530?method=download&shareKey=3db6ce4e929c9b1efc0f836f4cac021c">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/3263AA99C4BD46C9843476646FCE3A4D?method=download&shareKey=c90b340b2ad6f9f3ec859f2e784ee1db">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/7F01E2D51AC34EF5B32CD131C5DA19FD?method=download&shareKey=4a133510b85532b7c7ab15d9a2085335">
+<meta property="og:updated_time" content="2020-08-13T10:43:53.393Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Calcite RBO rule 解析和自定义">
+<meta name="twitter:description" content="什么是查询优化器查询优化器是传统数据库的核心模块，也是大数据计算引擎的核心模块，开源大数据引擎如 Impala、Presto、Drill、HAWQ、 Spark、Hive 等都有自己的查询优化器。Calcite 就是从 Hive 的优化器演化而来的。 优化器的作用：将解析器生成的关系代数表达式转换成执行计划，供执行引擎执行，在这个过程中，会应用一些规则优化，以帮助生成更高效的执行计划。 基于成本优">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/F9E42F67D82149FEA470F837FABD8530?method=download&shareKey=3db6ce4e929c9b1efc0f836f4cac021c">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/08/11/Calcite-RBO-rule-解析和自定义/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Calcite RBO rule 解析和自定义 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/11/Calcite-RBO-rule-解析和自定义/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Calcite RBO rule 解析和自定义
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-08-11 10:11:05" itemprop="dateCreated datePublished" datetime="2020-08-11T10:11:05+08:00">2020-08-11</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-08-13 18:43:53" itemprop="dateModified" datetime="2020-08-13T18:43:53+08:00">2020-08-13</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Calcite/" itemprop="url" rel="index"><span itemprop="name">Calcite</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="什么是查询优化器"><a href="#什么是查询优化器" class="headerlink" title="什么是查询优化器"></a>什么是查询优化器</h3><p>查询优化器是传统数据库的核心模块，也是大数据计算引擎的核心模块，开源大数据引擎如 Impala、Presto、Drill、HAWQ、 Spark、Hive 等都有自己的查询优化器。Calcite 就是从 Hive 的优化器演化而来的。</p>
+<p>优化器的作用：将解析器生成的关系代数表达式转换成执行计划，供执行引擎执行，在这个过程中，会应用一些规则优化，以帮助生成更高效的执行计划。</p>
+<h3 id="基于成本优化（CBO）"><a href="#基于成本优化（CBO）" class="headerlink" title="基于成本优化（CBO）"></a>基于成本优化（CBO）</h3><p>基于代价的优化器(Cost-Based Optimizer，CBO)：根据优化规则对关系表达式进行转换，这里的转换是说一个关系表达式经过优化规则后会生成另外一个关系表达式，同时原有表达式也会保留，经过一系列转换后会生成多个执行计划，然后 CBO 会根据统计信息和代价模型 (Cost Model) 计算每个执行计划的 Cost，从中挑选 Cost 最小的执行计划。</p>
+<p>由上可知，CBO 中有两个依赖：统计信息和代价模型。统计信息的准确与否、代价模型的合理与否都会影响 CBO 选择最优计划。 从上述描述可知，CBO 是优于 RBO 的，原因是 RBO 是一种只认规则，对数据不敏感的呆板的优化器，而在实际过程中，数据往往是有变化的，通过 RBO 生成的执行计划很有可能不是最优的。事实上目前各大数据库和大数据计算引擎都倾向于使用 CBO，但是对于流式计算引擎来说，使用 CBO 还是有很大难度的，因为并不能提前预知数据量等信息，这会极大地影响优化效果，CBO 主要还是应用在离线的场景。</p>
+<h3 id="基于规则优化（RBO）"><a href="#基于规则优化（RBO）" class="headerlink" title="基于规则优化（RBO）"></a>基于规则优化（RBO）</h3><p>基于规则的优化器（Rule-Based Optimizer，RBO）：根据优化规则对关系表达式进行转换，这里的转换是说一个关系表达式经过优化规则后会变成另外一个关系表达式，同时原有表达式会被裁剪掉，经过一系列转换后生成最终的执行计划。</p>
+<p>RBO 中包含了一套有着严格顺序的优化规则，同样一条 SQL，无论读取的表中数据是怎么样的，最后生成的执行计划都是一样的。同时，在 RBO 中 SQL 写法的不同很有可能影响最终的执行计划，从而影响执行计划的性能。</p>
+<h3 id="优化规则"><a href="#优化规则" class="headerlink" title="优化规则"></a>优化规则</h3><p>无论是 RBO，还是 CBO 都包含了一系列优化规则，这些优化规则可以对关系表达式进行等价转换，常见的优化规则包含：</p>
+<ol>
+<li>谓词下推 Predicate Pushdown</li>
+<li>常量折叠 Constant Folding</li>
+<li>列裁剪</li>
+<li>其他</li>
+</ol>
+<p>在 Calcite 的代码里，有一个测试类（org.apache.calcite.test.RelOptRulesTest）汇集了对目前内置所有 Rules 的测试 case，这个测试类可以方便我们了解各个 Rule 的作用。</p>
+<p>RBO的规则在Calite 1.24版本的时候，集中在org.apache.calcite.rel.rules.CoreRules中</p>
+<p>在这里有下面一条 SQL，通过这条语句来说明一下上面介绍的这些种规则。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">select 10 + 30, users.name, users.age</span><br><span class="line">from users join jobs on users.id= user.id</span><br><span class="line">where users.age &gt; 30 and jobs.id&gt;10</span><br></pre></td></tr></table></figure>
+<h3 id="谓词下推（Predicate-Pushdown）"><a href="#谓词下推（Predicate-Pushdown）" class="headerlink" title="谓词下推（Predicate Pushdown）"></a>谓词下推（Predicate Pushdown）</h3><p>关于谓词下推，它主要还是从关系型数据库借鉴而来，关系型数据中将谓词下推到外部数据库用以减少数据传输；属于逻辑优化，优化器将谓词过滤下推到数据源，使物理执行跳过无关数据。最常见的例子就是 join 与 filter 操作一起出现时，提前执行 filter 操作以减少处理的数据量，将 filter 操作下推，以上面例子为例，示意图如下</p>
+<p>（对应 Calcite 中的CoreRules.FILTER_INTO_JOIN):</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/F9E42F67D82149FEA470F837FABD8530?method=download&amp;shareKey=3db6ce4e929c9b1efc0f836f4cac021c" alt="image"></p>
+<p>在进行 join 前进行相应的过滤操作，可以极大地减少参加 join 的数据量。</p>
+<h3 id="常量折叠（Constant-Folding）"><a href="#常量折叠（Constant-Folding）" class="headerlink" title="常量折叠（Constant Folding）"></a>常量折叠（Constant Folding）</h3><p>常量折叠也是常见的优化策略，这个比较简单、也很好理解，可以看下 编译器优化 – 常量折叠 这篇文章，基本不用动脑筋就能理解，对于我们这里的示例，有一个常量表达式 10 + 30，如果不进行常量折叠，那么每行数据都需要进行计算，进行常量折叠后的结果如下图所示</p>
+<p>（ 对应 Calcite 中的 中的CoreRules.PROJECT_REDUCE_EXPRESSIONS Rule）：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/3263AA99C4BD46C9843476646FCE3A4D?method=download&amp;shareKey=c90b340b2ad6f9f3ec859f2e784ee1db" alt="image"></p>
+<p>###　列裁剪（Column Pruning）</p>
+<p>列裁剪也是一个经典的优化规则，在本示例中对于jobs 表来说，并不需要扫描它的所有列值，而只需要列值 id，所以在扫描 jobs 之后需要将其他列进行裁剪，只留下列 id。这个优化带来的好处很明显，大幅度减少了网络 IO、内存数据量的消耗。裁剪前后的示意图如下（不过并没有找到 Calcite 对应的 Rule）：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/7F01E2D51AC34EF5B32CD131C5DA19FD?method=download&amp;shareKey=4a133510b85532b7c7ab15d9a2085335" alt="image"></p>
+<h3 id="如何使用RBO"><a href="#如何使用RBO" class="headerlink" title="如何使用RBO"></a>如何使用RBO</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CalciteRuleTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> SqlParseException, ValidationException, RelConversionException </span>&#123;</span><br><span class="line"></span><br><span class="line">        Planner planner = getPlanner();</span><br><span class="line"></span><br><span class="line">        SqlNode sqlNode = planner.parse(<span class="string">"SELECT DATE_CD,SUM(IB0002001_CN000) FROM \n"</span> +</span><br><span class="line">                <span class="string">"(SELECT IDX_ID,CUBE2L_IB00040010_CN000.DATE_CD,SUM(CUBE2L_IB00040010_CN000.IDX_VAL) AS IB0002001_CN000 FROM "</span> +</span><br><span class="line">                <span class="string">"CUBE2L_IB00040010_CN000"</span> +</span><br><span class="line">                <span class="string">" GROUP BY  CUBE2L_IB00040010_CN000.DATE_CD,IDX_ID) IB0002001_CN000  WHERE IDX_ID IN ('IB0002001_CN000') AND DATE_CD = '2020-05-31' GROUP BY DATE_CD "</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        System.out.println(sqlNode.toString());</span><br><span class="line"></span><br><span class="line">        planner.validate(sqlNode);</span><br><span class="line">        RelRoot relRoot = planner.rel(sqlNode);</span><br><span class="line"></span><br><span class="line">        RelNode relNode = relRoot.project();</span><br><span class="line"></span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.print(RelOptUtil.toString(relNode));</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        HepProgramBuilder builder = <span class="keyword">new</span> HepProgramBuilder();</span><br><span class="line"><span class="comment">//        builder.addRuleInstance(CoreRules.FILTER_MERGE); //note: 添加 rule</span></span><br><span class="line"><span class="comment">//        builder.addRuleInstance(CoreRules.PROJECT_FILTER_TRANSPOSE);</span></span><br><span class="line"><span class="comment">//        builder.addRuleInstance(CoreRules.FILTER_AGGREGATE_TRANSPOSE);</span></span><br><span class="line"><span class="comment">//        builder.addRuleInstance(CoreRules.FILTER_PROJECT_TRANSPOSE);</span></span><br><span class="line"><span class="comment">//        builder.addRuleInstance(CoreRules.FILTER_AGGREGATE_TRANSPOSE);</span></span><br><span class="line">        builder.addRuleInstance(CoreRules.AGGREGATE_REMOVE);</span><br><span class="line">        builder.addRuleInstance(CoreRules.PROJECT_FILTER_TRANSPOSE);</span><br><span class="line">        HepPlanner hepPlanner = <span class="keyword">new</span> HepPlanner(builder.build());</span><br><span class="line">        hepPlanner.setRoot(relNode);</span><br><span class="line">        relNode = hepPlanner.findBestExp();</span><br><span class="line"></span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.println(<span class="string">"After --------------------"</span>);</span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.print(RelOptUtil.toString(relNode));</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        RelToSqlConverter relToSqlConverter = <span class="keyword">new</span> RelToSqlConverter(MysqlSqlDialect.DEFAULT);</span><br><span class="line">        SqlImplementor.Result result = relToSqlConverter.visitRoot(relNode);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        System.out.println();</span><br><span class="line">        System.out.println(result.asSelect().toString());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> Planner <span class="title">getPlanner</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        SchemaPlus rootSchema = Frameworks.createRootSchema(<span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">// 添加表的schema信息，才可以通过validate</span></span><br><span class="line">        rootSchema.add(<span class="string">"CUBE2L_IB00040010_CN000"</span>, <span class="keyword">new</span> AbstractTable() &#123;</span><br><span class="line">            <span class="function"><span class="keyword">public</span> RelDataType <span class="title">getRowType</span><span class="params">(<span class="keyword">final</span> RelDataTypeFactory typeFactory)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">                RelDataTypeFactory.Builder builder = typeFactory.builder();</span><br><span class="line">                builder.add(<span class="string">"DATE_CD"</span>, typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.DATE), <span class="keyword">true</span>));</span><br><span class="line">                builder.add(<span class="string">"IDX_VAL"</span>, typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.BIGINT), <span class="keyword">true</span>));</span><br><span class="line">                builder.add(<span class="string">"test"</span>, typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.BIGINT), <span class="keyword">true</span>));</span><br><span class="line">                builder.add(<span class="string">"IDX_ID"</span>, typeFactory.createTypeWithNullability(typeFactory.createSqlType(SqlTypeName.VARCHAR), <span class="keyword">true</span>));</span><br><span class="line"></span><br><span class="line">                <span class="keyword">return</span> builder.build();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">        SqlParser.ConfigBuilder parserConfig = SqlParser.configBuilder();</span><br><span class="line">        SqlParser.Config build = parserConfig.setCaseSensitive(<span class="keyword">false</span>).setLex(Lex.MYSQL).build();</span><br><span class="line"></span><br><span class="line">        FrameworkConfig frameworkConfig = Frameworks.newConfigBuilder()</span><br><span class="line">                .parserConfig(build)</span><br><span class="line">                .defaultSchema(rootSchema)</span><br><span class="line">                .build();</span><br><span class="line"></span><br><span class="line">        Planner planner = Frameworks.getPlanner(frameworkConfig);</span><br><span class="line">        <span class="keyword">return</span> planner;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>上面的代码总共分为三步：</p>
+<ol>
+<li>初始化 HepProgram 对象；</li>
+<li>初始化 HepPlanner 对象，并通过 setRoot() 方法将 RelNode 树转换成 HepPlanner 内部使用的 Graph；</li>
+<li>通过 findBestExp() 找到最优的 plan，规则的匹配都是在这里进行。</li>
+</ol>
+<h4 id="1-初始化-HepProgram"><a href="#1-初始化-HepProgram" class="headerlink" title="1. 初始化 HepProgram"></a>1. 初始化 HepProgram</h4><p>这几步代码实现没有太多需要介绍的地方，先初始化 HepProgramBuilder 也是为了后面初始化 HepProgram 做准备，HepProgramBuilder 主要也就是提供了一些配置设置和添加规则的方法等，常用的方法如下：</p>
+<ol>
+<li>addRuleInstance()：注册相应的规则；</li>
+<li>addRuleCollection()：这里是注册一个规则集合，先把规则放在一个集合里，再注册整个集合，如果规则多的话，一般是这种方式；</li>
+<li>addMatchLimit()：设置 MatchLimit，这个 rule match 次数的最大限制；</li>
+<li>addMatchOrder() Rule 匹配的顺序</li>
+</ol>
+<p>HepProgram 这个类对于后面 HepPlanner 的优化很重要，它定义 Rule 匹配的顺序，默认按【深度优先】顺序，它可以提供以下几种（见 HepMatchOrder 类）：</p>
+<ol>
+<li>ARBITRARY：按任意顺序匹配（因为它是有效的，而且大部分的 Rule 并不关心匹配顺序）；</li>
+<li>BOTTOM_UP：自下而上，先从子节点开始匹配；</li>
+<li>TOP_DOWN：自上而下，先从父节点开始匹配；</li>
+<li>DEPTH_FIRST：深度优先匹配，某些情况下比 ARBITRARY 高效（为了避免新的 vertex 产生后又从 root 节点开始匹配）。</li>
+</ol>
+<p>这个匹配顺序到底是什么呢？对于规则集合 rules，HepPlanner 的算法是：从一个节点开始，跟 rules 的所有 Rule 进行匹配，匹配上就进行转换操作，这个节点操作完，再进行下一个节点，这里的匹配顺序就是指的节点遍历顺序（这种方式的优劣，我们下面再说）。</p>
+<h3 id="分析现有rule"><a href="#分析现有rule" class="headerlink" title="分析现有rule"></a>分析现有rule</h3><p>最简单的例子，Join结合律，JoinAssociateRule</p>
+<p>首先所有的Rule都继承RelOptRule类</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Planner rule that changes a join based on the associativity rule.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;((a JOIN b) JOIN c) &amp;rarr; (a JOIN (b JOIN c))&lt;/p&gt;</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;We do not need a rule to convert (a JOIN (b JOIN c)) &amp;rarr;</span></span><br><span class="line"><span class="comment"> * ((a JOIN b) JOIN c) because we have</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@link</span> JoinCommuteRule&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@see</span> JoinCommuteRule</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">JoinAssociateRule</span> <span class="keyword">extends</span> <span class="title">RelOptRule</span> <span class="keyword">implements</span> <span class="title">TransformationRule</span></span></span><br></pre></td></tr></table></figure>
+<p>对于Join结合律，调用super，即RelOptRule的构造函数,匹配的树状为<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">join</span><br><span class="line">   join </span><br><span class="line">      any</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">  * Creates a JoinAssociateRule.</span></span><br><span class="line"><span class="comment">  */</span></span><br><span class="line"> <span class="function"><span class="keyword">public</span> <span class="title">JoinAssociateRule</span><span class="params">(RelBuilderFactory relBuilderFactory)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">super</span>(</span><br><span class="line">       operand(Join.class,</span><br><span class="line">           operand(Join.class, any()),</span><br><span class="line">           operand(RelSubset.class, any())),</span><br><span class="line">       relBuilderFactory, <span class="keyword">null</span>);</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+<p>operand也是一个树形结构，Top的Operand的类型是Join，他有两个children，其中一个也是join，另一个是RelSubset</p>
+<p>他们的children是any()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMatch</span><span class="params">(<span class="keyword">final</span> RelOptRuleCall call)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> Join topJoin = call.rel(<span class="number">0</span>);</span><br><span class="line">    <span class="keyword">final</span> Join bottomJoin = call.rel(<span class="number">1</span>);</span><br><span class="line">    <span class="keyword">final</span> RelNode relA = bottomJoin.getLeft();</span><br><span class="line">    <span class="keyword">final</span> RelNode relB = bottomJoin.getRight();</span><br><span class="line">    <span class="keyword">final</span> RelSubset relC = call.rel(<span class="number">2</span>);</span><br><span class="line">    <span class="keyword">final</span> RelOptCluster cluster = topJoin.getCluster();</span><br><span class="line">    <span class="keyword">final</span> RexBuilder rexBuilder = cluster.getRexBuilder();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (relC.getConvention() != relA.getConvention()) &#123;</span><br><span class="line">      <span class="comment">// relC could have any trait-set. But if we're matching say</span></span><br><span class="line">      <span class="comment">// EnumerableConvention, we're only interested in enumerable subsets.</span></span><br><span class="line">      <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//        topJoin</span></span><br><span class="line">    <span class="comment">//        /     \</span></span><br><span class="line">    <span class="comment">//   bottomJoin  C</span></span><br><span class="line">    <span class="comment">//    /    \</span></span><br><span class="line">    <span class="comment">//   A      B</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> aCount = relA.getRowType().getFieldCount();</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> bCount = relB.getRowType().getFieldCount();</span><br><span class="line">    <span class="keyword">final</span> <span class="keyword">int</span> cCount = relC.getRowType().getFieldCount();</span><br><span class="line">    <span class="keyword">final</span> ImmutableBitSet aBitSet = ImmutableBitSet.range(<span class="number">0</span>, aCount);</span><br><span class="line">    <span class="keyword">final</span> ImmutableBitSet bBitSet =</span><br><span class="line">        ImmutableBitSet.range(aCount, aCount + bCount);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">if</span> (!topJoin.getSystemFieldList().isEmpty()) &#123;</span><br><span class="line">      <span class="comment">// FIXME Enable this rule for joins with system fields</span></span><br><span class="line">      <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// If either join is not inner, we cannot proceed.</span></span><br><span class="line">    <span class="comment">// (Is this too strict?)</span></span><br><span class="line">    <span class="keyword">if</span> (topJoin.getJoinType() != JoinRelType.INNER</span><br><span class="line">        || bottomJoin.getJoinType() != JoinRelType.INNER) &#123;</span><br><span class="line">      <span class="keyword">return</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Goal is to transform to</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="comment">//       newTopJoin</span></span><br><span class="line">    <span class="comment">//        /     \</span></span><br><span class="line">    <span class="comment">//       A   newBottomJoin</span></span><br><span class="line">    <span class="comment">//               /    \</span></span><br><span class="line">    <span class="comment">//              B      C</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// Split the condition of topJoin and bottomJoin into a conjunctions. A</span></span><br><span class="line">    <span class="comment">// condition can be pushed down if it does not use columns from A.</span></span><br><span class="line">    <span class="keyword">final</span> List&lt;RexNode&gt; top = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    <span class="keyword">final</span> List&lt;RexNode&gt; bottom = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">    JoinPushThroughJoinRule.split(topJoin.getCondition(), aBitSet, top, bottom);</span><br><span class="line">    JoinPushThroughJoinRule.split(bottomJoin.getCondition(), aBitSet, top,</span><br><span class="line">        bottom);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Mapping for moving conditions from topJoin or bottomJoin to</span></span><br><span class="line">    <span class="comment">// newBottomJoin.</span></span><br><span class="line">    <span class="comment">// target: | B | C      |</span></span><br><span class="line">    <span class="comment">// source: | A       | B | C      |</span></span><br><span class="line">    <span class="keyword">final</span> Mappings.TargetMapping bottomMapping =</span><br><span class="line">        Mappings.createShiftMapping(</span><br><span class="line">            aCount + bCount + cCount,</span><br><span class="line">            <span class="number">0</span>, aCount, bCount,</span><br><span class="line">            bCount, aCount + bCount, cCount);</span><br><span class="line">    <span class="keyword">final</span> List&lt;RexNode&gt; newBottomList =</span><br><span class="line">        <span class="keyword">new</span> RexPermuteInputsShuttle(bottomMapping, relB, relC)</span><br><span class="line">            .visitList(bottom);</span><br><span class="line">    RexNode newBottomCondition =</span><br><span class="line">        RexUtil.composeConjunction(rexBuilder, newBottomList);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">final</span> Join newBottomJoin =</span><br><span class="line">        bottomJoin.copy(bottomJoin.getTraitSet(), newBottomCondition, relB,</span><br><span class="line">            relC, JoinRelType.INNER, <span class="keyword">false</span>);</span><br><span class="line"></span><br><span class="line">    <span class="comment">// Condition for newTopJoin consists of pieces from bottomJoin and topJoin.</span></span><br><span class="line">    <span class="comment">// Field ordinals do not need to be changed.</span></span><br><span class="line">    RexNode newTopCondition = RexUtil.composeConjunction(rexBuilder, top);</span><br><span class="line">    <span class="meta">@SuppressWarnings</span>(<span class="string">"SuspiciousNameCombination"</span>)</span><br><span class="line">    <span class="keyword">final</span> Join newTopJoin =</span><br><span class="line">        topJoin.copy(topJoin.getTraitSet(), newTopCondition, relA,</span><br><span class="line">            newBottomJoin, JoinRelType.INNER, <span class="keyword">false</span>);</span><br><span class="line"></span><br><span class="line">    call.transformTo(newTopJoin);</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="自定义rule"><a href="#自定义rule" class="headerlink" title="自定义rule"></a>自定义rule</h3><p>补充下基础概念</p>
+<p>RexLiteral表示常量，RexVariable表示变量，RexCall表示操作来连接Literal和Variable</p>
+<p>自定义rule，有三个主要的方法，一个是matches，一个是onMatch，一个是构造函数</p>
+<p>判断一个tree是否满足该rule，先从构造函数开始匹配，满足构造函数的tree，在满足matches方法，就可以进入到onMatch方法。</p>
+<p>matches方法默认是返回true，可以进行改写</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">matches</span><span class="params">(RelOptRuleCall call)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">super</span>.matches(call);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>假设想要匹配</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">join</span><br><span class="line">  project</span><br></pre></td></tr></table></figure>
+<p>构造函数得这么写</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">super(</span><br><span class="line">       operand(Join.class,</span><br><span class="line">           operand(Project.class, any())),</span><br><span class="line">       relBuilderFactory, null);</span><br></pre></td></tr></table></figure>
+<p>在onMatch中可以通过call.rel(x)获取构造函数中匹配的relNode</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Join join = call.rel(0);</span><br><span class="line">Project project = call.rel(1);</span><br></pre></td></tr></table></figure>
+<p>通过一些强转可以获取对应的节点</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">((HepRelVertex)rel.getInput(<span class="number">0</span>)).getCurrentRel()</span><br></pre></td></tr></table></figure>
+<p>创建rebuild，生成node</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">RelBuilder relBuilder = call.builder();</span><br><span class="line">RelNode build = relBuilder.build();</span><br></pre></td></tr></table></figure>
+<p>对relBuilder操作</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">relBuilder.push 加入数据源</span><br><span class="line">relbuilder.project 加入投影 还可以agg filter 等等</span><br></pre></td></tr></table></figure>
+<p>通过call替换掉原来的tree</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">call.transformTo(node);</span><br></pre></td></tr></table></figure>
+<h3 id="常用函数"><a href="#常用函数" class="headerlink" title="常用函数"></a>常用函数</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">RexUtil.composeDisjunction 以or合并两个规则</span><br><span class="line"></span><br><span class="line">RexUtil.composeConjunction 以and合并两个规则</span><br><span class="line"></span><br><span class="line">((HepRelVertex)rel.getInput(0)).getCurrentRel() 强转获取节点</span><br><span class="line"></span><br><span class="line">node.getCluster()可以继续get出很多东西getPlanner()、getRexBuilder()、getTypeFactory()</span><br><span class="line"></span><br><span class="line">RelDataType sqlType = typeFactory.createSqlType(SqlTypeName.ANY) 创建对应的类型</span><br><span class="line"></span><br><span class="line">rexBuilder.makeLiteral 创建常量  makeCall创建操作符等等</span><br><span class="line"></span><br><span class="line">SqlStdOperatorTable可以获取函数集合  SUM MIN MAX</span><br><span class="line"></span><br><span class="line">创建agg  relBuilder.aggregate(relBuilder.groupKey(ImmutableBitset.range(aggCount)),aggCallLists)</span><br></pre></td></tr></table></figure>
+<h3 id="中文编码问题"><a href="#中文编码问题" class="headerlink" title="中文编码问题"></a>中文编码问题</h3><p>Calcite中默认使用的编码是ISO-8895-1，如果使用中文，就会出现编码问题，需要修改编码方式。</p>
+<p>通过在代码中增加解决</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">System.setProperty(&quot;saffron.default.charset&quot;,ConversionUtil.NATIVE_UTF16_CHARSET_NAME);</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.cnblogs.com/fxjwind/p/11279080.html" target="_blank" rel="noopener">Calcite分析 - Rule</a></p>
+<p><a href="https://matt33.com/2019/03/17/apache-calcite-planner/" target="_blank" rel="noopener">Apache Calcite 优化器详解（二）</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/03/Calcite-RBO规则/" rel="next" title="Calcite RBO规则">
+                <i class="fa fa-chevron-left"></i> Calcite RBO规则
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/08/13/解决Flink1-11不能指定SQL任务JobName问题/" rel="prev" title="解决Flink1.11不能指定SQL任务JobName问题">
+                解决Flink1.11不能指定SQL任务JobName问题 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#什么是查询优化器"><span class="nav-number">1.</span> <span class="nav-text">什么是查询优化器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于成本优化（CBO）"><span class="nav-number">2.</span> <span class="nav-text">基于成本优化（CBO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#基于规则优化（RBO）"><span class="nav-number">3.</span> <span class="nav-text">基于规则优化（RBO）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#优化规则"><span class="nav-number">4.</span> <span class="nav-text">优化规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#谓词下推（Predicate-Pushdown）"><span class="nav-number">5.</span> <span class="nav-text">谓词下推（Predicate Pushdown）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常量折叠（Constant-Folding）"><span class="nav-number">6.</span> <span class="nav-text">常量折叠（Constant Folding）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何使用RBO"><span class="nav-number">7.</span> <span class="nav-text">如何使用RBO</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-初始化-HepProgram"><span class="nav-number">7.1.</span> <span class="nav-text">1. 初始化 HepProgram</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分析现有rule"><span class="nav-number">8.</span> <span class="nav-text">分析现有rule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#自定义rule"><span class="nav-number">9.</span> <span class="nav-text">自定义rule</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#常用函数"><span class="nav-number">10.</span> <span class="nav-text">常用函数</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#中文编码问题"><span class="nav-number">11.</span> <span class="nav-text">中文编码问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">12.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

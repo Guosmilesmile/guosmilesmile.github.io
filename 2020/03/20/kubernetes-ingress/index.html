@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="kubernetes 对外暴露服务的方法向 kubernetes 集群外部暴露服务的方式有三种： nodePort，LoadBalancer 和本文要介绍的 Ingress。每种方式都有各自的优缺点，nodePort 方式在服务变多的情况下会导致节点要开的端口越来越多，不好管理。而 LoadBalancer 更适合结合云提供商的 LB 来使用，但是在 LB 越来越多的情况下对成本的花费也是不可小觑">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kubernetes ingress">
+<meta property="og:url" content="http://yoursite.com/2020/03/20/kubernetes-ingress/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="kubernetes 对外暴露服务的方法向 kubernetes 集群外部暴露服务的方式有三种： nodePort，LoadBalancer 和本文要介绍的 Ingress。每种方式都有各自的优缺点，nodePort 方式在服务变多的情况下会导致节点要开的端口越来越多，不好管理。而 LoadBalancer 更适合结合云提供商的 LB 来使用，但是在 LB 越来越多的情况下对成本的花费也是不可小觑">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/2A670FBDC2BA491D9251C9EC0024C667?method=download&shareKey=13d9029aa04d77e94574cbfba66613bc">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6881D9BB2E5A4F45AE162184106177C2?method=download&shareKey=5f38c0818dd2a19b70ae6e4e0670a48a">
+<meta property="og:updated_time" content="2020-03-26T14:47:34.362Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="kubernetes ingress">
+<meta name="twitter:description" content="kubernetes 对外暴露服务的方法向 kubernetes 集群外部暴露服务的方式有三种： nodePort，LoadBalancer 和本文要介绍的 Ingress。每种方式都有各自的优缺点，nodePort 方式在服务变多的情况下会导致节点要开的端口越来越多，不好管理。而 LoadBalancer 更适合结合云提供商的 LB 来使用，但是在 LB 越来越多的情况下对成本的花费也是不可小觑">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/2A670FBDC2BA491D9251C9EC0024C667?method=download&shareKey=13d9029aa04d77e94574cbfba66613bc">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/03/20/kubernetes-ingress/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>kubernetes ingress | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/03/20/kubernetes-ingress/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">kubernetes ingress
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-03-20 11:06:20" itemprop="dateCreated datePublished" datetime="2020-03-20T11:06:20+08:00">2020-03-20</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-03-26 22:47:34" itemprop="dateModified" datetime="2020-03-26T22:47:34+08:00">2020-03-26</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Kubernetes/" itemprop="url" rel="index"><span itemprop="name">Kubernetes</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="kubernetes-对外暴露服务的方法"><a href="#kubernetes-对外暴露服务的方法" class="headerlink" title="kubernetes 对外暴露服务的方法"></a>kubernetes 对外暴露服务的方法</h3><p>向 kubernetes 集群外部暴露服务的方式有三种： nodePort，LoadBalancer 和本文要介绍的 Ingress。每种方式都有各自的优缺点，nodePort 方式在服务变多的情况下会导致节点要开的端口越来越多，不好管理。而 LoadBalancer 更适合结合云提供商的 LB 来使用，但是在 LB 越来越多的情况下对成本的花费也是不可小觑。Ingress 是 kubernetes 官方提供的用于对外暴露服务的方式，也是在生产环境用的比较多的方式，一般在云环境下是 LB + Ingress Ctroller 方式对外提供服务，这样就可以在一个 LB 的情况下根据域名路由到对应后端的 Service，有点类似于 Nginx 反向代理，只不过在 kubernetes 集群中，这个反向代理是集群外部流量的统一入口。</p>
+<h3 id="Ingress-及-Ingress-Controller-简介"><a href="#Ingress-及-Ingress-Controller-简介" class="headerlink" title="Ingress 及 Ingress Controller 简介"></a>Ingress 及 Ingress Controller 简介</h3><p>Ingress 是 k8s 资源对象，用于对外暴露服务，该资源对象定义了不同主机名（域名）及 URL 和对应后端 Service（k8s Service）的绑定，根据不同的路径路由 http 和 https 流量。而 Ingress Contoller 是一个 pod 服务，封装了一个 web 前端负载均衡器，同时在其基础上实现了动态感知 Ingress 并根据 Ingress 的定义动态生成 前端 web 负载均衡器的配置文件，比如 Nginx Ingress Controller 本质上就是一个 Nginx，只不过它能根据 Ingress 资源的定义动态生成 Nginx 的配置文件，然后动态 Reload。个人觉得 Ingress Controller 的重大作用是将前端负载均衡器和 Kubernetes 完美地结合了起来，一方面在云、容器平台下方便配置的管理，另一方面实现了集群统一的流量入口，而不是像 nodePort 那样给集群打多个孔。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/2A670FBDC2BA491D9251C9EC0024C667?method=download&amp;shareKey=13d9029aa04d77e94574cbfba66613bc" alt="在这里插入图片描述"></p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/6881D9BB2E5A4F45AE162184106177C2?method=download&amp;shareKey=5f38c0818dd2a19b70ae6e4e0670a48a" alt="img"></p>
+<p>所以，总的来说要使用 Ingress，得先部署 Ingress Controller 实体（相当于前端 Nginx），然后再创建 Ingress （相当于 Nginx 配置的 k8s 资源体现），Ingress Controller 部署好后会动态检测 Ingress 的创建情况生成相应配置。Ingress Controller 的实现有很多种：有基于 Nginx 的，也有基于 HAProxy的，还有基于 OpenResty 的 Kong Ingress Controller 等，更多 Controller 见：<a href="https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/，本文使用基于" target="_blank" rel="noopener">https://kubernetes.io/docs/concepts/services-networking/ingress-controllers/，本文使用基于</a> Nginx 的 Ingress Controller：ingress-nginx。</p>
+<h3 id="Nginx-Ingress-Controller"><a href="#Nginx-Ingress-Controller" class="headerlink" title="Nginx Ingress Controller"></a>Nginx Ingress Controller</h3><p>官方文档参考：<a href="https://kubernetes.github.io/ingress-nginx/deploy/" target="_blank" rel="noopener">https://kubernetes.github.io/ingress-nginx/deploy/</a></p>
+<p>首先部署命名空间，默认后端（处理 404 等），配置等，与官方一致。</p>
+<p><a href="https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/mandatory.yaml" target="_blank" rel="noopener">https://raw.githubusercontent.com/kubernetes/ingress-nginx/nginx-0.30.0/deploy/static/mandatory.yaml</a></p>
+<p>官方的配置文件使用 Deployment 的方式部署单副本到任意一台 worker 机器，但我修改了一些配置，改变了以下行为：</p>
+<ol>
+<li><p>Nginx 部署在 master 机器上，使用 master 的入口 ip 提供服务</p>
+</li>
+<li><p>官方文档部署完后仍然需要使用 Service 做转发，在没有 ELB 的情况下仍需使用 NodePort 方式暴露在高端口上</p>
+</li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">apiVersion: apps/v1</span><br><span class="line">kind: DaemonSet</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-controller</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">spec:</span><br><span class="line">  replicas: 1</span><br><span class="line">  selector:</span><br><span class="line">    matchLabels:</span><br><span class="line">      app.kubernetes.io/name: ingress-nginx</span><br><span class="line">      app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">  template:</span><br><span class="line">    metadata:</span><br><span class="line">      labels:</span><br><span class="line">        app.kubernetes.io/name: ingress-nginx</span><br><span class="line">        app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">      annotations:</span><br><span class="line">        prometheus.io/port: &quot;10254&quot;</span><br><span class="line">        prometheus.io/scrape: &quot;true&quot;</span><br><span class="line">    spec:</span><br><span class="line">      # wait up to five minutes for the drain of connections</span><br><span class="line">      terminationGracePeriodSeconds: 300</span><br><span class="line">      serviceAccountName: nginx-ingress-serviceaccount</span><br><span class="line">      hostNetwork: true</span><br><span class="line">      affinity:</span><br><span class="line">        nodeAffinity:</span><br><span class="line">          requiredDuringSchedulingIgnoredDuringExecution:</span><br><span class="line">            nodeSelectorTerms:</span><br><span class="line">            - matchExpressions:</span><br><span class="line">              - key: node-role.kubernetes.io/master</span><br><span class="line">                operator: Exists</span><br><span class="line">      tolerations:</span><br><span class="line">      - key: node-role.kubernetes.io/master</span><br><span class="line">        operator: Exists</span><br><span class="line">        effect: NoSchedule</span><br><span class="line">      containers:</span><br><span class="line">        - name: nginx-ingress-controller</span><br><span class="line">          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.30.0</span><br><span class="line">          args:</span><br><span class="line">            - /nginx-ingress-controller</span><br><span class="line">            - --configmap=$(POD_NAMESPACE)/nginx-configuration</span><br><span class="line">            - --tcp-services-configmap=$(POD_NAMESPACE)/tcp-services</span><br><span class="line">            - --udp-services-configmap=$(POD_NAMESPACE)/udp-services</span><br><span class="line">            - --publish-service=$(POD_NAMESPACE)/ingress-nginx</span><br><span class="line">            - --annotations-prefix=nginx.ingress.kubernetes.io</span><br><span class="line">          securityContext:</span><br><span class="line">            allowPrivilegeEscalation: true</span><br><span class="line">            capabilities:</span><br><span class="line">              drop:</span><br><span class="line">                - ALL</span><br><span class="line">              add:</span><br><span class="line">                - NET_BIND_SERVICE</span><br><span class="line">            # www-data -&gt; 101</span><br><span class="line">            runAsUser: 101</span><br><span class="line">          env:</span><br><span class="line">            - name: POD_NAME</span><br><span class="line">              valueFrom:</span><br><span class="line">                fieldRef:</span><br><span class="line">                  fieldPath: metadata.name</span><br><span class="line">            - name: POD_NAMESPACE</span><br><span class="line">              valueFrom:</span><br><span class="line">                fieldRef:</span><br><span class="line">                  fieldPath: metadata.namespace</span><br><span class="line">          ports:</span><br><span class="line">            - name: http</span><br><span class="line">              containerPort: 80</span><br><span class="line">              protocol: TCP</span><br><span class="line">            - name: https</span><br><span class="line">              containerPort: 443</span><br><span class="line">              protocol: TCP</span><br><span class="line">          livenessProbe:</span><br><span class="line">            failureThreshold: 3</span><br><span class="line">            httpGet:</span><br><span class="line">              path: /healthz</span><br><span class="line">              port: 10254</span><br><span class="line">              scheme: HTTP</span><br><span class="line">            initialDelaySeconds: 10</span><br><span class="line">            periodSeconds: 10</span><br><span class="line">            successThreshold: 1</span><br><span class="line">            timeoutSeconds: 10</span><br><span class="line">          readinessProbe:</span><br><span class="line">            failureThreshold: 3</span><br><span class="line">            httpGet:</span><br><span class="line">              path: /healthz</span><br><span class="line">              port: 10254</span><br><span class="line">              scheme: HTTP</span><br><span class="line">            periodSeconds: 10</span><br><span class="line">            successThreshold: 1</span><br><span class="line">            timeoutSeconds: 10</span><br><span class="line">          lifecycle:</span><br><span class="line">            preStop:</span><br><span class="line">              exec:</span><br><span class="line">                command:</span><br><span class="line">                  - /wait-shutdown</span><br></pre></td></tr></table></figure>
+<p>对官方配置的修改主要有以下几处：</p>
+<ol>
+<li>使用 <code>hostNetwork</code> 配置将服务暴露在外网接口</li>
+<li>使用<a href="https://kubernetes.io/docs/concepts/configuration/assign-pod-node/#affinity-and-anti-affinity" target="_blank" rel="noopener">亲和性配置</a>限制服务只能部署在 master 上</li>
+<li>使用 <code>tolerations</code> 配置允许在 master 上部署此服务</li>
+</ol>
+<p>因为使用了hostNetwork，直接绑定了宿主机的80和443端口了，不需要再使用NodePort的方式创建一个service。如果没有配置hstoNetwor，那么需要另外配置一个service。</p>
+<p>全部配置见下方的配置清单</p>
+<h3 id="配置-Ingress"><a href="#配置-Ingress" class="headerlink" title="配置 Ingress"></a>配置 Ingress</h3><p>这个困扰我比较久，如果只是简单的80端口转发就搞定了，先上简单版本的吧。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">kubectl get svc -n flink</span><br><span class="line">NAME                    TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)                      AGE</span><br><span class="line">flink-jobmanager        ClusterIP   10.104.134.45   &lt;none&gt;        6123/TCP,6124/TCP,8081/TCP   18h</span><br><span class="line">flink-jobmanager-rest   ClusterIP   10.98.55.178    &lt;none&gt;        8081/TCP                     18h</span><br></pre></td></tr></table></figure>
+<p>先查看需要关联的服务，对应的名称是flink-jobmanager-rest，对应的端口是8081。</p>
+<p>所以对应的ingress的资源文件应该如下配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: extensions/v1beta1</span><br><span class="line">kind: Ingress</span><br><span class="line">metadata:</span><br><span class="line">  name: submodule-checker-ingress-flink</span><br><span class="line">  annotations:</span><br><span class="line">    kubernetes.io/ingress.class: &quot;nginx&quot;</span><br><span class="line">spec:</span><br><span class="line">  rules:</span><br><span class="line">  - host: flink.test.com</span><br><span class="line">    http:</span><br><span class="line">      paths:</span><br><span class="line">      - backend:</span><br><span class="line">          serviceName: flink-jobmanager-rest</span><br><span class="line">          servicePort: 8081</span><br><span class="line">        path: /</span><br></pre></td></tr></table></figure>
+<p><strong>有一点需要注意的是，ingress的资源文件需要跟service同一个空间，内部的匹配规则是 nameSpace.serviceName去匹配的。</strong></p>
+<p>部署好以后，如果有公网域名最好了，如果没有就做一条本地host来模拟解析flink.test.com到node的ip地址。测试访问  <a href="http://flink.test.com/" target="_blank" rel="noopener">http://flink.test.com/</a></p>
+<p>但是这样80端口就会占用了，如果你有多个flink作业，想用区分开，如果想要通过后缀区分，例如</p>
+<p><a href="http://flink.test.com/app" target="_blank" rel="noopener">http://flink.test.com/app</a>  , <a href="http://flink.test.com/app1" target="_blank" rel="noopener">http://flink.test.com/app1</a> 区分不同的作业，那么就需要进行重定向。</p>
+<p>根据官网的重定向配置，配置文件应该修改为</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: extensions/v1beta1</span><br><span class="line">kind: Ingress</span><br><span class="line">metadata:</span><br><span class="line">  name: submodule-checker-ingress-flink</span><br><span class="line">  annotations:</span><br><span class="line">    kubernetes.io/ingress.class: &quot;nginx&quot;</span><br><span class="line">    nginx.ingress.kubernetes.io/rewrite-target: /$2    </span><br><span class="line">spec:</span><br><span class="line">  rules:</span><br><span class="line">  - host: flink.test.com</span><br><span class="line">    http:</span><br><span class="line">      paths:</span><br><span class="line">      - backend:</span><br><span class="line">          serviceName: flink-jobmanager-rest</span><br><span class="line">          servicePort: 8081</span><br><span class="line">        path: /app(/|$)(.*)</span><br></pre></td></tr></table></figure>
+<p><strong>注意了</strong> 必须将地址输入全， <a href="http://flink.test.com/app" target="_blank" rel="noopener">http://flink.test.com/app</a> 这样是访问不到的，必须是 <a href="http://flink.test.com/app/" target="_blank" rel="noopener">http://flink.test.com/app/</a> 才可以正确访问到。</p>
+<p>至此，可以通过ingress还有url来区分不同的资源了。</p>
+<h3 id="配置"><a href="#配置" class="headerlink" title="配置"></a>配置</h3><p>ingress.yaml</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: v1</span><br><span class="line">kind: Namespace</span><br><span class="line">metadata:</span><br><span class="line">  name: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">kind: ConfigMap</span><br><span class="line">apiVersion: v1</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-configuration</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">kind: ConfigMap</span><br><span class="line">apiVersion: v1</span><br><span class="line">metadata:</span><br><span class="line">  name: tcp-services</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">kind: ConfigMap</span><br><span class="line">apiVersion: v1</span><br><span class="line">metadata:</span><br><span class="line">  name: udp-services</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: ServiceAccount</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-serviceaccount</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1beta1</span><br><span class="line">kind: ClusterRole</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-clusterrole</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">rules:</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - configmaps</span><br><span class="line">      - endpoints</span><br><span class="line">      - nodes</span><br><span class="line">      - pods</span><br><span class="line">      - secrets</span><br><span class="line">    verbs:</span><br><span class="line">      - list</span><br><span class="line">      - watch</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - nodes</span><br><span class="line">    verbs:</span><br><span class="line">      - get</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - services</span><br><span class="line">    verbs:</span><br><span class="line">      - get</span><br><span class="line">      - list</span><br><span class="line">      - watch</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - events</span><br><span class="line">    verbs:</span><br><span class="line">      - create</span><br><span class="line">      - patch</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;extensions&quot;</span><br><span class="line">      - &quot;networking.k8s.io&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - ingresses</span><br><span class="line">    verbs:</span><br><span class="line">      - get</span><br><span class="line">      - list</span><br><span class="line">      - watch</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;extensions&quot;</span><br><span class="line">      - &quot;networking.k8s.io&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - ingresses/status</span><br><span class="line">    verbs:</span><br><span class="line">      - update</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1beta1</span><br><span class="line">kind: Role</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-role</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">rules:</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - configmaps</span><br><span class="line">      - pods</span><br><span class="line">      - secrets</span><br><span class="line">      - namespaces</span><br><span class="line">    verbs:</span><br><span class="line">      - get</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - configmaps</span><br><span class="line">    resourceNames:</span><br><span class="line">      # Defaults to &quot;&lt;election-id&gt;-&lt;ingress-class&gt;&quot;</span><br><span class="line">      # Here: &quot;&lt;ingress-controller-leader&gt;-&lt;nginx&gt;&quot;</span><br><span class="line">      # This has to be adapted if you change either parameter</span><br><span class="line">      # when launching the nginx-ingress-controller.</span><br><span class="line">      - &quot;ingress-controller-leader-nginx&quot;</span><br><span class="line">    verbs:</span><br><span class="line">      - get</span><br><span class="line">      - update</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - configmaps</span><br><span class="line">    verbs:</span><br><span class="line">      - create</span><br><span class="line">  - apiGroups:</span><br><span class="line">      - &quot;&quot;</span><br><span class="line">    resources:</span><br><span class="line">      - endpoints</span><br><span class="line">    verbs:</span><br><span class="line">      - get</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1beta1</span><br><span class="line">kind: RoleBinding</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-role-nisa-binding</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">roleRef:</span><br><span class="line">  apiGroup: rbac.authorization.k8s.io</span><br><span class="line">  kind: Role</span><br><span class="line">  name: nginx-ingress-role</span><br><span class="line">subjects:</span><br><span class="line">  - kind: ServiceAccount</span><br><span class="line">    name: nginx-ingress-serviceaccount</span><br><span class="line">    namespace: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1beta1</span><br><span class="line">kind: ClusterRoleBinding</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-clusterrole-nisa-binding</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">roleRef:</span><br><span class="line">  apiGroup: rbac.authorization.k8s.io</span><br><span class="line">  kind: ClusterRole</span><br><span class="line">  name: nginx-ingress-clusterrole</span><br><span class="line">subjects:</span><br><span class="line">  - kind: ServiceAccount</span><br><span class="line">    name: nginx-ingress-serviceaccount</span><br><span class="line">    namespace: ingress-nginx</span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">apiVersion: apps/v1</span><br><span class="line">kind: DaemonSet</span><br><span class="line">metadata:</span><br><span class="line">  name: nginx-ingress-controller</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">spec:</span><br><span class="line">  replicas: 1</span><br><span class="line">  selector:</span><br><span class="line">    matchLabels:</span><br><span class="line">      app.kubernetes.io/name: ingress-nginx</span><br><span class="line">      app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">  template:</span><br><span class="line">    metadata:</span><br><span class="line">      labels:</span><br><span class="line">        app.kubernetes.io/name: ingress-nginx</span><br><span class="line">        app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">      annotations:</span><br><span class="line">        prometheus.io/port: &quot;10254&quot;</span><br><span class="line">        prometheus.io/scrape: &quot;true&quot;</span><br><span class="line">    spec:</span><br><span class="line">      # wait up to five minutes for the drain of connections</span><br><span class="line">      terminationGracePeriodSeconds: 300</span><br><span class="line">      serviceAccountName: nginx-ingress-serviceaccount</span><br><span class="line">      hostNetwork: true</span><br><span class="line">      affinity:</span><br><span class="line">        nodeAffinity:</span><br><span class="line">          requiredDuringSchedulingIgnoredDuringExecution:</span><br><span class="line">            nodeSelectorTerms:</span><br><span class="line">            - matchExpressions:</span><br><span class="line">              - key: node-role.kubernetes.io/master</span><br><span class="line">                operator: Exists</span><br><span class="line">      tolerations:</span><br><span class="line">      - key: node-role.kubernetes.io/master</span><br><span class="line">        operator: Exists</span><br><span class="line">        effect: NoSchedule</span><br><span class="line">      containers:</span><br><span class="line">        - name: nginx-ingress-controller</span><br><span class="line">          image: quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.30.0</span><br><span class="line">          args:</span><br><span class="line">            - /nginx-ingress-controller</span><br><span class="line">            - --configmap=$(POD_NAMESPACE)/nginx-configuration</span><br><span class="line">            - --tcp-services-configmap=$(POD_NAMESPACE)/tcp-services</span><br><span class="line">            - --udp-services-configmap=$(POD_NAMESPACE)/udp-services</span><br><span class="line">            - --publish-service=$(POD_NAMESPACE)/ingress-nginx</span><br><span class="line">            - --annotations-prefix=nginx.ingress.kubernetes.io</span><br><span class="line">          securityContext:</span><br><span class="line">            allowPrivilegeEscalation: true</span><br><span class="line">            capabilities:</span><br><span class="line">              drop:</span><br><span class="line">                - ALL</span><br><span class="line">              add:</span><br><span class="line">                - NET_BIND_SERVICE</span><br><span class="line">            # www-data -&gt; 101</span><br><span class="line">            runAsUser: 101</span><br><span class="line">          env:</span><br><span class="line">            - name: POD_NAME</span><br><span class="line">              valueFrom:</span><br><span class="line">                fieldRef:</span><br><span class="line">                  fieldPath: metadata.name</span><br><span class="line">            - name: POD_NAMESPACE</span><br><span class="line">              valueFrom:</span><br><span class="line">                fieldRef:</span><br><span class="line">                  fieldPath: metadata.namespace</span><br><span class="line">          ports:</span><br><span class="line">            - name: http</span><br><span class="line">              containerPort: 80</span><br><span class="line">              protocol: TCP</span><br><span class="line">            - name: https</span><br><span class="line">              containerPort: 443</span><br><span class="line">              protocol: TCP</span><br><span class="line">          livenessProbe:</span><br><span class="line">            failureThreshold: 3</span><br><span class="line">            httpGet:</span><br><span class="line">              path: /healthz</span><br><span class="line">              port: 10254</span><br><span class="line">              scheme: HTTP</span><br><span class="line">            initialDelaySeconds: 10</span><br><span class="line">            periodSeconds: 10</span><br><span class="line">            successThreshold: 1</span><br><span class="line">            timeoutSeconds: 10</span><br><span class="line">          readinessProbe:</span><br><span class="line">            failureThreshold: 3</span><br><span class="line">            httpGet:</span><br><span class="line">              path: /healthz</span><br><span class="line">              port: 10254</span><br><span class="line">              scheme: HTTP</span><br><span class="line">            periodSeconds: 10</span><br><span class="line">            successThreshold: 1</span><br><span class="line">            timeoutSeconds: 10</span><br><span class="line">          lifecycle:</span><br><span class="line">            preStop:</span><br><span class="line">              exec:</span><br><span class="line">                command:</span><br><span class="line">                  - /wait-shutdown</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">---</span><br><span class="line"></span><br><span class="line">apiVersion: v1</span><br><span class="line">kind: LimitRange</span><br><span class="line">metadata:</span><br><span class="line">  name: ingress-nginx</span><br><span class="line">  namespace: ingress-nginx</span><br><span class="line">  labels:</span><br><span class="line">    app.kubernetes.io/name: ingress-nginx</span><br><span class="line">    app.kubernetes.io/part-of: ingress-nginx</span><br><span class="line">spec:</span><br><span class="line">  limits:</span><br><span class="line">  - min:</span><br><span class="line">      memory: 90Mi</span><br><span class="line">      cpu: 100m</span><br><span class="line">    type: Container</span><br></pre></td></tr></table></figure>
+<p>jobmanager-ingress.yaml</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">apiVersion: extensions/v1beta1</span><br><span class="line">kind: Ingress</span><br><span class="line">metadata:</span><br><span class="line">  name: submodule-checker-ingress-flink</span><br><span class="line">  annotations:</span><br><span class="line">    kubernetes.io/ingress.class: &quot;nginx&quot;</span><br><span class="line">    nginx.ingress.kubernetes.io/rewrite-target: /$2    </span><br><span class="line">spec:</span><br><span class="line">  rules:</span><br><span class="line">  - host: flink.test.com</span><br><span class="line">    http:</span><br><span class="line">      paths:</span><br><span class="line">      - backend:</span><br><span class="line">          serviceName: flink-jobmanager-rest</span><br><span class="line">          servicePort: 8081</span><br><span class="line">        path: /app(/|$)(.*)</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://kubernetes.github.io/ingress-nginx/deploy/" target="_blank" rel="noopener">官方安装教程</a></p>
+<p><a href="https://kubernetes.github.io/ingress-nginx/examples/rewrite/" target="_blank" rel="noopener">官网配置–rewrite </a></p>
+<p><a href="https://blog.hlyue.com/2018/05/12/deploy-nginx-ingress-controller-on-kubernetes/" target="_blank" rel="noopener">在 Kubernetes 上部署 Nginx Ingress Cntroller</a></p>
+<p><a href="https://blog.csdn.net/qianghaohao/article/details/99354304" target="_blank" rel="noopener">使用 Kubernetes Ingress 对外暴露服务</a></p>
+<p><a href="https://segmentfault.com/a/1190000019908991" target="_blank" rel="noopener">k8s ingress原理及ingress-nginx部署测试</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/03/14/Elasticsearch-常用操作/" rel="next" title="Elasticsearch 常用操作">
+                <i class="fa fa-chevron-left"></i> Elasticsearch 常用操作
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/03/30/Flink-1-10-0-on-Kubernetes-搭建/" rel="prev" title="Flink 1.10.0 on Kubernetes 搭建">
+                Flink 1.10.0 on Kubernetes 搭建 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#kubernetes-对外暴露服务的方法"><span class="nav-number">1.</span> <span class="nav-text">kubernetes 对外暴露服务的方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Ingress-及-Ingress-Controller-简介"><span class="nav-number">2.</span> <span class="nav-text">Ingress 及 Ingress Controller 简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Nginx-Ingress-Controller"><span class="nav-number">3.</span> <span class="nav-text">Nginx Ingress Controller</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置-Ingress"><span class="nav-number">4.</span> <span class="nav-text">配置 Ingress</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置"><span class="nav-number">5.</span> <span class="nav-text">配置</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

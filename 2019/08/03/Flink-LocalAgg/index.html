@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景参考了腾讯Oceanus和阿里Blink中minibatch的思路，针对热流进行预聚合的方式解决数据倾斜的问题。 Local Keyed Streams现实中，很多数据具有幂律分布(，幂律就是两个通俗的定律，一个是“长尾”理论，只有少数大的门户网站是很多人关注的，但是还有一个长长的尾巴，就是小网站，小公司。长尾理论就是对幂律通俗化的解释。另外一个通俗解释就是马太效应，穷者越穷富者越富)。在处理">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink LocalAgg">
+<meta property="og:url" content="http://yoursite.com/2019/08/03/Flink-LocalAgg/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景参考了腾讯Oceanus和阿里Blink中minibatch的思路，针对热流进行预聚合的方式解决数据倾斜的问题。 Local Keyed Streams现实中，很多数据具有幂律分布(，幂律就是两个通俗的定律，一个是“长尾”理论，只有少数大的门户网站是很多人关注的，但是还有一个长长的尾巴，就是小网站，小公司。长尾理论就是对幂律通俗化的解释。另外一个通俗解释就是马太效应，穷者越穷富者越富)。在处理">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/BE6639701DD84910B0E7069F084387D8?method=download&shareKey=5d8081463a3605c4ac3391611a0162c3">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/D3287FF635D24326BE7902971F354958?method=download&shareKey=6f56622fca40ccafe099b039abb0f76f">
+<meta property="og:updated_time" content="2020-03-30T08:55:50.463Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink LocalAgg">
+<meta name="twitter:description" content="背景参考了腾讯Oceanus和阿里Blink中minibatch的思路，针对热流进行预聚合的方式解决数据倾斜的问题。 Local Keyed Streams现实中，很多数据具有幂律分布(，幂律就是两个通俗的定律，一个是“长尾”理论，只有少数大的门户网站是很多人关注的，但是还有一个长长的尾巴，就是小网站，小公司。长尾理论就是对幂律通俗化的解释。另外一个通俗解释就是马太效应，穷者越穷富者越富)。在处理">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/BE6639701DD84910B0E7069F084387D8?method=download&shareKey=5d8081463a3605c4ac3391611a0162c3">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/08/03/Flink-LocalAgg/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink LocalAgg | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/08/03/Flink-LocalAgg/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink LocalAgg
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-08-03 00:06:52" itemprop="dateCreated datePublished" datetime="2019-08-03T00:06:52+08:00">2019-08-03</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-03-30 16:55:50" itemprop="dateModified" datetime="2020-03-30T16:55:50+08:00">2020-03-30</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>参考了腾讯Oceanus和阿里Blink中minibatch的思路，针对热流进行预聚合的方式解决数据倾斜的问题。</p>
+<h2 id="Local-Keyed-Streams"><a href="#Local-Keyed-Streams" class="headerlink" title="Local Keyed Streams"></a>Local Keyed Streams</h2><p>现实中，很多数据具有幂律分布(，幂律就是两个通俗的定律，一个是“长尾”理论，只有少数大的门户网站是很多人关注的，但是还有一个长长的尾巴，就是小网站，小公司。长尾理论就是对幂律通俗化的解释。另外一个通俗解释就是马太效应，穷者越穷富者越富)。在处理这类数据时，作业执行性能就会由于负载倾斜而急剧下降。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/BE6639701DD84910B0E7069F084387D8?method=download&amp;shareKey=5d8081463a3605c4ac3391611a0162c3" alt="image"></p>
+<p>以WordCount程序作为示例。为了统计每个出现word的次数，我们需要将每个word送到对应的aggregator上进行统计。当有部分word出现的次数远远超过其他word时，那么将只有少数的几个aggregator在执行，而其他的aggregator将空闲。当我们增加更多的aggregator时，因为绝大部分word仍然只会被发送到少数那几个aggregator上，程序性能也不会得到任何提高。</p>
+<h3 id="解决思路"><a href="#解决思路" class="headerlink" title="解决思路"></a>解决思路</h3><p>将数据在分发前提前聚合</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/D3287FF635D24326BE7902971F354958?method=download&amp;shareKey=6f56622fca40ccafe099b039abb0f76f" alt="image"></p>
+<h4 id="设计思路"><a href="#设计思路" class="headerlink" title="设计思路"></a>设计思路</h4><ol>
+<li>处理每一条记录的时候，先缓存</li>
+<li>到达触发条件仅需预聚合</li>
+<li>讲这批数据向下发放</li>
+</ol>
+<h4 id="实现一个基于条数为触发条件的LocalAgg"><a href="#实现一个基于条数为触发条件的LocalAgg" class="headerlink" title="实现一个基于条数为触发条件的LocalAgg"></a>实现一个基于条数为触发条件的LocalAgg</h4><ul>
+<li>首先需要有一个方法，方法主要是将新加的元素和存储在内存中相同key的元素仅需合并，做到处理一条数据合并一条数据，而不是一起合并。</li>
+<li>达到阈值的时候，出发flush动作将数据下发。</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.Function;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.annotation.Nullable;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Basic interface for LocalAggFunction processing.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;K&gt;   The type of the key in the storage map</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;V&gt;   The type of the value in the storage map</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;IN&gt;  Type of the input elements.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;OUT&gt; Type of the returned elements.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">LocalAggFunction</span>&lt;<span class="title">K</span>, <span class="title">V</span>, <span class="title">IN</span>, <span class="title">OUT</span>&gt; <span class="keyword">implements</span> <span class="title">Function</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = -<span class="number">6672219582127325882L</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Adds the given input to the given value, returning the new  value.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> value the existing  value, maybe null</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> input the given input, not null</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> V <span class="title">addInput</span><span class="params">(@Nullable V value, IN input)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Called when a storage is finished. Transform a  to zero, one, or more output elements.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">finishBundle</span><span class="params">(Map&lt;K, V&gt; buffer, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>作为一个算子，因为是单流输入，需要继承AbstractStreamOperator和OneInputStreamOperator。</p>
+<p>这个算子需要下面变量</p>
+<ol>
+<li>keySelect获取key</li>
+<li>Map存储数据</li>
+<li>计数</li>
+<li>用户函数</li>
+</ol>
+<p>processElement处理元素的时候，先获取对应的key，然后内存中的对应key的元素，再交给用户函数去合并数据，并将返回的数据塞入内存中对应key的value。如果计数满足flush条件，调用用户函数的flinsh方法提交数据。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.util.FunctionUtils;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.functions.KeySelector;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.operators.AbstractStreamOperator;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.operators.OneInputStreamOperator;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.runtime.streamrecord.StreamRecord;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.HashMap;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LocalAggOperation</span>&lt;<span class="title">IN</span>, <span class="title">OUT</span>, <span class="title">K</span>, <span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">AbstractStreamOperator</span>&lt;<span class="title">OUT</span>&gt;</span></span><br><span class="line"><span class="class">        <span class="keyword">implements</span> <span class="title">OneInputStreamOperator</span>&lt;<span class="title">IN</span>, <span class="title">OUT</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * KeySelector is used to extract key for bundle map.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> KeySelector&lt;IN, K&gt; keySelector;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> Map&lt;K, V&gt; storage = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">long</span> FlushCount;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">long</span> numOfElements = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Output for stream records.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> Collector&lt;OUT&gt; collector;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">LocalAggOperation</span><span class="params">(KeySelector&lt;IN, K&gt; keySelector, <span class="keyword">long</span> flushCount, LocalAggFunction localAggFunction)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.keySelector = keySelector;</span><br><span class="line">        FlushCount = flushCount;</span><br><span class="line">        <span class="keyword">this</span>.function = localAggFunction;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> K <span class="title">getKey</span><span class="params">(IN input)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.keySelector.getKey(input);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> LocalAggFunction&lt;K, V, IN, OUT&gt; function;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.open();</span><br><span class="line">        <span class="keyword">this</span>.collector = <span class="keyword">new</span> StreamRecordCollector&lt;&gt;(output);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(StreamRecord&lt;IN&gt; element)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        IN elementValue = element.getValue();</span><br><span class="line"></span><br><span class="line">        K key = keySelector.getKey(elementValue);</span><br><span class="line"></span><br><span class="line">        V value = storage.get(key);</span><br><span class="line"></span><br><span class="line">        V newValue = function.addInput(value, elementValue);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// update to map bundle</span></span><br><span class="line">        storage.put(key, newValue);</span><br><span class="line"></span><br><span class="line">        numOfElements++;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">if</span> (numOfElements &gt;= FlushCount) &#123;</span><br><span class="line">            function.finishBundle(storage, collector);</span><br><span class="line">            storage.clear();</span><br><span class="line">            numOfElements = <span class="number">0</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            function.finishBundle(storage, collector);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            Exception exception = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">super</span>.close();</span><br><span class="line">                <span class="keyword">if</span> (function != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    FunctionUtils.closeFunction(function);<span class="comment">//执行用户函数的close方法</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException interrupted) &#123;</span><br><span class="line">                exception = interrupted;</span><br><span class="line"></span><br><span class="line">                Thread.currentThread().interrupt();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                exception = e;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (exception != <span class="keyword">null</span>) &#123;</span><br><span class="line">                LOG.warn(<span class="string">"Errors occurred while closing the BundleOperator."</span>, exception);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>StreamRecordCollector主要是实现StreamRecord的复用。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StreamRecordCollector</span>&lt;<span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">Collector</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> StreamRecord&lt;T&gt; element = <span class="keyword">new</span> StreamRecord&lt;&gt;(<span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Output&lt;StreamRecord&lt;T&gt;&gt; underlyingOutput;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">StreamRecordCollector</span><span class="params">(Output&lt;StreamRecord&lt;T&gt;&gt; output)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.underlyingOutput = output;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">collect</span><span class="params">(T record)</span> </span>&#123;</span><br><span class="line">        underlyingOutput.collect(element.replace(record));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        underlyingOutput.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>构建流，其实有两种模式，一种是直接改在DataStream这个类中，一种是另外构建一个类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * creater of bundler operation</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LocalAggBuiler</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;K, V, IN, OUT&gt; <span class="function">SingleOutputStreamOperator&lt;OUT&gt; <span class="title">create</span><span class="params">(LocalAggFunction&lt;K, V, IN, OUT&gt; localAggFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         <span class="keyword">long</span> flushCount,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         KeySelector&lt;IN, K&gt; keySelector,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         DataStream dataStream)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        TypeInformation&lt;OUT&gt; outType = TypeExtractor.getUnaryOperatorReturnType(</span><br><span class="line">                (Function) localAggFunction,</span><br><span class="line">                LocalAggFunction.class,</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                <span class="number">3</span>,</span><br><span class="line">                <span class="keyword">new</span> <span class="keyword">int</span>[]&#123;&#125;,</span><br><span class="line">                dataStream.getType(),</span><br><span class="line">                Utils.getCallLocationName(),</span><br><span class="line">                <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> dataStream.transform(</span><br><span class="line">                <span class="string">"localAgg function"</span>,</span><br><span class="line">                outType,</span><br><span class="line">                <span class="keyword">new</span> LocalAggOperation(keySelector, flushCount, localAggFunction)</span><br><span class="line">        );</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>到这里就完成了开发。看下如何调用.构建一个TestLocalAggFunction类，实现其中的方法，如果有相同的key，字符串拼接，如果满足条件以key=value的形式下发。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TestLocalAggFunction</span> <span class="keyword">extends</span> <span class="title">LocalAggFunction</span>&lt;<span class="title">String</span>, <span class="title">String</span>, <span class="title">Tuple2</span>&lt;<span class="title">String</span>, <span class="title">String</span>&gt;, <span class="title">String</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> finishCount = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">private</span> List&lt;String&gt; outputs = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">addInput</span><span class="params">(@Nullable String value, Tuple2&lt;String, String&gt; input)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (value == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">return</span> input.f1;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> value + <span class="string">","</span> + input.f1;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">finishBundle</span><span class="params">(Map&lt;String, String&gt; buffer, Collector&lt;String&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        finishCount++;</span><br><span class="line">        outputs.clear();</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, String&gt; entry : buffer.entrySet()) &#123;</span><br><span class="line">            out.collect(entry.getKey() + <span class="string">"="</span> + entry.getValue());</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">int</span> <span class="title">getFinishCount</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> finishCount;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function">List&lt;String&gt; <span class="title">getOutputs</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> outputs;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LocalAggTest</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">        env.setParallelism(<span class="number">1</span>);</span><br><span class="line">        List&lt;Tuple2&lt;String, String&gt;&gt; list = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">        list.add(Tuple2.of(<span class="string">"gy"</span>, <span class="string">"s"</span>));</span><br><span class="line">        list.add(Tuple2.of(<span class="string">"gy"</span>, <span class="string">"s"</span>));</span><br><span class="line">        list.add(Tuple2.of(<span class="string">"gy1"</span>, <span class="string">"s"</span>));</span><br><span class="line">        list.add(Tuple2.of(<span class="string">"gy1"</span>, <span class="string">"s"</span>));</span><br><span class="line">        list.add(Tuple2.of(<span class="string">"gy1"</span>, <span class="string">"s"</span>));</span><br><span class="line">        DataStream&lt;Tuple2&lt;String, String&gt;&gt; dataStream = env.fromCollection(list);</span><br><span class="line"></span><br><span class="line">        KeySelector&lt;Tuple2&lt;String, String&gt;, String&gt; keySelector =</span><br><span class="line">                (KeySelector&lt;Tuple2&lt;String, String&gt;, String&gt;) value -&gt; value.f0;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        DataStream&lt;String&gt; bundleStream = LocalAggBuiler.create(<span class="keyword">new</span> TestLocalAggFunction(), <span class="number">3</span>, keySelector, dataStream);</span><br><span class="line">        bundleStream.map(<span class="keyword">new</span> MapFunction&lt;String, String&gt;() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> String <span class="title">map</span><span class="params">(String value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                <span class="keyword">return</span> value;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).print();</span><br><span class="line">        env.execute();</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>结果<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">gy=s,s</span><br><span class="line">gy1=s</span><br><span class="line">guoy1=s,s</span><br></pre></td></tr></table></figure></p>
+<h3 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h3><ol>
+<li>LocalAggOperation里关于count触发计算可以抽出一个抽象类叫做CountLocalTrigger，将触发相关的交给用户来实现。</li>
+<li>可以实现count和time一起避免数据没到一直不下发的情况。（不过会用到localAgg说明数据量不小了，应该不会出现这种，实现价值不高）</li>
+</ol>
+<h3 id="参考code"><a href="#参考code" class="headerlink" title="参考code"></a>参考code</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.annotation.Internal;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.operators.Output;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.runtime.streamrecord.StreamRecord;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Wrapper around an &#123;<span class="doctag">@link</span> Output&#125; for wrap &#123;<span class="doctag">@code</span> T&#125; to &#123;<span class="doctag">@link</span> StreamRecord&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;T&gt; The type of the elements that can be emitted.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Internal</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StreamRecordCollector</span>&lt;<span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">Collector</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> StreamRecord&lt;T&gt; element = <span class="keyword">new</span> StreamRecord&lt;&gt;(<span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Output&lt;StreamRecord&lt;T&gt;&gt; underlyingOutput;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">StreamRecordCollector</span><span class="params">(Output&lt;StreamRecord&lt;T&gt;&gt; output)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.underlyingOutput = output;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">collect</span><span class="params">(T record)</span> </span>&#123;</span><br><span class="line">        underlyingOutput.collect(element.replace(record));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        underlyingOutput.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> study.flink.bundle.trigger.BundleTrigger;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.functions.KeySelector;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * The &#123;<span class="doctag">@link</span> MapBundleOperator&#125; uses a &#123;<span class="doctag">@link</span> KeySelector&#125; to extract bundle key, thus can be</span></span><br><span class="line"><span class="comment"> * used with non-keyed-stream.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MapBundleOperator</span>&lt;<span class="title">K</span>, <span class="title">V</span>, <span class="title">IN</span>, <span class="title">OUT</span>&gt; <span class="keyword">extends</span> <span class="title">AbstractMapBundleOperator</span>&lt;<span class="title">K</span>, <span class="title">V</span>, <span class="title">IN</span>, <span class="title">OUT</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">1L</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * KeySelector is used to extract key for bundle map.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> KeySelector&lt;IN, K&gt; keySelector;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MapBundleOperator</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">            MapBundleFunction&lt;K, V, IN, OUT&gt; function,</span></span></span><br><span class="line"><span class="function"><span class="params">            BundleTrigger&lt;IN&gt; bundleTrigger,</span></span></span><br><span class="line"><span class="function"><span class="params">            KeySelector&lt;IN, K&gt; keySelector)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(function, bundleTrigger);</span><br><span class="line">        <span class="keyword">this</span>.keySelector = keySelector;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> K <span class="title">getKey</span><span class="params">(IN input)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">this</span>.keySelector.getKey(input);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.Function;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> javax.annotation.Nullable;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Basic interface for map bundle processing.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;K&gt;   The type of the key in the bundle map</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;V&gt;   The type of the value in the bundle map</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;IN&gt;  Type of the input elements.</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;OUT&gt; Type of the returned elements.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">MapBundleFunction</span>&lt;<span class="title">K</span>, <span class="title">V</span>, <span class="title">IN</span>, <span class="title">OUT</span>&gt; <span class="keyword">implements</span> <span class="title">Function</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = -<span class="number">6672219582127325882L</span>;</span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">    protected transient ExecutionContext ctx;</span></span><br><span class="line"><span class="comment"></span></span><br><span class="line"><span class="comment">    public void open(ExecutionContext ctx) throws Exception &#123;</span></span><br><span class="line"><span class="comment">        this.ctx = Preconditions.checkNotNull(ctx);</span></span><br><span class="line"><span class="comment">    &#125;*/</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Adds the given input to the given value, returning the new bundle value.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> value the existing bundle value, maybe null</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> input the given input, not null</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> V <span class="title">addInput</span><span class="params">(@Nullable V value, IN input)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Called when a bundle is finished. Transform a bundle to zero, one, or more output elements.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">finishBundle</span><span class="params">(Map&lt;K, V&gt; buffer, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> study.flink.bundle.trigger.BundleTrigger;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.Function;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.typeinfo.TypeInformation;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.Utils;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.functions.KeySelector;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.typeutils.TypeExtractor;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.datastream.DataStream;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.datastream.SingleOutputStreamOperator;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * creater of bundler operation</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BundlerBuilder</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;K, V, IN, OUT&gt; <span class="function">SingleOutputStreamOperator&lt;OUT&gt; <span class="title">bundle</span><span class="params">(MapBundleFunction&lt;K, V, IN, OUT&gt; mapBundleFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         BundleTrigger&lt;IN&gt; bundleTrigger,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         KeySelector&lt;IN, K&gt; keySelector,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         DataStream dataStream,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         <span class="keyword">int</span> parallelism)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        TypeInformation&lt;OUT&gt; outType = TypeExtractor.getUnaryOperatorReturnType(</span><br><span class="line">                (Function) mapBundleFunction,</span><br><span class="line">                MapBundleFunction.class,</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                <span class="number">3</span>,</span><br><span class="line">                <span class="keyword">new</span> <span class="keyword">int</span>[]&#123;&#125;,</span><br><span class="line">                dataStream.getType(),</span><br><span class="line">                Utils.getCallLocationName(),</span><br><span class="line">                <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> dataStream.transform(</span><br><span class="line">                <span class="string">"bundle function"</span>,</span><br><span class="line">                outType,</span><br><span class="line">                <span class="keyword">new</span> MapBundleOperator(mapBundleFunction, bundleTrigger, keySelector)</span><br><span class="line">        ).setParallelism(parallelism);</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> &lt;K, V, IN, OUT&gt; <span class="function">SingleOutputStreamOperator&lt;OUT&gt; <span class="title">bundle</span><span class="params">(MapBundleFunction&lt;K, V, IN, OUT&gt; mapBundleFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         BundleTrigger&lt;IN&gt; bundleTrigger,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         KeySelector&lt;IN, K&gt; keySelector,</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         DataStream dataStream</span></span></span><br><span class="line"><span class="function"><span class="params">                                                                         )</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">        TypeInformation&lt;OUT&gt; outType = TypeExtractor.getUnaryOperatorReturnType(</span><br><span class="line">                (Function) mapBundleFunction,</span><br><span class="line">                MapBundleFunction.class,</span><br><span class="line">                <span class="number">2</span>,</span><br><span class="line">                <span class="number">3</span>,</span><br><span class="line">                <span class="keyword">new</span> <span class="keyword">int</span>[]&#123;&#125;,</span><br><span class="line">                dataStream.getType(),</span><br><span class="line">                Utils.getCallLocationName(),</span><br><span class="line">                <span class="keyword">true</span>);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> dataStream.transform(</span><br><span class="line">                <span class="string">"bundle function"</span>,</span><br><span class="line">                outType,</span><br><span class="line">                <span class="keyword">new</span> MapBundleOperator(mapBundleFunction, bundleTrigger, keySelector)</span><br><span class="line">        );</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> study.flink.bundle.trigger.BundleTrigger;</span><br><span class="line"><span class="keyword">import</span> study.flink.bundle.trigger.BundleTriggerCallback;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.util.FunctionUtils;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Gauge;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.operators.AbstractStreamOperator;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.operators.ChainingStrategy;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.operators.OneInputStreamOperator;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.watermark.Watermark;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.runtime.streamrecord.StreamRecord;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.HashMap;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="keyword">static</span> org.apache.flink.util.Preconditions.checkNotNull;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractMapBundleOperator</span>&lt;<span class="title">K</span>, <span class="title">V</span>, <span class="title">IN</span>, <span class="title">OUT</span>&gt; <span class="keyword">extends</span> <span class="title">AbstractStreamOperator</span>&lt;<span class="title">OUT</span>&gt;</span></span><br><span class="line"><span class="class">        <span class="keyword">implements</span> <span class="title">OneInputStreamOperator</span>&lt;<span class="title">IN</span>, <span class="title">OUT</span>&gt;, <span class="title">BundleTriggerCallback</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * The map in heap to store elements.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> Map&lt;K, V&gt; bundle;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * The trigger that determines how many elements should be put into a bundle.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> BundleTrigger&lt;IN&gt; bundleTrigger;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * The function used to process when receiving element.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> MapBundleFunction&lt;K, V, IN, OUT&gt; function;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Output for stream records.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> Collector&lt;OUT&gt; collector;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">transient</span> <span class="keyword">int</span> numOfElements = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    AbstractMapBundleOperator(</span><br><span class="line">            MapBundleFunction&lt;K, V, IN, OUT&gt; function,</span><br><span class="line">            BundleTrigger&lt;IN&gt; bundleTrigger) &#123;</span><br><span class="line">        chainingStrategy = ChainingStrategy.ALWAYS;</span><br><span class="line">        <span class="keyword">this</span>.function = checkNotNull(function, <span class="string">"function is null"</span>);</span><br><span class="line">        <span class="keyword">this</span>.bundleTrigger = checkNotNull(bundleTrigger, <span class="string">"bundleTrigger is null"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.open();</span><br><span class="line">        <span class="keyword">this</span>.numOfElements = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">this</span>.collector = <span class="keyword">new</span> StreamRecordCollector&lt;&gt;(output);</span><br><span class="line">        <span class="keyword">this</span>.bundle = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">        bundleTrigger.registerCallback(<span class="keyword">this</span>);</span><br><span class="line">        <span class="comment">// reset trigger</span></span><br><span class="line">        bundleTrigger.reset();</span><br><span class="line"></span><br><span class="line">        LOG.info(<span class="string">"BundleOperator's trigger info: "</span> + bundleTrigger.explain());</span><br><span class="line"></span><br><span class="line">        <span class="comment">// counter metric to get the size of bundle</span></span><br><span class="line">        getRuntimeContext().getMetricGroup().gauge(<span class="string">"bundleSize"</span>, (Gauge&lt;Integer&gt;) () -&gt; numOfElements);</span><br><span class="line"></span><br><span class="line">        getRuntimeContext().getMetricGroup().gauge(<span class="string">"bundleRatio"</span>, (Gauge&lt;Double&gt;) () -&gt; &#123;</span><br><span class="line">            <span class="keyword">int</span> numOfKeys = bundle.size();</span><br><span class="line">            <span class="keyword">if</span> (numOfKeys == <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="number">0.0</span>;</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="number">1.0</span> * numOfElements / numOfKeys;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(StreamRecord&lt;IN&gt; element)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// get the key and value for the map bundle</span></span><br><span class="line">        <span class="keyword">final</span> IN input = element.getValue();</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> K bundleKey = getKey(input);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> V bundleValue = bundle.get(bundleKey);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// get a new value after adding this element to bundle</span></span><br><span class="line">        <span class="keyword">final</span> V newBundleValue = function.addInput(bundleValue, input);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// update to map bundle</span></span><br><span class="line">        bundle.put(bundleKey, newBundleValue);</span><br><span class="line"></span><br><span class="line">        numOfElements++;</span><br><span class="line">        bundleTrigger.onElement(input);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">finishBundle</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (!bundle.isEmpty()) &#123;</span><br><span class="line">            numOfElements = <span class="number">0</span>;</span><br><span class="line">            function.finishBundle(bundle, collector);</span><br><span class="line">            bundle.clear();</span><br><span class="line">        &#125;</span><br><span class="line">        bundleTrigger.reset();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processWatermark</span><span class="params">(Watermark mark)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        finishBundle();</span><br><span class="line">        <span class="keyword">super</span>.processWatermark(mark);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">prepareSnapshotPreBarrier</span><span class="params">(<span class="keyword">long</span> checkpointId)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        finishBundle();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            finishBundle();</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            Exception exception = <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">super</span>.close();</span><br><span class="line">                <span class="keyword">if</span> (function != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    FunctionUtils.closeFunction(function);<span class="comment">//执行用户函数的close方法</span></span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (InterruptedException interrupted) &#123;</span><br><span class="line">                exception = interrupted;</span><br><span class="line"></span><br><span class="line">                Thread.currentThread().interrupt();</span><br><span class="line">            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                exception = e;</span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (exception != <span class="keyword">null</span>) &#123;</span><br><span class="line">                LOG.warn(<span class="string">"Errors occurred while closing the BundleOperator."</span>, exception);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Get the key for current processing element, which will be used as the map bundle's key.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="keyword">abstract</span> K <span class="title">getKey</span><span class="params">(<span class="keyword">final</span> IN input)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle.trigger;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.annotation.Internal;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.Serializable;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * A &#123;<span class="doctag">@link</span> BundleTrigger&#125; determines when a bundle of input elements should be evaluated and</span></span><br><span class="line"><span class="comment"> * trigger the callback which registered previously.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;T&gt; The input element type.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Internal</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BundleTrigger</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Register a callback which will be called once this trigger decides to finish this bundle.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerCallback</span><span class="params">(BundleTriggerCallback callback)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Called for every element that gets added to the bundle. If the trigger decides to start</span></span><br><span class="line"><span class="comment">     * evaluate the input, &#123;<span class="doctag">@link</span> BundleTriggerCallback#finishBundle()&#125; should be invoked.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> element The element that arrived.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">onElement</span><span class="params">(<span class="keyword">final</span> T element)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Reset the trigger to its initiate status.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">reset</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function">String <span class="title">explain</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle.trigger;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.annotation.Internal;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Interface for bundle trigger callbacks that can be registered to a &#123;<span class="doctag">@link</span> BundleTrigger&#125;.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Internal</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BundleTriggerCallback</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * This method is invoked to finish current bundle and start a new one when the trigger was fired.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@throws</span> Exception This method may throw exceptions. Throwing an exception will cause the operation</span></span><br><span class="line"><span class="comment">     * to fail and may trigger recovery.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">finishBundle</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> study.flink.bundle.trigger;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.annotation.Internal;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.io.Serializable;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * A &#123;<span class="doctag">@link</span> BundleTrigger&#125; determines when a bundle of input elements should be evaluated and</span></span><br><span class="line"><span class="comment"> * trigger the callback which registered previously.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;T&gt; The input element type.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Internal</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">BundleTrigger</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Register a callback which will be called once this trigger decides to finish this bundle.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">registerCallback</span><span class="params">(BundleTriggerCallback callback)</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Called for every element that gets added to the bundle. If the trigger decides to start</span></span><br><span class="line"><span class="comment">     * evaluate the input, &#123;<span class="doctag">@link</span> BundleTriggerCallback#finishBundle()&#125; should be invoked.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> element The element that arrived.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">onElement</span><span class="params">(<span class="keyword">final</span> T element)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Reset the trigger to its initiate status.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">reset</span><span class="params">()</span></span>;</span><br><span class="line"></span><br><span class="line">    <span class="function">String <span class="title">explain</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://mp.weixin.qq.com/s?__biz=MzI0NTIxNzE1Ng==&amp;mid=2651217184&amp;idx=1&amp;sn=65da0d5eb9a8f6495c7e53d8fc1e11f9&amp;chksm=f2a31fcbc5d496dd13a6bca6169398d733b62b3980833e170793bde621d3876ae37637853f6b&amp;mpshare=1&amp;scene=1&amp;srcid=0802JsqNqF81zenG78BCNI3i&amp;sharer_sharetime=1564757862875&amp;sharer_shareid=797dbcdd3a4e624875c639b16a4ef5d9&amp;key=6cd3c34421b09586e61385eb3b6f3b9cfdd05b739bfeed6fc1e4fa68ca2a5aac712193b4d850a44facb6eaf6565d321066f90eeda6e466cb5da193e9f0ab82c45e7b5ef23e75c66a7bf850734d6ca5cb&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+7&amp;version=62060833&amp;lang=zh_CN&amp;pass_ticket=gV0s9pD7VKBTVznGaxHDu4CFeto3SssDnyhskiwLmml7tHl5ipJiMG%2BZktlqrVEi" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?__biz=MzI0NTIxNzE1Ng==&amp;mid=2651217184&amp;idx=1&amp;sn=65da0d5eb9a8f6495c7e53d8fc1e11f9&amp;chksm=f2a31fcbc5d496dd13a6bca6169398d733b62b3980833e170793bde621d3876ae37637853f6b&amp;mpshare=1&amp;scene=1&amp;srcid=0802JsqNqF81zenG78BCNI3i&amp;sharer_sharetime=1564757862875&amp;sharer_shareid=797dbcdd3a4e624875c639b16a4ef5d9&amp;key=6cd3c34421b09586e61385eb3b6f3b9cfdd05b739bfeed6fc1e4fa68ca2a5aac712193b4d850a44facb6eaf6565d321066f90eeda6e466cb5da193e9f0ab82c45e7b5ef23e75c66a7bf850734d6ca5cb&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+7&amp;version=62060833&amp;lang=zh_CN&amp;pass_ticket=gV0s9pD7VKBTVznGaxHDu4CFeto3SssDnyhskiwLmml7tHl5ipJiMG%2BZktlqrVEi</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/07/28/Flink-通信机制和背压处理/" rel="next" title="Flink 通信机制和背压处理">
+                <i class="fa fa-chevron-left"></i> Flink 通信机制和背压处理
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/08/10/Flink-的-Exactly-Once-和-At-Least-Once-和-Jstorm的ACK/" rel="prev" title="Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK">
+                Flink 的 Exactly Once 和 At Least Once  和 Jstorm的ACK <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#Local-Keyed-Streams"><span class="nav-number"></span> <span class="nav-text">Local Keyed Streams</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#解决思路"><span class="nav-number">1.</span> <span class="nav-text">解决思路</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#设计思路"><span class="nav-number">1.1.</span> <span class="nav-text">设计思路</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#实现一个基于条数为触发条件的LocalAgg"><span class="nav-number">1.2.</span> <span class="nav-text">实现一个基于条数为触发条件的LocalAgg</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#优化"><span class="nav-number">2.</span> <span class="nav-text">优化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#参考code"><span class="nav-number">3.</span> <span class="nav-text">参考code</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">4.</span> <span class="nav-text">Reference</span></a></li></ol></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

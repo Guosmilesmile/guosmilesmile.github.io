@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="本文也是通过上述流程一步步解决了线上任务的问题，整体流程：  看到现象猜想可能是序列化有问题 修改 StateBackend 后结果正确，验证了猜想的正确性 解释了为什么 LinkedHashMap 会序列化出错 列出了具体的解决方案，解决方案可以举一反三（以后类似情况都可以使用本文的序列化方案）  异常现象任务在测试环境运行符合预期，在线上环境运行有个数据每次都是最新的值，不会计算累计值了。 怀">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 实战采坑记之 Kryo 序列化">
+<meta property="og:url" content="http://yoursite.com/2021/05/02/Flink-实战采坑记之-Kryo-序列化/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="本文也是通过上述流程一步步解决了线上任务的问题，整体流程：  看到现象猜想可能是序列化有问题 修改 StateBackend 后结果正确，验证了猜想的正确性 解释了为什么 LinkedHashMap 会序列化出错 列出了具体的解决方案，解决方案可以举一反三（以后类似情况都可以使用本文的序列化方案）  异常现象任务在测试环境运行符合预期，在线上环境运行有个数据每次都是最新的值，不会计算累计值了。 怀">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/9B63B913DB874CCABFAD9E75CE22A5F8?method=download&shareKey=17d9e936ae19575a4235166879e962e0">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/908FABBA717C463CA8508EA7D34392CF?method=download&shareKey=ab6483fd0896b68180dcc2e7ec2d0d8f">
+<meta property="og:updated_time" content="2021-05-02T07:23:26.468Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 实战采坑记之 Kryo 序列化">
+<meta name="twitter:description" content="本文也是通过上述流程一步步解决了线上任务的问题，整体流程：  看到现象猜想可能是序列化有问题 修改 StateBackend 后结果正确，验证了猜想的正确性 解释了为什么 LinkedHashMap 会序列化出错 列出了具体的解决方案，解决方案可以举一反三（以后类似情况都可以使用本文的序列化方案）  异常现象任务在测试环境运行符合预期，在线上环境运行有个数据每次都是最新的值，不会计算累计值了。 怀">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/9B63B913DB874CCABFAD9E75CE22A5F8?method=download&shareKey=17d9e936ae19575a4235166879e962e0">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2021/05/02/Flink-实战采坑记之-Kryo-序列化/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink 实战采坑记之 Kryo 序列化 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/05/02/Flink-实战采坑记之-Kryo-序列化/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink 实战采坑记之 Kryo 序列化
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-05-02 15:14:32 / 修改时间：15:23:26" itemprop="dateCreated datePublished" datetime="2021-05-02T15:14:32+08:00">2021-05-02</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>本文也是通过上述流程一步步解决了线上任务的问题，整体流程：</p>
+<ol>
+<li>看到现象猜想可能是序列化有问题</li>
+<li>修改 StateBackend 后结果正确，验证了猜想的正确性</li>
+<li>解释了为什么 LinkedHashMap 会序列化出错</li>
+<li>列出了具体的解决方案，解决方案可以举一反三（以后类似情况都可以使用本文的序列化方案）</li>
+</ol>
+<h3 id="异常现象"><a href="#异常现象" class="headerlink" title="异常现象"></a>异常现象</h3><p>任务在测试环境运行符合预期，在线上环境运行有个数据每次都是最新的值，不会计算累计值了。</p>
+<p>怀疑 LinkedHashMap 序列化有问题，为什么会这么怀疑呢？</p>
+<p>因为之前这里使用的 guava 的 Cache，但 guava 的 Cache 不支持序列化，所以换成了 LinkedHashMap，但好像 LinkedHashMap 也没那么容易序列化。</p>
+<h4 id="Flink-哪些场景需要对数据进行序列化和反序列化？"><a href="#Flink-哪些场景需要对数据进行序列化和反序列化？" class="headerlink" title="Flink 哪些场景需要对数据进行序列化和反序列化？"></a>Flink 哪些场景需要对数据进行序列化和反序列化？</h4><ul>
+<li>上下游数据传输</li>
+<li>读写 RocksDB 中的 State 数据</li>
+<li>从 Savepoint 或 Checkpoint 中恢复状态数据</li>
+</ul>
+<p>memory 或 filesystem 模式下，State 数据存在内存中，所以每次读写并不需要序列化和反序列化。</p>
+<p>第一部分异常现象是任务在测试环境运行符合预期主要是因为测试环境 StateBackend 使用的 filesystem，所以没走序列化相关的逻辑，线上使用的是 RocksDB。</p>
+<p>但如果状态中的数据类型序列化存在问题，是不是从 RocksDB 切到 memory 或 filesystem 模式就可以了呢？</p>
+<p>不行，如果从 Checkpoint 和 Savepoint 恢复还需要走序列化逻辑，还是不能正常恢复。</p>
+<h4 id="验证是否是序列化导致结果统计出错"><a href="#验证是否是序列化导致结果统计出错" class="headerlink" title="验证是否是序列化导致结果统计出错"></a>验证是否是序列化导致结果统计出错</h4><p>线上环境将 RocksDB 改为 filesystem，结果就正确了，于是断定是因为序列化导致的结果错误。</p>
+<p>具体到代码就是 LinkedHashMap 不能被 Kryo 正确地序列化和反序列化。</p>
+<h4 id="LinkedHashMap-如何使用？"><a href="#LinkedHashMap-如何使用？" class="headerlink" title="LinkedHashMap 如何使用？"></a>LinkedHashMap 如何使用？</h4><p>LinkedHashMap 是 HashMap 的子类，相比 HashMap 增加了基于 LRU 的淘汰策略。</p>
+<p>所以一般使用 LinkedHashMap 都是要使用其剔除策略功能，如果不需要该功能，HashMap 即可满足业务需求。</p>
+<p>使用 LinkedHashMap 的代码一般会这么搞，搞一个 LinkedHashMap 的匿名内部类，并重写 LinkedHashMap 的 removeEldestEntry 方法，当 LinkedHashMap 中元素个数超过 maxSize 时，就会根据 LRU 策略，将最久没被使用过的数据从 LinkedHashMap 中剔除。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> LinkedHashMap&lt;K, V&gt;() &#123;</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">removeEldestEntry</span><span class="params">(Map.Entry&lt;K, V&gt; eldest)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> size() &gt; maxSize;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>如果上述 Flink 的 State 中存储了上述的 LinkedHashMap 对象，将会出问题。为什么呢？</p>
+<p>答：Kryo 「不支持匿名类」，反序列化时往往会产生错误的数据（这比报错更加危险），请尽量不要使用匿名类传递数据。</p>
+<p>Kryo 反序列化时，默认根据对象的无参构造器通过反射机制创建对象，匿名内部类哪来的无参构造器。</p>
+<p>注：上述操作确实危险，Flink 如果直接报错反序列异常还好，用户可以直接定位到问题。现在的现象是 Flink 序列化不报错，只是跑出来的结果是错的，很蛋疼。</p>
+<h4 id="解决方案"><a href="#解决方案" class="headerlink" title="解决方案"></a>解决方案</h4><p>匿名内部类改写成普通类</p>
+<h4 id="现象"><a href="#现象" class="headerlink" title="现象"></a>现象</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LinkedHashMapEnhance</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">LinkedHashMap</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; </span>&#123;</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">int</span> maxSize;</span><br><span class="line"> </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">LinkedHashMapEnhance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>();</span><br><span class="line">    maxSize = Integer.MAX_VALUE;</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="title">LinkedHashMapEnhance</span><span class="params">(<span class="keyword">int</span> maxSize)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">super</span>();</span><br><span class="line">    <span class="keyword">this</span>.maxSize = maxSize;</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">getMaxSize</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> maxSize;</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">protected</span> <span class="keyword">boolean</span> <span class="title">removeEldestEntry</span><span class="params">(Map.Entry&lt;K, V&gt; eldest)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> size() &gt; maxSize;</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="string">"LinkedHashMapEnhance : "</span> + <span class="keyword">super</span>.toString() + <span class="string">" maxSize:"</span> + maxSize;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>LinkedHashMapEnhance 类继承 LinkedHashMap，且增加了 maxSize 的功能。</p>
+<p>之后直接使用 LinkedHashMapEnhance 类即可，但是还存在问题：「maxSize 变量不能被正常的反序列化」。</p>
+<p>因为 LinkedHashMapEnhance 实现了 Map 接口，都会默认走 kryo 对 Map 序列化的通用逻辑。</p>
+<h4 id="kryo-中的-MapSerializer-实现原理"><a href="#kryo-中的-MapSerializer-实现原理" class="headerlink" title="kryo 中的 MapSerializer 实现原理"></a>kryo 中的 MapSerializer 实现原理</h4><p>kryo 代码中的 MapSerializer 类封装了通用的 Map 类型序列化和反序列化逻辑。</p>
+<p>其中 write 方法表示序列化，read 方法表示反序列化。</p>
+<p>序列化逻辑：<br>write 方法精简后的截图如下所示，大概逻辑：调用 Map 的迭代器，将 map 中所有 Key Value 数据遍历出来，依次序列化。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/9B63B913DB874CCABFAD9E75CE22A5F8?method=download&amp;shareKey=17d9e936ae19575a4235166879e962e0" alt="image"></p>
+<p>反序列化逻辑：<br>read 方法精简后的截图如下所示，大概逻辑：反序列化出所有 Key Value 的数据，依次 put 到 Map 中。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/908FABBA717C463CA8508EA7D34392CF?method=download&amp;shareKey=ab6483fd0896b68180dcc2e7ec2d0d8f" alt="image"></p>
+<p>由上述原理分析可知：</p>
+<p>Map 默认的序列化器只会序列化 Key Value 的数据，并没有序列化我们自定义的 maxSize 变量。</p>
+<p>所以反序列化出来的 LinkedHashMapEnhance 类功能并不完善，maxSize 默认值为 Integer.MAX_VALUE，相当于没有容量上限，缺失了数据淘汰的功能。</p>
+<p>庆幸的是 Kryo 支持用户自定义序列化器，我们可以为 LinkedHashMapEnhance 类定义特定的序列化器。</p>
+<h4 id="自定义序列化器"><a href="#自定义序列化器" class="headerlink" title="自定义序列化器"></a>自定义序列化器</h4><p>自定义序列化器只需要实现 Kryo 的 Serializer 接口，并重写 read 和 write 方法即可。</p>
+<p>序列化时，模仿 MapSerializer 将 map 的容量、maxSize、所有的 kv 数据依次序列化即可。反序列化也是类似。</p>
+<p>具体代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">LinkedHashSetSerializer</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt; <span class="keyword">extends</span> <span class="title">Serializer</span>&lt;<span class="title">LinkedHashMapEnhance</span>&lt;<span class="title">K</span>, <span class="title">V</span>&gt;&gt; <span class="keyword">implements</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = -<span class="number">3335512745506751743L</span>;</span><br><span class="line"> </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">write</span><span class="params">(Kryo kryo, Output output, LinkedHashMapEnhance&lt;K, V&gt; linkedHashMapEnhance)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 序列化 map 的容量和 maxSize</span></span><br><span class="line">    kryo.writeObject(output, linkedHashMapEnhance.size());</span><br><span class="line">    kryo.writeObject(output, linkedHashMapEnhance.getMaxSize());</span><br><span class="line"> </span><br><span class="line">    <span class="comment">// 迭代器遍历一条条数据，将其序列化写出到 output</span></span><br><span class="line">    <span class="keyword">for</span> (Map.Entry&lt;K, V&gt; entry : linkedHashMapEnhance.entrySet()) &#123;</span><br><span class="line">      kryo.writeClassAndObject(output, entry.getKey());</span><br><span class="line">      kryo.writeClassAndObject(output, entry.getValue());</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"> </span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> LinkedHashMapEnhance&lt;K, V&gt; <span class="title">read</span><span class="params">(Kryo kryo, Input input, Class&lt;LinkedHashMapEnhance&lt;K, V&gt;&gt; aClass)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 先读取 map 的容量和 maxSize</span></span><br><span class="line">    <span class="keyword">int</span> size = kryo.readObject(input, Integer.class);</span><br><span class="line">    <span class="keyword">int</span> maxSize = kryo.readObject(input, Integer.class);</span><br><span class="line">    <span class="comment">// 构造 LinkedHashMapEnhance</span></span><br><span class="line">    LinkedHashMapEnhance&lt;K, V&gt; map = <span class="keyword">new</span> LinkedHashMapEnhance&lt;&gt;(maxSize);</span><br><span class="line"> </span><br><span class="line">    <span class="comment">// for 循环遍历 size 次，每次读取出 key 和 value，并将其插入到 map 中</span></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; size; i++) &#123;</span><br><span class="line">      K key = (K) kryo.readClassAndObject(input);</span><br><span class="line">      V value = (V) kryo.readClassAndObject(input);</span><br><span class="line">      map.put(key, value);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> map;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>最后只需要将序列化器注册给 Kyro 即可。原生的 Kryo 和 Flink 注册方式稍有不同，不过非常类似。</p>
+<p>代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 原生 kryo 的注册方式</span></span><br><span class="line">Kryo kryo = <span class="keyword">new</span> Kryo();</span><br><span class="line">kryo.register(LinkedHashSet.class, <span class="keyword">new</span> LinkedHashSetSerializer());</span><br><span class="line"> </span><br><span class="line"><span class="comment">// Flink 的注册方式</span></span><br><span class="line">env.getConfig().registerTypeWithKryoSerializer(LinkedHashSet.class, LinkedHashSetSerializer.class);</span><br></pre></td></tr></table></figure>
+<p>当然如果你是平台方，想让用户通过参数传递来注册 Kryo 序列化，可以通过反射的方式实现。</p>
+<p>使用反射注册的代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// 要序列化的类名及序列化器的类名使用参数传递</span></span><br><span class="line">String className = <span class="string">"com.dream.flink.kryo.LinkedHashSet"</span>;</span><br><span class="line">String serializerClassName = <span class="string">"com.dream.flink.kryo.LinkedHashSetSerializer"</span>;</span><br><span class="line"> </span><br><span class="line"><span class="comment">// 原生 kryo 的注册方式</span></span><br><span class="line">Kryo kryo = <span class="keyword">new</span> Kryo();</span><br><span class="line">kryo.register(Class.forName(className),</span><br><span class="line">        (Serializer) Class.forName(serializerClassName).newInstance());</span><br><span class="line"> </span><br><span class="line"><span class="comment">// Flink 的注册方式</span></span><br><span class="line">env.getConfig().registerTypeWithKryoSerializer(Class.forName(className),</span><br><span class="line">                                               Class.forName(serializerClassName));</span><br></pre></td></tr></table></figure>
+<h2 id="reduce导致yarn容器挂掉"><a href="#reduce导致yarn容器挂掉" class="headerlink" title="reduce导致yarn容器挂掉"></a>reduce导致yarn容器挂掉</h2><ol>
+<li>服务器load值500+，无法界定是因为load值高导致容器被yarn认为异常剔除还是其他原因。</li>
+<li>cpu普通很低</li>
+<li>iotop查看到磁盘写入很高直接将load跑高，abrt-hook-ccpp 有多个进程 </li>
+</ol>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">abrt-hook-ccpp 是linux的程序，在进程崩溃的时候会将内存快照等信息dump到磁盘</span><br></pre></td></tr></table></figure>
+<h4 id="分析"><a href="#分析" class="headerlink" title="分析"></a>分析</h4><ol>
+<li>首先排除因为计算导致的cpu异常</li>
+<li>内存可能是一个导致爆炸的原因<br>通过修改读取数据的大小，将数据压到200M，依旧出现这种情况，当时提供的服务器是5台，每台98G。开始出现灵异事件。</li>
+<li>将reduce内的操作全部剔除直接返回，程序正常运行。</li>
+<li>重点分析reduce内的操作.</li>
+</ol>
+<h2 id="个人案例"><a href="#个人案例" class="headerlink" title="个人案例"></a>个人案例</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">.reduce(<span class="keyword">new</span> ReduceFunction&lt;DuplicateEntity&gt;() &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> DuplicateEntity <span class="title">reduce</span><span class="params">(DuplicateEntity value1, DuplicateEntity value2)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        RangeLestEntity rangeEntities = value1.getRangeEntities();</span><br><span class="line">        RangeLestEntity rangeEntities2 = value2.getRangeEntities();</span><br><span class="line">        <span class="keyword">for</span> (RangeEntity rangeEntity : rangeEntities2.getTreeSet()) &#123;</span><br><span class="line">            rangeEntities.addRange(rangeEntity);</span><br><span class="line">        &#125;</span><br><span class="line">        value1.setRangeEntities(rangeEntities);</span><br><span class="line">        <span class="keyword">return</span> value1;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;)</span><br></pre></td></tr></table></figure>
+<p>只很对RangeLestEntity这个实体进行操作。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//异常类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RangeLestEntity</span> <span class="keyword">extends</span> <span class="title">TreeSet</span>&lt;<span class="title">RangeEntity</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 自定义addRange方法</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>将该类修改为如下操作，运行正常。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//正常运行类</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RangeLestEntity</span>  </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> TreeSet&lt;RangeEntity&gt; treeSet = <span class="keyword">new</span> TreeSet&lt;&gt;();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 自定义addRange方法</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果是继承treeSet在序列化传输的时候，通过set序列化器的时候，没办法把自定义方法传递过去。所有会有问题。</p>
+<p>如果是作为一个实体，那么就不会使用set的序列化器去序列化</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://mp.weixin.qq.com/s/GJjZxpq4FIl4eiM_PQrdyA" target="_blank" rel="noopener">https://mp.weixin.qq.com/s/GJjZxpq4FIl4eiM_PQrdyA</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/11/21/Calcite-RBO-出现-VALUES导致sql变型/" rel="next" title="Calcite RBO 出现 VALUES导致sql变型">
+                <i class="fa fa-chevron-left"></i> Calcite RBO 出现 VALUES导致sql变型
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/05/15/Flink-on-YARN时，如何确定TaskManager数/" rel="prev" title="Flink on YARN时，如何确定TaskManager数">
+                Flink on YARN时，如何确定TaskManager数 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#异常现象"><span class="nav-number">1.</span> <span class="nav-text">异常现象</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Flink-哪些场景需要对数据进行序列化和反序列化？"><span class="nav-number">1.1.</span> <span class="nav-text">Flink 哪些场景需要对数据进行序列化和反序列化？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#验证是否是序列化导致结果统计出错"><span class="nav-number">1.2.</span> <span class="nav-text">验证是否是序列化导致结果统计出错</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#LinkedHashMap-如何使用？"><span class="nav-number">1.3.</span> <span class="nav-text">LinkedHashMap 如何使用？</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#解决方案"><span class="nav-number">1.4.</span> <span class="nav-text">解决方案</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#现象"><span class="nav-number">1.5.</span> <span class="nav-text">现象</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#kryo-中的-MapSerializer-实现原理"><span class="nav-number">1.6.</span> <span class="nav-text">kryo 中的 MapSerializer 实现原理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#自定义序列化器"><span class="nav-number">1.7.</span> <span class="nav-text">自定义序列化器</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#reduce导致yarn容器挂掉"><span class="nav-number"></span> <span class="nav-text">reduce导致yarn容器挂掉</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#分析"><span class="nav-number">0.1.</span> <span class="nav-text">分析</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#个人案例"><span class="nav-number"></span> <span class="nav-text">个人案例</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">1.</span> <span class="nav-text">Reference</span></a></li></ol></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

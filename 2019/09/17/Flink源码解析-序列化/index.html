@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="TypeInformation 类是描述一切类型的公共基类，它和它的所有子类必须可序列化（Serializable），因为类型信息将会伴随 Flink 的作业提交，被传递给每个执行节点。 类型信息由 TypeInformation 类表示，TypeInformation 支持以下几种类型：  BasicTypeInfo: 任意Java 基本类型（装箱的）或 String 类型。 BasicArra">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析  序列化">
+<meta property="og:url" content="http://yoursite.com/2019/09/17/Flink源码解析-序列化/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="TypeInformation 类是描述一切类型的公共基类，它和它的所有子类必须可序列化（Serializable），因为类型信息将会伴随 Flink 的作业提交，被传递给每个执行节点。 类型信息由 TypeInformation 类表示，TypeInformation 支持以下几种类型：  BasicTypeInfo: 任意Java 基本类型（装箱的）或 String 类型。 BasicArra">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/9B6167B879D44D0897292590B37E9D61?method=download&shareKey=475b5c6e1e1984afcbc727f42d246e3c">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/4FE22225B71B474A834F13F69B7C789E?method=download&shareKey=54f98b410bf649be112f69db79b4afc7">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/11B1637FC25C4C3686FAD944DCA964FF?method=download&shareKey=d3c087ab46b1888a2002fc238598ef44">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/86CB5AB7CCAE4DB8AB9F185D0860CA82?method=download&shareKey=a3527963a8da3fadb9da6cab519a985a">
+<meta property="og:updated_time" content="2019-10-11T14:05:13.820Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析  序列化">
+<meta name="twitter:description" content="TypeInformation 类是描述一切类型的公共基类，它和它的所有子类必须可序列化（Serializable），因为类型信息将会伴随 Flink 的作业提交，被传递给每个执行节点。 类型信息由 TypeInformation 类表示，TypeInformation 支持以下几种类型：  BasicTypeInfo: 任意Java 基本类型（装箱的）或 String 类型。 BasicArra">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/9B6167B879D44D0897292590B37E9D61?method=download&shareKey=475b5c6e1e1984afcbc727f42d246e3c">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/09/17/Flink源码解析-序列化/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析  序列化 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/09/17/Flink源码解析-序列化/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析  序列化
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-09-17 22:23:50" itemprop="dateCreated datePublished" datetime="2019-09-17T22:23:50+08:00">2019-09-17</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-10-11 22:05:13" itemprop="dateModified" datetime="2019-10-11T22:05:13+08:00">2019-10-11</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>TypeInformation 类是描述一切类型的公共基类，它和它的所有子类必须可序列化（Serializable），因为类型信息将会伴随 Flink 的作业提交，被传递给每个执行节点。</p>
+<p>类型信息由 TypeInformation 类表示，TypeInformation 支持以下几种类型：</p>
+<ul>
+<li>BasicTypeInfo: 任意Java 基本类型（装箱的）或 String 类型。</li>
+<li>BasicArrayTypeInfo: 任意Java基本类型数组（装箱的）或 String 数组。</li>
+<li>WritableTypeInfo: 任意 Hadoop Writable 接口的实现类。</li>
+<li>TupleTypeInfo: 任意的 Flink Tuple 类型(支持Tuple1 to Tuple25)。Flink tuples 是固定长度固定类型的Java Tuple实现。</li>
+<li>CaseClassTypeInfo: 任意的 Scala CaseClass(包括 Scala tuples)。</li>
+<li>PojoTypeInfo: 任意的 POJO (Java or Scala)，例如，Java对象的所有成员变量，要么是 public 修饰符定义，要么有 getter/setter 方法。</li>
+<li>GenericTypeInfo: 任意无法匹配之前几种类型的类。</li>
+</ul>
+<p><img src="https://note.youdao.com/yws/api/personal/file/9B6167B879D44D0897292590B37E9D61?method=download&amp;shareKey=475b5c6e1e1984afcbc727f42d246e3c" alt="image"></p>
+<h3 id="TypSerializer"><a href="#TypSerializer" class="headerlink" title="TypSerializer"></a>TypSerializer</h3><p>所有序列化的基础类。此接口描述Flink运行时处理数据类型所需的方法。 具体来说，此接口包含序列化和复制方法。</p>
+<p>其中有一个深度拷贝的方法duplicate，因为这个序列化器是非线程安全的，如果序列化器不具备状态，直接返回自身，如果有状态，调用这个方法返回一个深度拷贝（抽象发发，具体实现子类自行实现。）</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Creates a deep copy of this serializer if it is necessary, i.e. if it is stateful. This</span></span><br><span class="line"><span class="comment">	 * can return itself if the serializer is not stateful.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * We need this because Serializers might be used in several threads. Stateless serializers</span></span><br><span class="line"><span class="comment">	 * are inherently thread-safe while stateful serializers might not be thread-safe.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> TypeSerializer&lt;T&gt; <span class="title">duplicate</span><span class="params">()</span></span>;</span><br></pre></td></tr></table></figure>
+<p>还有序列化和逆序列化的定义，将数据与DataView进行转换，dataView作为MemorySegment 的抽象显示，序列化与逆序列化就是讲自定义的内存结构与实体进行转换的过程。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Serializes the given record to the given target output view.</span></span><br><span class="line"><span class="comment">	 * </span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> record The record to serialize.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> target The output view to write the serialized data to.</span></span><br><span class="line"><span class="comment">	 * </span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@throws</span> IOException Thrown, if the serialization encountered an I/O related error. Typically raised by the</span></span><br><span class="line"><span class="comment">	 *                     output view, which may have an underlying I/O channel to which it delegates.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">serialize</span><span class="params">(T record, DataOutputView target)</span> <span class="keyword">throws</span> IOException</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * De-serializes a record from the given source input view.</span></span><br><span class="line"><span class="comment">	 * </span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> source The input view from which to read the data.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> The deserialized element.</span></span><br><span class="line"><span class="comment">	 * </span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@throws</span> IOException Thrown, if the de-serialization encountered an I/O related error. Typically raised by the</span></span><br><span class="line"><span class="comment">	 *                     input view, which may have an underlying I/O channel from which it reads.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> T <span class="title">deserialize</span><span class="params">(DataInputView source)</span> <span class="keyword">throws</span> IOException</span>;</span><br></pre></td></tr></table></figure>
+<p>选几个具体的序列化器分析一下</p>
+<p>分为定长(LongSerializer)和变长(StringSerializer)</p>
+<h5 id="LongSerializer"><a href="#LongSerializer" class="headerlink" title="LongSerializer"></a>LongSerializer</h5><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">serialize</span><span class="params">(Long record, DataOutputView target)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		target.writeLong(record);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Long <span class="title">deserialize</span><span class="params">(DataInputView source)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> source.readLong();</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>直接调用DataView的方法</p>
+<p>AbstractPagedOutputView.writeLong</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">writeLong</span><span class="params">(<span class="keyword">long</span> v)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (<span class="keyword">this</span>.positionInSegment &lt; <span class="keyword">this</span>.segmentSize - <span class="number">7</span>) &#123;</span><br><span class="line">			<span class="keyword">this</span>.currentSegment.putLongBigEndian(<span class="keyword">this</span>.positionInSegment, v);</span><br><span class="line">			<span class="keyword">this</span>.positionInSegment += <span class="number">8</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.positionInSegment == <span class="keyword">this</span>.segmentSize) &#123;</span><br><span class="line">			advance();</span><br><span class="line">			writeLong(v);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">else</span> &#123;</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt; <span class="number">56</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt; <span class="number">48</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt; <span class="number">40</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt; <span class="number">32</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt; <span class="number">24</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt; <span class="number">16</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) (v &gt;&gt;  <span class="number">8</span>));</span><br><span class="line">			writeByte((<span class="keyword">int</span>) v);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>通过this.positionInSegment &lt; this.segmentSize - 7判断剩余的长度，如果剩余的长度还够8位，那么直接put进去</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">this</span>.currentSegment.putLongBigEndian(<span class="keyword">this</span>.positionInSegment, v);</span><br></pre></td></tr></table></figure>
+<p>这里会判断是大端序还是小端序，如果是小端，需要做一次转换<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">putLongBigEndian</span><span class="params">(<span class="keyword">int</span> index, <span class="keyword">long</span> value)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (LITTLE_ENDIAN) &#123;</span><br><span class="line">			putLong(index, Long.reverseBytes(value));</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			putLong(index, value);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>如果剩余的不足8位，且刚好剩余为0，通过advance进行切换页操作，然后写。如果剩余的还有一些，因为long是8个byte，所以每次写一个byte进去，不够再切页。切页操作是由具体的子类实现的。</p>
+<h5 id="StringSerializer"><a href="#StringSerializer" class="headerlink" title="StringSerializer"></a>StringSerializer</h5><p>重点在于序列化和逆序列化<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">serialize</span><span class="params">(String record, DataOutputView target)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		StringValue.writeString(record, target);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> String <span class="title">deserialize</span><span class="params">(DataInputView source)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> StringValue.readString(source);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>重点的放在StringValue中。</p>
+<h5 id="StringValue"><a href="#StringValue" class="headerlink" title="StringValue"></a>StringValue</h5><p>变长的string，是比较复杂的。</p>
+<ul>
+<li>以一个byte(8位)为一格，小于128的都好办，大于128的需要循环写入</li>
+<li><strong>大于128的字符读取结束的条件是遇到小于128的byte，所以变长字符的写入要大于128，通过每次写入7位，第八位强制设为1实现。</strong></li>
+</ul>
+<p>在这个类中，定义了一个高bit  0x1 &lt;&lt; 7(128，ASCII 定义了128个字符)</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> HIGH_BIT = <span class="number">0x1</span> &lt;&lt; <span class="number">7</span>;</span><br></pre></td></tr></table></figure>
+<p>先研究写入，写入的时候，是通过out.write(byte)写入数据，一次最多只能写入8位数据。flink的做法是每次获取7位的数据，然后第八位通过（ | HIGH_BIT[1000 0000]） 强制置为1，在二进制中，置为第八位代表正负，1位负，0位正。然后右移7位，获取下一个高7位的数据，以此类推，写入到流中。</p>
+<p>假设写入一个汉字 ：测</p>
+<p>测 这个字 对应的 (int)s.charAt(0)为27979，<br>写入的时候，先获取长度+1，第一位为2，将27979与HIGH_BIT进行或操作将第八位置为1，得到28107，其实真实写入的是28107的后八位11001011，右移7位后进行计算得到218，再一次得到1，序列化后的是  2 28107 218 1 . 写入byte中得到2 -53 -38 1. </p>
+<p>因为有符号范围在 -128  —- 127之间，无符号是在0-256，由于写是默认按照有符号写，所以写11001011会变成-53.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">void</span> <span class="title">writeString</span><span class="params">(CharSequence cs, DataOutput out)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">if</span> (cs != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="comment">// the length we write is offset by one, because a length of zero indicates a null value</span></span><br><span class="line">			<span class="keyword">int</span> lenToWrite = cs.length()+<span class="number">1</span>;</span><br><span class="line">			<span class="keyword">if</span> (lenToWrite &lt; <span class="number">0</span>) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"CharSequence is too long."</span>);</span><br><span class="line">			&#125;</span><br><span class="line">	</span><br><span class="line">			<span class="comment">// write the length, variable-length encoded</span></span><br><span class="line">			<span class="keyword">while</span> (lenToWrite &gt;= HIGH_BIT) &#123;</span><br><span class="line">				out.write(lenToWrite | HIGH_BIT);</span><br><span class="line">				lenToWrite &gt;&gt;&gt;= <span class="number">7</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			out.write(lenToWrite);</span><br><span class="line">	</span><br><span class="line">			<span class="comment">// write the char data, variable length encoded</span></span><br><span class="line">			<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; cs.length(); i++) &#123;</span><br><span class="line">				<span class="keyword">int</span> c = cs.charAt(i);</span><br><span class="line">	</span><br><span class="line">				<span class="keyword">while</span> (c &gt;= HIGH_BIT) &#123;</span><br><span class="line">					out.write(c | HIGH_BIT);</span><br><span class="line">					c &gt;&gt;&gt;= <span class="number">7</span>;</span><br><span class="line">				&#125;</span><br><span class="line">				out.write(c);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			out.write(<span class="number">0</span>);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>逆序列化的时候，逆序列化 2 -53 -38 1. </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">     <span class="keyword">if</span> (c &lt; HIGH_BIT) &#123;</span><br><span class="line">	data[i] = (<span class="keyword">char</span>) c;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>默认如果小于128，就会当做是结束条件，直接转换成char，所以在变长的string中，还没结束的部分，一定要大于128，这就是为什么写入的时候，一定要强制将第八位置为1.读取的2-1=1获取数据长度为1， -53 通过in.readUnsignedByte()得到203,对应11001011，取七位1001011，作为低七位，<br>继续获取218[11011010]，取七位[1011010]，再进行左移7位操作作为高一阶的七位，拼上低七位，得到10110101001011,最后一个1，进行左移14位操作作为再高一阶的七位，拼上低十四位得到110110101001011对应的十进制为27979，转为ascII为测这个字。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> String <span class="title">readString</span><span class="params">(DataInput in)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="comment">// the length we read is offset by one, because a length of zero indicates a null value</span></span><br><span class="line">		<span class="keyword">int</span> len = in.readUnsignedByte();</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">if</span> (len == <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (len &gt;= HIGH_BIT) &#123;</span><br><span class="line">			<span class="keyword">int</span> shift = <span class="number">7</span>;</span><br><span class="line">			<span class="keyword">int</span> curr;</span><br><span class="line">			len = len &amp; <span class="number">0x7f</span>;</span><br><span class="line">			<span class="keyword">while</span> ((curr = in.readUnsignedByte()) &gt;= HIGH_BIT) &#123;</span><br><span class="line">				len |= (curr &amp; <span class="number">0x7f</span>) &lt;&lt; shift;</span><br><span class="line">				shift += <span class="number">7</span>;</span><br><span class="line">			&#125;</span><br><span class="line">			len |= curr &lt;&lt; shift;</span><br><span class="line">		&#125;</span><br><span class="line">		</span><br><span class="line">		<span class="comment">// subtract one for the null length</span></span><br><span class="line">		len -= <span class="number">1</span>;</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">char</span>[] data = <span class="keyword">new</span> <span class="keyword">char</span>[len];</span><br><span class="line"></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; len; i++) &#123;</span><br><span class="line">			<span class="keyword">int</span> c = in.readUnsignedByte();</span><br><span class="line">			<span class="keyword">if</span> (c &lt; HIGH_BIT) &#123;</span><br><span class="line">				data[i] = (<span class="keyword">char</span>) c;</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				<span class="keyword">int</span> shift = <span class="number">7</span>;</span><br><span class="line">				<span class="keyword">int</span> curr;</span><br><span class="line">				c = c &amp; <span class="number">0x7f</span>;</span><br><span class="line">				<span class="keyword">while</span> ((curr = in.readUnsignedByte()) &gt;= HIGH_BIT) &#123;</span><br><span class="line">					c |= (curr &amp; <span class="number">0x7f</span>) &lt;&lt; shift;</span><br><span class="line">					shift += <span class="number">7</span>;</span><br><span class="line">				&#125;</span><br><span class="line">				c |= curr &lt;&lt; shift;</span><br><span class="line">				data[i] = (<span class="keyword">char</span>) c;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> String(data, <span class="number">0</span>, len);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h5 id="PojoSerializer"><a href="#PojoSerializer" class="headerlink" title="PojoSerializer"></a>PojoSerializer</h5><p>POJO多个一个字节的header，PojoSerializer只负责将header序列化进去，并委托每个字段对应的serializer对字段进行序列化。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// Flags for the header</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">byte</span> IS_NULL = <span class="number">1</span>;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">byte</span> NO_SUBCLASS = <span class="number">2</span>;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">byte</span> IS_SUBCLASS = <span class="number">4</span>;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">byte</span> IS_TAGGED_SUBCLASS = <span class="number">8</span>;</span><br></pre></td></tr></table></figure>
+<p>序列化的时候，会先判断是否是null，是的话，置为IS_NULL.</p>
+<p>接着进行header的判断。<br>如果Class&lt;?&gt; actualClass = value.getClass();等于构造函数的class，说明这个class不是一个subClass，置为IS_SUBCLASS。如果在registeredClasses可以获取到子类，说明这个类自身存在子类，他是一个父类，置为IS_TAGGED_SUBCLASS<br>先将flag写入，target.writeByte(flags);<br>如果是subclass，将类的全名写入序列化中，如果</p>
+<p>如果是NO_SUBCLASS，直接</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">header&#123;</span><br><span class="line">    flag,</span><br><span class="line">    subFlag,(class tag id  or the full classname)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>写完header，再委托每个字段对应的serializer对字段进行序列化。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">serialize</span><span class="params">(T value, DataOutputView target)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">		<span class="keyword">int</span> flags = <span class="number">0</span>;</span><br><span class="line">		<span class="comment">// handle null values</span></span><br><span class="line">		<span class="keyword">if</span> (value == <span class="keyword">null</span>) &#123;</span><br><span class="line">			flags |= IS_NULL;</span><br><span class="line">			target.writeByte(flags);</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		Integer subclassTag = -<span class="number">1</span>;</span><br><span class="line">		Class&lt;?&gt; actualClass = value.getClass();</span><br><span class="line">		TypeSerializer subclassSerializer = <span class="keyword">null</span>;</span><br><span class="line">		<span class="keyword">if</span> (clazz != actualClass) &#123;</span><br><span class="line">			subclassTag = registeredClasses.get(actualClass);</span><br><span class="line">			<span class="keyword">if</span> (subclassTag != <span class="keyword">null</span>) &#123;</span><br><span class="line">				flags |= IS_TAGGED_SUBCLASS;</span><br><span class="line">				subclassSerializer = registeredSerializers[subclassTag];</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				flags |= IS_SUBCLASS;</span><br><span class="line">				subclassSerializer = getSubclassSerializer(actualClass);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			flags |= NO_SUBCLASS;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		target.writeByte(flags);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// if its a registered subclass, write the class tag id, otherwise write the full classname</span></span><br><span class="line">		<span class="keyword">if</span> ((flags &amp; IS_SUBCLASS) != <span class="number">0</span>) &#123;</span><br><span class="line">			target.writeUTF(actualClass.getName());</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> ((flags &amp; IS_TAGGED_SUBCLASS) != <span class="number">0</span>) &#123;</span><br><span class="line">			target.writeByte(subclassTag);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// if its a subclass, use the corresponding subclass serializer,</span></span><br><span class="line">		<span class="comment">// otherwise serialize each field with our field serializers</span></span><br><span class="line">		<span class="keyword">if</span> ((flags &amp; NO_SUBCLASS) != <span class="number">0</span>) &#123;</span><br><span class="line">			<span class="keyword">try</span> &#123;</span><br><span class="line">				<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; numFields; i++) &#123;</span><br><span class="line">					Object o = (fields[i] != <span class="keyword">null</span>) ? fields[i].get(value) : <span class="keyword">null</span>;</span><br><span class="line">					<span class="keyword">if</span> (o == <span class="keyword">null</span>) &#123;</span><br><span class="line">						target.writeBoolean(<span class="keyword">true</span>); <span class="comment">// null field handling</span></span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						target.writeBoolean(<span class="keyword">false</span>);</span><br><span class="line">						fieldSerializers[i].serialize(o, target);</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;</span><br><span class="line">			&#125; <span class="keyword">catch</span> (IllegalAccessException e) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> RuntimeException(<span class="string">"Error during POJO copy, this should not happen since we check the fields before."</span>, e);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// subclass</span></span><br><span class="line">			<span class="keyword">if</span> (subclassSerializer != <span class="keyword">null</span>) &#123;</span><br><span class="line">				subclassSerializer.serialize(value, target);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/4FE22225B71B474A834F13F69B7C789E?method=download&amp;shareKey=54f98b410bf649be112f69db79b4afc7" alt="image"></p>
+<h2 id="Flink-如何直接操作二进制数据"><a href="#Flink-如何直接操作二进制数据" class="headerlink" title="Flink 如何直接操作二进制数据"></a>Flink 如何直接操作二进制数据</h2><h3 id="排序"><a href="#排序" class="headerlink" title="排序"></a>排序</h3><p>Flink 提供了如 group、sort、join 等操作，这些操作都需要访问海量数据。这里，我们以sort为例，这是一个在 Flink 中使用非常频繁的操作。</p>
+<p>首先，Flink 会从 MemoryManager 中申请一批 MemorySegment，我们把这批 MemorySegment 称作 sort buffer，用来存放排序的数据。</p>
+<p>将实际的数据和指针加定长key分开存放有两个目的。第一，交换定长块（key+pointer）更高效，不用交换真实的数据也不用移动其他key和pointer。第二，这样做是缓存友好的，因为key都是连续存储在内存中的，可以大大减少 cache miss（后面会详细解释）。</p>
+<p>排序的关键是比大小和交换。Flink 中，会先用 key 比大小，这样就可以直接用二进制的key比较而不需要反序列化出整个对象。因为key是定长的，所以如果key相同（或者没有提供二进制key），那就必须将真实的二进制数据反序列化出来，然后再做比较。之后，只需要交换key+pointer就可以达到排序的效果，真实的数据不用移动。</p>
+<p>最后，访问排序后的数据，可以沿着排好序的key+pointer区域顺序访问，通过pointer找到对应的真实数据，并写到内存或外部</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/11B1637FC25C4C3686FAD944DCA964FF?method=download&amp;shareKey=d3c087ab46b1888a2002fc238598ef44" alt="image"></p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/86CB5AB7CCAE4DB8AB9F185D0860CA82?method=download&amp;shareKey=a3527963a8da3fadb9da6cab519a985a" alt="image"></p>
+<p>可见NormalizedKeySorter.java</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://segmentfault.com/a/1190000016350098" target="_blank" rel="noopener">https://segmentfault.com/a/1190000016350098</a></p>
+<p><a href="http://wuchong.me/blog/2016/04/29/flink-internals-memory-manage/" target="_blank" rel="noopener">http://wuchong.me/blog/2016/04/29/flink-internals-memory-manage/</a></p>
+<p><a href="https://www.cnblogs.com/fxjwind/p/5334271.html" target="_blank" rel="noopener">https://www.cnblogs.com/fxjwind/p/5334271.html</a></p>
+<p><a href="http://aitozi.com/BinaryRow-implement.html" target="_blank" rel="noopener">http://aitozi.com/BinaryRow-implement.html</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/09/11/Flink源码解析-Flink-内存基础/" rel="next" title="Flink源码解析 Flink 内存基础">
+                <i class="fa fa-chevron-left"></i> Flink源码解析 Flink 内存基础
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/09/17/java字节序、主机字节序和网络字节序/" rel="prev" title="java字节序、主机字节序和网络字节序">
+                java字节序、主机字节序和网络字节序 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#TypSerializer"><span class="nav-number">1.</span> <span class="nav-text">TypSerializer</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#LongSerializer"><span class="nav-number">1.0.1.</span> <span class="nav-text">LongSerializer</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#StringSerializer"><span class="nav-number">1.0.2.</span> <span class="nav-text">StringSerializer</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#StringValue"><span class="nav-number">1.0.3.</span> <span class="nav-text">StringValue</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#PojoSerializer"><span class="nav-number">1.0.4.</span> <span class="nav-text">PojoSerializer</span></a></li></ol></li></ol><li class="nav-item nav-level-2"><a class="nav-link" href="#Flink-如何直接操作二进制数据"><span class="nav-number"></span> <span class="nav-text">Flink 如何直接操作二进制数据</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#排序"><span class="nav-number">1.</span> <span class="nav-text">排序</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">2.</span> <span class="nav-text">Reference</span></a></li></ol></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="主要思路1.ValueState内部包含了计数、key和最后修改时间2.对于每一个输入的记录,ProcessFunction都会增加计数,然后注册对应的过期检测timer3.在onTimer中进行检测和输出 上代码模拟数据source如下：数据以Tuple3的形式， key，无用，时间戳的形式向下游发送，每隔5秒发送一条数据. 12345678910111213141516171819202122">
+<meta property="og:type" content="article">
+<meta property="og:title" content="实例应用：获取超过10s没有更新的key">
+<meta property="og:url" content="http://yoursite.com/2020/10/12/实例应用：获取超过10s没有更新的key/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="主要思路1.ValueState内部包含了计数、key和最后修改时间2.对于每一个输入的记录,ProcessFunction都会增加计数,然后注册对应的过期检测timer3.在onTimer中进行检测和输出 上代码模拟数据source如下：数据以Tuple3的形式， key，无用，时间戳的形式向下游发送，每隔5秒发送一条数据. 12345678910111213141516171819202122">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-10-12T12:01:21.783Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="实例应用：获取超过10s没有更新的key">
+<meta name="twitter:description" content="主要思路1.ValueState内部包含了计数、key和最后修改时间2.对于每一个输入的记录,ProcessFunction都会增加计数,然后注册对应的过期检测timer3.在onTimer中进行检测和输出 上代码模拟数据source如下：数据以Tuple3的形式， key，无用，时间戳的形式向下游发送，每隔5秒发送一条数据. 12345678910111213141516171819202122">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/10/12/实例应用：获取超过10s没有更新的key/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>实例应用：获取超过10s没有更新的key | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/10/12/实例应用：获取超过10s没有更新的key/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">实例应用：获取超过10s没有更新的key
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-10-12 20:00:20 / 修改时间：20:01:21" itemprop="dateCreated datePublished" datetime="2020-10-12T20:00:20+08:00">2020-10-12</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="主要思路"><a href="#主要思路" class="headerlink" title="主要思路"></a>主要思路</h2><p>1.ValueState内部包含了计数、key和最后修改时间<br>2.对于每一个输入的记录,ProcessFunction都会增加计数,然后注册对应的过期检测timer<br>3.在onTimer中进行检测和输出</p>
+<h2 id="上代码"><a href="#上代码" class="headerlink" title="上代码"></a>上代码</h2><p>模拟数据source如下：数据以Tuple3的形式， key，无用，时间戳的形式向下游发送，每隔5秒发送一条数据.</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.tuple.Tuple3;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.source.RichParallelSourceFunction;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">StreamDemoDataSource</span> <span class="keyword">extends</span> <span class="title">RichParallelSourceFunction</span>&lt;<span class="title">Tuple3</span>&lt;<span class="title">String</span>, <span class="title">Long</span>, <span class="title">Long</span>&gt;&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">boolean</span> running = <span class="keyword">true</span>;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">(SourceContext&lt;Tuple3&lt;String, Long, Long&gt;&gt; sourceContext)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">        Tuple3[] elements = <span class="keyword">new</span> Tuple3[]&#123;</span><br><span class="line">                Tuple3.of(<span class="string">"a"</span>, <span class="number">1L</span>, <span class="number">1000000050000L</span>),</span><br><span class="line">                Tuple3.of(<span class="string">"a"</span>, <span class="number">1L</span>, <span class="number">1000000054000L</span>),</span><br><span class="line">                Tuple3.of(<span class="string">"a"</span>, <span class="number">1L</span>, <span class="number">1000000079900L</span>),</span><br><span class="line">                Tuple3.of(<span class="string">"a"</span>, <span class="number">1L</span>, <span class="number">1000000115000L</span>),</span><br><span class="line">                Tuple3.of(<span class="string">"b"</span>, <span class="number">1L</span>, <span class="number">1000000100000L</span>),</span><br><span class="line">                Tuple3.of(<span class="string">"b"</span>, <span class="number">1L</span>, <span class="number">1000000108000L</span>)</span><br><span class="line">        &#125;;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">int</span> count = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">while</span> (running &amp;&amp; count &lt; elements.length) &#123;</span><br><span class="line">            sourceContext.collect(<span class="keyword">new</span> Tuple3&lt;&gt;((String) elements[count].f0, (Long) elements[count].f1, (Long) elements[count].f2));</span><br><span class="line">            count++;</span><br><span class="line">            Thread.sleep(<span class="number">5000</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">cancel</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        running = <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>KeyprocessFunction</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.state.ValueState;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.state.ValueStateDescriptor;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.tuple.Tuple2;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.configuration.Configuration;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.functions.KeyedProcessFunction;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.util.Collector;</span><br><span class="line"><span class="keyword">import</span> org.joda.time.DateTime;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CountWithTimeoutFunction</span> <span class="keyword">extends</span> <span class="title">KeyedProcessFunction</span>&lt;<span class="title">String</span>, <span class="title">Tuple2</span>&lt;<span class="title">String</span>, <span class="title">Long</span>&gt;, <span class="title">Tuple2</span>&lt;<span class="title">String</span>, <span class="title">Long</span>&gt;&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> ValueState&lt;CountWithTimestamp&gt; state;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//最先调用</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(Configuration parameters)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//根据上下文获取状态</span></span><br><span class="line">        state = getRuntimeContext().getState(<span class="keyword">new</span> ValueStateDescriptor&lt;&gt;(<span class="string">"myState"</span>, CountWithTimestamp.class));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(Tuple2&lt;String, Long&gt; input, Context ctx, Collector&lt;Tuple2&lt;String, Long&gt;&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        CountWithTimestamp current = state.value();</span><br><span class="line">        <span class="keyword">if</span> (current == <span class="keyword">null</span>) &#123;</span><br><span class="line">            current = <span class="keyword">new</span> CountWithTimestamp();</span><br><span class="line">            current.key = input.f0;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="comment">//更新ValueState</span></span><br><span class="line">        current.count++;</span><br><span class="line">        <span class="comment">//这里面的context可以获取时间戳</span></span><br><span class="line">        current.lastModified = ctx.timestamp();</span><br><span class="line">        System.out.println(<span class="string">"元素"</span> + input.f0 + <span class="string">"进入事件时间为："</span> + <span class="keyword">new</span> DateTime(current.lastModified).toString(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>));</span><br><span class="line">        state.update(current);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//注册ProcessTimer,更新一次就会有一个ProcessTimer</span></span><br><span class="line">        ctx.timerService().registerEventTimeTimer(current.lastModified + <span class="number">9000</span>);</span><br><span class="line">        System.out.println(<span class="string">"定时触发时间为："</span> + <span class="keyword">new</span> DateTime(current.lastModified + <span class="number">9000</span>).toString(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>));</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onTimer</span><span class="params">(<span class="keyword">long</span> timestamp, OnTimerContext ctx, Collector&lt;Tuple2&lt;String, Long&gt;&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">//获取上次时间,与参数中的timestamp相比,如果相差等于10s 就会输出</span></span><br><span class="line">        CountWithTimestamp res = state.value();</span><br><span class="line">        System.out.println(<span class="string">"当前时间为："</span> + <span class="keyword">new</span> DateTime(timestamp).toString(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>) + <span class="string">" 当前state :"</span> + res);</span><br><span class="line">        <span class="keyword">if</span> (timestamp &gt;= res.lastModified + <span class="number">9000</span>) &#123;</span><br><span class="line">            System.out.println(<span class="string">"定时器被触发："</span> + <span class="string">"当前时间为"</span> + <span class="keyword">new</span> DateTime(timestamp).toString(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>) + <span class="string">" 最近修改时间为"</span> + <span class="keyword">new</span> DateTime(res.lastModified).toString(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>));</span><br><span class="line">            out.collect(<span class="keyword">new</span> Tuple2&lt;String, Long&gt;(res.key, res.count));</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.joda.time.DateTime;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CountWithTimestamp</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//单词</span></span><br><span class="line">    <span class="keyword">public</span> String key;</span><br><span class="line">    <span class="comment">//单词计数</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> count;</span><br><span class="line">    <span class="comment">//最近更新时间</span></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">long</span> lastModified;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="string">"CountWithTimestamp&#123;"</span> +</span><br><span class="line">                <span class="string">"key='"</span> + key + <span class="string">'\''</span> +</span><br><span class="line">                <span class="string">", count="</span> + count +</span><br><span class="line">                <span class="string">", lastModified="</span> + <span class="keyword">new</span> DateTime(lastModified).toString(<span class="string">"yyyy-MM-dd HH:mm:ss"</span>) +</span><br><span class="line">                <span class="string">'&#125;'</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主函数如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.eventtime.SerializableTimestampAssigner;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.eventtime.WatermarkStrategy;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.common.functions.MapFunction;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.tuple.Tuple2;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.api.java.tuple.Tuple3;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.TimeCharacteristic;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.datastream.DataStream;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.time.Duration;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">KeyNotifyFlink</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">      </span><br><span class="line">        env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);</span><br><span class="line">        DataStream&lt;Tuple2&lt;String, Long&gt;&gt; data = env.addSource(<span class="keyword">new</span> StreamDemoDataSource()).setParallelism(<span class="number">1</span>)</span><br><span class="line">                .assignTimestampsAndWatermarks(WatermarkStrategy.&lt;Tuple3&lt;String, Long, Long&gt;&gt;forBoundedOutOfOrderness(Duration.ofSeconds(<span class="number">0</span>))</span><br><span class="line">                        .withTimestampAssigner(<span class="keyword">new</span> SerializableTimestampAssigner&lt;Tuple3&lt;String, Long, Long&gt;&gt;() &#123;</span><br><span class="line">                            <span class="meta">@Override</span></span><br><span class="line">                            <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(Tuple3&lt;String, Long, Long&gt; element, <span class="keyword">long</span> recordTimestamp)</span> </span>&#123;</span><br><span class="line">                                <span class="keyword">return</span> element.f2; <span class="comment">//指定EventTime对应的字段</span></span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;))</span><br><span class="line">               .map(<span class="keyword">new</span> MapFunction&lt;Tuple3&lt;String, Long, Long&gt;, Tuple2&lt;String, Long&gt;&gt;() &#123;</span><br><span class="line">                    <span class="meta">@Override</span></span><br><span class="line">                    <span class="function"><span class="keyword">public</span> Tuple2&lt;String, Long&gt; <span class="title">map</span><span class="params">(Tuple3&lt;String, Long, Long&gt; input)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                        <span class="keyword">return</span> Tuple2.of(input.f0, input.f1);</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;);</span><br><span class="line"></span><br><span class="line">        data.keyBy(item -&gt; item.f0)</span><br><span class="line">                .process(<span class="keyword">new</span> CountWithTimeoutFunction()).print();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        env.execute();</span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>采用的是Flink 1.11 的新的水印生成策略，可以参考<br><a href="https://guosmilesmile.github.io/2020/07/23/Flink1-11%E5%8D%87%E7%BA%A7%E5%A1%AB%E5%9D%91/" target="_blank" rel="noopener">https://guosmilesmile.github.io/2020/07/23/Flink1-11%E5%8D%87%E7%BA%A7%E5%A1%AB%E5%9D%91/</a></p>
+<h3 id="结果"><a href="#结果" class="headerlink" title="结果"></a>结果</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">元素a进入事件时间为：2001-09-09 09:47:30</span><br><span class="line">定时触发时间为：2001-09-09 09:47:39</span><br><span class="line">元素a进入事件时间为：2001-09-09 09:47:34</span><br><span class="line">定时触发时间为：2001-09-09 09:47:43</span><br><span class="line">元素a进入事件时间为：2001-09-09 09:47:59</span><br><span class="line">定时触发时间为：2001-09-09 09:48:08</span><br><span class="line">进入定时器，当前时间为：2001-09-09 09:47:39 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=3, lastModified=2001-09-09 09:47:59&#125;</span><br><span class="line">进入定时器，当前时间为：2001-09-09 09:47:43 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=3, lastModified=2001-09-09 09:47:59&#125;</span><br><span class="line">元素a进入事件时间为：2001-09-09 09:48:35</span><br><span class="line">定时触发时间为：2001-09-09 09:48:44</span><br><span class="line">进入定时器，当前时间为：2001-09-09 09:48:08 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=4, lastModified=2001-09-09 09:48:35&#125;</span><br><span class="line">元素b进入事件时间为：2001-09-09 09:48:20</span><br><span class="line">定时触发时间为：2001-09-09 09:48:29</span><br><span class="line">元素b进入事件时间为：2001-09-09 09:48:28</span><br><span class="line">定时触发时间为：2001-09-09 09:48:37</span><br><span class="line">进入定时器，当前时间为：2001-09-09 09:48:29 当前state :CountWithTimestamp&#123;key=&apos;b&apos;, count=2, lastModified=2001-09-09 09:48:28&#125;</span><br><span class="line">进入定时器，当前时间为：2001-09-09 09:48:37 当前state :CountWithTimestamp&#123;key=&apos;b&apos;, count=2, lastModified=2001-09-09 09:48:28&#125;</span><br><span class="line">触发定时器：当前时间为2001-09-09 09:48:37 最近修改时间为2001-09-09 09:48:28</span><br><span class="line">(b,2)</span><br><span class="line">进入定时器，当前时间为：2001-09-09 09:48:44 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=4, lastModified=2001-09-09 09:48:35&#125;</span><br><span class="line">触发定时器：当前时间为2001-09-09 09:48:44 最近修改时间为2001-09-09 09:48:35</span><br><span class="line">(a,4)</span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br></pre></td></tr></table></figure>
+<h2 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h2><h3 id="setStreamTimeCharacteristic"><a href="#setStreamTimeCharacteristic" class="headerlink" title="setStreamTimeCharacteristic"></a>setStreamTimeCharacteristic</h3><p>env.setStreamTimeCharacteristic(TimeCharacteristic.EventTime);<br>这行必须加，不然会以processTime进行处理，一直得不到结果，因为注册的是EventTime（registerEventTimeTimer）</p>
+<p>结果如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">元素a进入事件时间为：2001-09-09 09:47:30</span><br><span class="line">定时触发时间为：2001-09-09 09:47:39</span><br><span class="line">元素a进入事件时间为：2001-09-09 09:47:34</span><br><span class="line">定时触发时间为：2001-09-09 09:47:43</span><br><span class="line">元素a进入事件时间为：2001-09-09 09:47:59</span><br><span class="line">定时触发时间为：2001-09-09 09:48:08</span><br><span class="line">元素a进入事件时间为：2001-09-09 09:48:35</span><br><span class="line">定时触发时间为：2001-09-09 09:48:44</span><br><span class="line">元素b进入事件时间为：2001-09-09 09:48:20</span><br><span class="line">定时触发时间为：2001-09-09 09:48:29</span><br><span class="line">元素b进入事件时间为：2001-09-09 09:48:28</span><br><span class="line">定时触发时间为：2001-09-09 09:48:37</span><br><span class="line">当前时间为：2001-09-09 09:47:39 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=4, lastModified=2001-09-09 09:48:35&#125;</span><br><span class="line">当前时间为：2001-09-09 09:47:43 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=4, lastModified=2001-09-09 09:48:35&#125;</span><br><span class="line">当前时间为：2001-09-09 09:48:08 当前state :CountWithTimestamp&#123;key=&apos;a&apos;, count=4, lastModified=2001-09-09 09:48:35&#125;</span><br><span class="line">当前时间为：2001-09-09 09:48:29 当前state :CountWithTimestamp&#123;key=&apos;b&apos;, count=2, lastModified=2001-09-09 09:48:28&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="ctx-timestamp-为null"><a href="#ctx-timestamp-为null" class="headerlink" title="ctx.timestamp() 为null"></a>ctx.timestamp() 为null</h3><p>该现象出现于没有加assignTimestampsAndWatermarks </p>
+<p>withTimestampAssigner中的extractTimestamp方法是在TimestampsAndWatermarksOperator.processElement中被调用</p>
+<p>TimestampsAndWatermarksOperator.processElement</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(<span class="keyword">final</span> StreamRecord&lt;T&gt; element)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> T event = element.getValue();</span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">long</span> previousTimestamp = element.hasTimestamp() ? element.getTimestamp() : Long.MIN_VALUE;</span><br><span class="line">		<span class="keyword">final</span> <span class="keyword">long</span> newTimestamp = timestampAssigner.extractTimestamp(event, previousTimestamp);</span><br><span class="line"></span><br><span class="line">		element.setTimestamp(newTimestamp);</span><br><span class="line">		output.collect(element);</span><br><span class="line">		watermarkGenerator.onEvent(event, newTimestamp, wmOutput);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>ctx.timestamp()源码见KeyedProcessOperator#ContextImpl.timestamp()</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Long <span class="title">timestamp</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		checkState(element != <span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (element.hasTimestamp()) &#123;</span><br><span class="line">			<span class="keyword">return</span> element.getTimestamp();</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>如果没有assignTimestampsAndWatermarks就会以nullPoint的异常出现</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://mp.weixin.qq.com/s?__biz=MzU3MzgwNTU2Mg==&amp;mid=2247487531&amp;idx=1&amp;sn=183d114f36a697eb7df595fa24fec31c&amp;chksm=fd3d56beca4adfa830cdbd99cf0adde30c7622c3541252cdf172ca0b66e60ae475e7796fdc96&amp;mpshare=1&amp;scene=24&amp;srcid=&amp;sharer_sharetime=1588985687033&amp;sharer_shareid=797dbcdd3a4e624875c639b16a4ef5d9#rd" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?__biz=MzU3MzgwNTU2Mg==&amp;mid=2247487531&amp;idx=1&amp;sn=183d114f36a697eb7df595fa24fec31c&amp;chksm=fd3d56beca4adfa830cdbd99cf0adde30c7622c3541252cdf172ca0b66e60ae475e7796fdc96&amp;mpshare=1&amp;scene=24&amp;srcid=&amp;sharer_sharetime=1588985687033&amp;sharer_shareid=797dbcdd3a4e624875c639b16a4ef5d9#rd</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/10/09/基于文件的批量sql的Flink-SQL提交程序/" rel="next" title="基于文件的批量sql的Flink SQL提交程序">
+                <i class="fa fa-chevron-left"></i> 基于文件的批量sql的Flink SQL提交程序
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/10/31/SqlNode-toString源码解析以及SqlOrderBy无法根据方言自适应的bug/" rel="prev" title="SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug">
+                SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#主要思路"><span class="nav-number">1.</span> <span class="nav-text">主要思路</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#上代码"><span class="nav-number">2.</span> <span class="nav-text">上代码</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#结果"><span class="nav-number">2.1.</span> <span class="nav-text">结果</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#注意"><span class="nav-number">3.</span> <span class="nav-text">注意</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#setStreamTimeCharacteristic"><span class="nav-number">3.1.</span> <span class="nav-text">setStreamTimeCharacteristic</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ctx-timestamp-为null"><span class="nav-number">3.2.</span> <span class="nav-text">ctx.timestamp() 为null</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">3.3.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

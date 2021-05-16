@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="1、Kafka的客户端缓冲机制首先，先得给大家明确一个事情，那就是在客户端发送消息给kafka服务器的时候，一定是有一个内存缓冲机制的。 也就是说，消息会先写入一个内存缓冲中，然后直到多条消息组成了一个Batch，才会一次网络通信把Batch发送过去。 整个过程如下图所示：  2、内存缓冲造成的频繁GC问题那么这种内存缓冲机制的本意，其实就是把多条消息组成一个Batch，一次网络请求就是一个Bat">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kafka 如何优化内存缓冲机制造成的频繁 GC 问题">
+<meta property="og:url" content="http://yoursite.com/2020/04/22/Kafka-如何优化内存缓冲机制造成的频繁-GC-问题/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="1、Kafka的客户端缓冲机制首先，先得给大家明确一个事情，那就是在客户端发送消息给kafka服务器的时候，一定是有一个内存缓冲机制的。 也就是说，消息会先写入一个内存缓冲中，然后直到多条消息组成了一个Batch，才会一次网络通信把Batch发送过去。 整个过程如下图所示：  2、内存缓冲造成的频繁GC问题那么这种内存缓冲机制的本意，其实就是把多条消息组成一个Batch，一次网络请求就是一个Bat">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/703C2640D4FE4BE19EA20677D4634670?method=download&shareKey=6f5a311166afc5d93e8d29c68c6f7ee6">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/A968164A387F4A4E87E392FF15367D53?method=download&shareKey=c38b349e621ddc6f69a992056cfbb223">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/E7E577A0F55E49748AECD38F41D59A1D?method=download&shareKey=3290888c7402e05d27127782090e82f7">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/C3DE2B89B2884971A218F5BB6E97F66E?method=download&shareKey=89b3522da20cc4de4f98f90ca3e6ea3d">
+<meta property="og:updated_time" content="2020-04-22T12:30:55.231Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kafka 如何优化内存缓冲机制造成的频繁 GC 问题">
+<meta name="twitter:description" content="1、Kafka的客户端缓冲机制首先，先得给大家明确一个事情，那就是在客户端发送消息给kafka服务器的时候，一定是有一个内存缓冲机制的。 也就是说，消息会先写入一个内存缓冲中，然后直到多条消息组成了一个Batch，才会一次网络通信把Batch发送过去。 整个过程如下图所示：  2、内存缓冲造成的频繁GC问题那么这种内存缓冲机制的本意，其实就是把多条消息组成一个Batch，一次网络请求就是一个Bat">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/703C2640D4FE4BE19EA20677D4634670?method=download&shareKey=6f5a311166afc5d93e8d29c68c6f7ee6">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/04/22/Kafka-如何优化内存缓冲机制造成的频繁-GC-问题/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Kafka 如何优化内存缓冲机制造成的频繁 GC 问题 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/04/22/Kafka-如何优化内存缓冲机制造成的频繁-GC-问题/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Kafka 如何优化内存缓冲机制造成的频繁 GC 问题
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-04-22 20:30:25 / 修改时间：20:30:55" itemprop="dateCreated datePublished" datetime="2020-04-22T20:30:25+08:00">2020-04-22</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Kafka/" itemprop="url" rel="index"><span itemprop="name">Kafka</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="1、Kafka的客户端缓冲机制"><a href="#1、Kafka的客户端缓冲机制" class="headerlink" title="1、Kafka的客户端缓冲机制"></a>1、Kafka的客户端缓冲机制</h3><p>首先，先得给大家明确一个事情，那就是在客户端发送消息给kafka服务器的时候，一定是有一个内存缓冲机制的。</p>
+<p>也就是说，消息会先写入一个内存缓冲中，然后直到多条消息组成了一个Batch，才会一次网络通信把Batch发送过去。</p>
+<p>整个过程如下图所示：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/703C2640D4FE4BE19EA20677D4634670?method=download&amp;shareKey=6f5a311166afc5d93e8d29c68c6f7ee6" alt="image"></p>
+<h3 id="2、内存缓冲造成的频繁GC问题"><a href="#2、内存缓冲造成的频繁GC问题" class="headerlink" title="2、内存缓冲造成的频繁GC问题"></a>2、内存缓冲造成的频繁GC问题</h3><p>那么这种内存缓冲机制的本意，其实就是把多条消息组成一个Batch，一次网络请求就是一个Batch或者多个Batch。</p>
+<p>这样每次网络请求都可以发送很多数据过去，避免了一条消息一次网络请求。从而提升了吞吐量，即单位时间内发送的数据量。</p>
+<p>但是问题来了，大家可以思考一下，一个Batch中的数据，会取出来然后封装在底层的网络包里，通过网络发送出去到达Kafka服务器。</p>
+<p>那么然后呢？</p>
+<p><strong>这个Batch里的数据都发送过去了，现在Batch里的数据应该怎么处理？</strong></p>
+<p>你要知道，这些Batch里的数据此时可还在客户端的JVM的内存里啊！那么此时从代码实现层面，一定会尝试避免任何变量去引用这些Batch对应的数据，然后尝试触发JVM自动回收掉这些内存垃圾。</p>
+<p>这样不断的让JVM回收垃圾，就可以不断的清理掉已经发送成功的Batch了，然后就可以不断的腾出来新的内存空间让后面新的数据来使用。</p>
+<p>这种想法很好，但是实际线上运行的时候一定会有问题，最大的问题，就是JVM GC问题。</p>
+<p>大家都知道一点，JVM GC在回收内存垃圾的时候，他会有一个“Stop the World”的过程，也就是垃圾回收线程运行的时候，会导致其他工作线程短暂的停顿，这样可以便于他自己安安静静的回收内存垃圾。</p>
+<p>这个也很容易想明白，毕竟你要是在回收内存垃圾的时候，你的工作线程还在不断的往内存里写数据，制造更多的内存垃圾，那你让人家JVM怎么回收垃圾？</p>
+<p>这就好比在大马路上，如果地上有很多垃圾，现在要把垃圾都扫干净，最好的办法是什么？大家都让开，把马路空出来，然后清洁工就是把垃圾清理干净。</p>
+<p>但是如果清洁工在清扫垃圾的时候，结果一帮人在旁边不停的嗑瓜子扔瓜子壳，吃西瓜扔西瓜皮，不停的制造垃圾，你觉得清洁工内心啥感受？当然是很愤慨了，照这么搞，地上的垃圾永远的都搞不干净了！</p>
+<p>通过了上面的语言描述，我们再来一张图，大家看看就更加清楚了</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/A968164A387F4A4E87E392FF15367D53?method=download&amp;shareKey=c38b349e621ddc6f69a992056cfbb223" alt="image"></p>
+<p>现在JVM GC是越来越先进，从CMS垃圾回收器到G1垃圾回收器，核心的目标之一就是不断的缩减垃圾回收的时候，导致其他工作线程停顿的时间。</p>
+<p>所以现在越是新款的垃圾回收器导致工作线程停顿的时间越短，但是再怎么短，他也还是存在啊！</p>
+<p>所以说，如何尽可能在自己的设计上避免JVM频繁的GC就是一个非常考验水平的事儿了。</p>
+<h3 id="3、Kafka设计者实现的缓冲池机制"><a href="#3、Kafka设计者实现的缓冲池机制" class="headerlink" title="3、Kafka设计者实现的缓冲池机制"></a>3、Kafka设计者实现的缓冲池机制</h3><p>在Kafka客户端内部，对这个问题实现了一个非常优秀的机制，就是缓冲池的机制</p>
+<p>简单来说，就是每个Batch底层都对应一块内存空间，这个内存空间就是专门用来存放写入进去的消息的。</p>
+<p>然后呢，当一个Batch被发送到了kafka服务器，这个Batch的数据不再需要了，就意味着这个Batch的内存空间不再使用了。</p>
+<p>此时这个Batch底层的内存空间不要交给JVM去垃圾回收，而是把这块内存空间给放入一个缓冲池里。</p>
+<p>这个缓冲池里放了很多块内存空间，下次如果你又有一个新的Batch了，那么不就可以直接从这个缓冲池里获取一块内存空间就ok了？</p>
+<p>然后如果一个Batch发送出去了之后，再把内存空间给人家还回来不就好了？以此类推，循环往复。</p>
+<p>同样，听完了上面的文字描述，再来一张图，看完这张图相信大伙儿就明白了：</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/E7E577A0F55E49748AECD38F41D59A1D?method=download&amp;shareKey=3290888c7402e05d27127782090e82f7" alt="image"></p>
+<p>一旦使用了这个缓冲池机制之后，就不涉及到频繁的大量内存的GC问题了。</p>
+<p>为什么呢？因为他可以上来就占用固定的内存，比如32MB。然后把32MB划分为N多个内存块，比如说一个内存块是16KB，这样的话这个缓冲池里就会有很多的内存块。</p>
+<p>然后你需要创建一个新的Batch，就从缓冲池里取一个16KB的内存块就可以了，然后这个Batch就不断的写入消息，但是最多就是写16KB，因为Batch底层的内存块就16KB。</p>
+<p>接着如果Batch被发送到Kafka服务器了，此时Batch底层的内存块就直接还回缓冲池就可以了。</p>
+<p>下次别人再要构建一个Batch的时候，再次使用缓冲池里的内存块就好了。这样就可以利用有限的内存，对他不停的反复重复的利用。因为如果你的Batch使用完了以后是把内存块还回到缓冲池中去，那么就不涉及到垃圾回收了。</p>
+<p>如果没有频繁的垃圾回收，自然就避免了频繁导致的工作线程的停顿了，JVM GC问题是不是就得到了大幅度的优化？</p>
+<p>没错，正是这个设计思想让Kafka客户端的性能和吞吐量都非常的高，这里蕴含了大量的优秀的机制。</p>
+<p>那么此时有人说了，如果我现在把一个缓冲池里的内存资源都占满了，现在缓冲池里暂时没有内存块了，怎么办呢？</p>
+<p>很简单，阻塞你的写入操作，不让你继续写入消息了。把你给阻塞住，不停的等待，直到有内存块释放出来，然后再继续让你写入消息。</p>
+<h3 id="思考"><a href="#思考" class="headerlink" title="思考"></a>思考</h3><p>这个时候笔者就有一个想法了，如果这个内存块，只是一个简单的List，那么内存块只是一个壳，而不是一个块，加入实现方式如下，那么缓冲池其实是无效的。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">private</span> Pool pool;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addRecord</span><span class="params">(String line)</span></span>&#123;</span><br><span class="line">    Block block = pool.allocate().getFreeBlock();</span><br><span class="line">    <span class="comment">//获取可以替换掉记录实例</span></span><br><span class="line">    String record = block.getRelaceRecord();</span><br><span class="line">    record = line;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>那其实这种情况并没有做到内存复用的情况，等价如下代码</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">String a = &quot;111&quot;;</span><br><span class="line">a=&quot;2222&quot;;</span><br></pre></td></tr></table></figure>
+<p>前后两个实例都是存在的，只是指向的对应不一样，没办法实现内存复用。如果用过上述方法实现的缓冲池，缓存的只是一个坑。 该发生full GC还是会发送，毕竟内存占用大头还是发送的内容。</p>
+<p>为了实现针对同一个内存地址的写入，kafka的发送者使用了ByteBuffer,通过流的形式，将string数据写到同一个内存中。实现内存段的复用。</p>
+<p>RecordAccumulator.java<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> RecordAppendResult <span class="title">append</span><span class="params">(TopicPartition tp,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">long</span> timestamp,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">byte</span>[] key,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">byte</span>[] value,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 Callback callback,</span></span></span><br><span class="line"><span class="function"><span class="params">                                 <span class="keyword">long</span> maxTimeToBlock)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">    <span class="comment">// We keep track of the number of appending thread to make sure we do not miss batches in</span></span><br><span class="line">    <span class="comment">// abortIncompleteBatches().</span></span><br><span class="line">    appendsInProgress.incrementAndGet();</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        <span class="comment">// check if we have an in-progress batch</span></span><br><span class="line">        Deque&lt;RecordBatch&gt; dq = getOrCreateDeque(tp);</span><br><span class="line">        <span class="keyword">synchronized</span> (dq) &#123;</span><br><span class="line">            <span class="keyword">if</span> (closed)</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Cannot send after the producer is closed."</span>);</span><br><span class="line">            RecordAppendResult appendResult = tryAppend(timestamp, key, value, callback, dq);</span><br><span class="line">            <span class="keyword">if</span> (appendResult != <span class="keyword">null</span>)</span><br><span class="line">                <span class="keyword">return</span> appendResult;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// we don't have an in-progress record batch try to allocate a new batch</span></span><br><span class="line">        <span class="keyword">int</span> size = Math.max(<span class="keyword">this</span>.batchSize, Records.LOG_OVERHEAD + Record.recordSize(key, value));</span><br><span class="line">        log.trace(<span class="string">"Allocating a new &#123;&#125; byte message buffer for topic &#123;&#125; partition &#123;&#125;"</span>, size, tp.topic(), tp.partition());</span><br><span class="line">        ByteBuffer buffer = free.allocate(size, maxTimeToBlock);</span><br><span class="line">        <span class="keyword">synchronized</span> (dq) &#123;</span><br><span class="line">            <span class="comment">// Need to check if producer is closed again after grabbing the dequeue lock.</span></span><br><span class="line">            <span class="keyword">if</span> (closed)</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"Cannot send after the producer is closed."</span>);</span><br><span class="line"></span><br><span class="line">            RecordAppendResult appendResult = tryAppend(timestamp, key, value, callback, dq);</span><br><span class="line">            <span class="keyword">if</span> (appendResult != <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="comment">// Somebody else found us a batch, return the one we waited for! Hopefully this doesn't happen often...</span></span><br><span class="line">                free.deallocate(buffer);</span><br><span class="line">                <span class="keyword">return</span> appendResult;</span><br><span class="line">            &#125;</span><br><span class="line">            MemoryRecordsBuilder recordsBuilder = MemoryRecords.builder(buffer, compression, TimestampType.CREATE_TIME, <span class="keyword">this</span>.batchSize);</span><br><span class="line">            RecordBatch batch = <span class="keyword">new</span> RecordBatch(tp, recordsBuilder, time.milliseconds());</span><br><span class="line">            FutureRecordMetadata future = Utils.notNull(batch.tryAppend(timestamp, key, value, callback, time.milliseconds()));</span><br><span class="line"></span><br><span class="line">            dq.addLast(batch);</span><br><span class="line">            incomplete.add(batch);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> RecordAppendResult(future, dq.size() &gt; <span class="number">1</span> || batch.isFull(), <span class="keyword">true</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">        appendsInProgress.decrementAndGet();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>先从缓冲池中申请内存块ByteBuffer，然后将内存块交给RecordBatch，在RecordBatch中会将ByteBuffer转为DataOutputStream流。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">ByteBuffer buffer = free.allocate(size, maxTimeToBlock);</span><br><span class="line"></span><br><span class="line">MemoryRecordsBuilder recordsBuilder = MemoryRecords.builder(buffer, compression, TimestampType.CREATE_TIME, this.batchSize);</span><br><span class="line">           RecordBatch batch = new RecordBatch(tp, recordsBuilder, time.milliseconds());</span><br></pre></td></tr></table></figure></p>
+<p> 后续在执行batch.tryAppend的时候，会将数据直接通过流的方式写到ByteBuffer对应的内存块中。</p>
+<h3 id="KaflaClient-内存块池化"><a href="#KaflaClient-内存块池化" class="headerlink" title="KaflaClient 内存块池化"></a>KaflaClient 内存块池化</h3><p> <img src="https://note.youdao.com/yws/api/personal/file/C3DE2B89B2884971A218F5BB6E97F66E?method=download&amp;shareKey=89b3522da20cc4de4f98f90ca3e6ea3d" alt="image"></p>
+<p> 内存池有四个关键属性：totalMemory代表内存池上限，由buffer.memory决定；poolableSize指池化内存块大小，由batch.size设置,默认是16k；free和availableMemory则分别代表池化内存和闲置内存大小。注意free和available的区别，前者是已申请但未使用，后者是未申请未使用，它们之间关系：totalMemory= 可使用空间+已使用空间，可使用空间=availableMemory+free.size()*poolableSize代表。</p>
+<p>如果消息的大小会等于池化块大小poolableSize，会复用内存块。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// check if we have a free buffer of the right size pooled</span></span><br><span class="line">          <span class="keyword">if</span> (size == poolableSize &amp;&amp; !<span class="keyword">this</span>.free.isEmpty())</span><br><span class="line">              <span class="keyword">return</span> <span class="keyword">this</span>.free.pollFirst();</span><br></pre></td></tr></table></figure></p>
+<p>如果消息大小超过poolableSize，就无法复用内存块，只好直接申请。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"> <span class="keyword">if</span> (<span class="keyword">this</span>.availableMemory + freeListSize &gt;= size) &#123;</span><br><span class="line">                <span class="comment">// we have enough unallocated or pooled memory to immediately</span></span><br><span class="line">                <span class="comment">// satisfy the request</span></span><br><span class="line">                freeUp(size);</span><br><span class="line">                <span class="keyword">this</span>.availableMemory -= size;</span><br><span class="line">                lock.unlock();</span><br><span class="line">                <span class="keyword">return</span> ByteBuffer.allocate(size);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>在内存块的回收上可以看到，如果大小是池化大小，直接返回队列中，否则等着gc回收。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">           <span class="keyword">if</span> (size == <span class="keyword">this</span>.poolableSize &amp;&amp; size == buffer.capacity()) &#123;</span><br><span class="line">               buffer.clear();</span><br><span class="line">               <span class="keyword">this</span>.free.add(buffer);</span><br><span class="line">           &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">               <span class="keyword">this</span>.availableMemory += size;</span><br><span class="line">           &#125;</span><br><span class="line">           Condition moreMem = <span class="keyword">this</span>.waiters.peekFirst();</span><br><span class="line">           <span class="keyword">if</span> (moreMem != <span class="keyword">null</span>)</span><br><span class="line">               moreMem.signal();</span><br><span class="line">       &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">           lock.unlock();</span><br><span class="line">       &#125;</span><br></pre></td></tr></table></figure>
+<p>只有固定大小的内存块被释放后才会进入池化列表，非常规释放后只会增加可用内存大小，而释放内存则由虚拟机回收。因此如果超大消息比较多，依然有可能会引起fgc乃至oom。因此在使用kafka client，不适合做超长消息的发送或者自行囤积消息发送，适合使用batch.size和linger.ms来控制消息的批次发送和囤积超时。消息的囤积，适合在入库前操作。</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p> <a href="https://blog.csdn.net/worldchinalee/article/details/85068362" target="_blank" rel="noopener">Kafka源码分析-Producer-BufferPool</a></p>
+<p> <a href="//mp.weixin.qq.com/s?__biz=MzU0OTk3ODQ3Ng==&amp;mid=2247486393&amp;idx=1&amp;sn=dd88188f9d18bc75cb84f2621b73dccd&amp;chksm=fba6e3baccd16aac2b3678276d5dbf55d1010d83df5acf6747c6d368532b53e457a7ac8838c4&amp;mpshare=1&amp;scene=1&amp;srcid=&amp;sharer_sharetime=1570840715710&amp;sharer_shareid=797dbcdd3a4e624875c639b16a4ef5d9&amp;key=bad1bd95c2b983fb3250d6bbd6ff09ad5ce52ab268662e0d1be0748c2fba57d902d4725a85a3c06be3f4bad6923a212ab9aaf48aa7c28cfbf22ce1facdd6f04ece0dbc318a198702452929c438ab5f17&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+10&amp;version=62070141&amp;lang=zh_CN&amp;pass_ticket=jEVS5q00no0M1hfS42pSib%2B%2BCaDT6YtLCrJzfre%2F1%2BzD6tfURnvLmNmgJODxVO2D">面试官：Kafka 如何优化内存缓冲机制造成的频繁 GC 问题？</a></p>
+<p> <a href="https://blog.csdn.net/szwandcj/article/details/77460939" target="_blank" rel="noopener">更加深入理解Kafka–Producer篇</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/22/Flink-cluster-evenly-spread-out-slots/" rel="next" title="Flink cluster.evenly-spread-out-slots">
+                <i class="fa fa-chevron-left"></i> Flink cluster.evenly-spread-out-slots
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/04/26/clickhouse指标上报prometheus对接grafana/" rel="prev" title="clickhouse指标上报prometheus对接grafana">
+                clickhouse指标上报prometheus对接grafana <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#1、Kafka的客户端缓冲机制"><span class="nav-number">1.</span> <span class="nav-text">1、Kafka的客户端缓冲机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2、内存缓冲造成的频繁GC问题"><span class="nav-number">2.</span> <span class="nav-text">2、内存缓冲造成的频繁GC问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3、Kafka设计者实现的缓冲池机制"><span class="nav-number">3.</span> <span class="nav-text">3、Kafka设计者实现的缓冲池机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#思考"><span class="nav-number">4.</span> <span class="nav-text">思考</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#KaflaClient-内存块池化"><span class="nav-number">5.</span> <span class="nav-text">KaflaClient 内存块池化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

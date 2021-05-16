@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景数据去重（data deduplication）是我们大数据攻城狮司空见惯的问题了。除了统计UV等传统用法之外，去重的意义更在于消除不可靠数据源产生的脏数据——即重复上报数据或重复投递数据的影响，使流式计算产生的结果更加准确。 以一个实际场景为例：计算每个广告每小时的点击用户数，广告点击日志包含：广告位ID、用户设备ID、点击时间。 实现步骤分析： 为了当天的数据可重现，这里选择事件时间也就是">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 去重">
+<meta property="og:url" content="http://yoursite.com/2020/06/15/Flink-去重/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景数据去重（data deduplication）是我们大数据攻城狮司空见惯的问题了。除了统计UV等传统用法之外，去重的意义更在于消除不可靠数据源产生的脏数据——即重复上报数据或重复投递数据的影响，使流式计算产生的结果更加准确。 以一个实际场景为例：计算每个广告每小时的点击用户数，广告点击日志包含：广告位ID、用户设备ID、点击时间。 实现步骤分析： 为了当天的数据可重现，这里选择事件时间也就是">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-06-15T12:55:51.645Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 去重">
+<meta name="twitter:description" content="背景数据去重（data deduplication）是我们大数据攻城狮司空见惯的问题了。除了统计UV等传统用法之外，去重的意义更在于消除不可靠数据源产生的脏数据——即重复上报数据或重复投递数据的影响，使流式计算产生的结果更加准确。 以一个实际场景为例：计算每个广告每小时的点击用户数，广告点击日志包含：广告位ID、用户设备ID、点击时间。 实现步骤分析： 为了当天的数据可重现，这里选择事件时间也就是">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/06/15/Flink-去重/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink 去重 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/15/Flink-去重/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink 去重
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-06-15 20:55:07 / 修改时间：20:55:51" itemprop="dateCreated datePublished" datetime="2020-06-15T20:55:07+08:00">2020-06-15</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>数据去重（data deduplication）是我们大数据攻城狮司空见惯的问题了。除了统计UV等传统用法之外，去重的意义更在于消除不可靠数据源产生的脏数据——即重复上报数据或重复投递数据的影响，使流式计算产生的结果更加准确。</p>
+<p>以一个实际场景为例：计算每个广告每小时的点击用户数，广告点击日志包含：广告位ID、用户设备ID、点击时间。</p>
+<h3 id="实现步骤分析："><a href="#实现步骤分析：" class="headerlink" title="实现步骤分析："></a>实现步骤分析：</h3><ol>
+<li>为了当天的数据可重现，这里选择事件时间也就是广告点击时间作为每小时的窗口期划分</li>
+<li>数据分组使用广告位ID+点击事件所属的小时</li>
+<li>选择processFunction来实现，一个状态用来保存数据、另外一个状态用来保存对应的数据量</li>
+<li>计算完成之后的数据清理，按照时间进度注册定时器清理</li>
+</ol>
+<h3 id="数据准备"><a href="#数据准备" class="headerlink" title="数据准备"></a>数据准备</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AdData</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">int</span> id;</span><br><span class="line">	<span class="keyword">private</span> String devId;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">long</span> time;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主流程 </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">StreamExecutionEnvironment env = StreamContextEnvironment.getExecutionEnvironment();</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">DataStreamSource&lt;AdData&gt; dataStreamSource = env.fromCollection(<span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">DataStream&lt;AdData&gt; dedupStream = dataStreamSource.map(item -&gt; item).assignTimestampsAndWatermarks(<span class="keyword">new</span> BoundedOutOfOrdernessTimestampExtractor&lt;AdData&gt;(Time.minutes(<span class="number">1</span>)) &#123;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">extractTimestamp</span><span class="params">(AdData element)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> element.getTime();</span><br><span class="line">   &#125;</span><br><span class="line">&#125;)	&#125;).keyBy(item -&gt; Tuple2.of(TimeWindow.getWindowStartWithOffset(item.getTime(), <span class="number">0</span>,</span><br><span class="line">			Time.hours(<span class="number">1</span>).toMilliseconds()) + Time.hours(<span class="number">1</span>).toMilliseconds(), item.getId()))</span><br><span class="line">			.process(<span class="keyword">new</span> RocksDbDeduplicateProcessFunc());</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">env.execute();</span><br></pre></td></tr></table></figure>
+<h3 id="朴素方法论"><a href="#朴素方法论" class="headerlink" title="朴素方法论"></a>朴素方法论</h3><p>HashSet去重</p>
+<h3 id="状态后台去重"><a href="#状态后台去重" class="headerlink" title="状态后台去重"></a>状态后台去重</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">RocksDbDeduplicateProcessFunc</span> <span class="keyword">extends</span> <span class="title">KeyedProcessFunction</span>&lt;<span class="title">Tuple2</span>&lt;<span class="title">Long</span>, <span class="title">Integer</span>&gt;, <span class="title">AdData</span>, <span class="title">AdData</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">private</span> MapState&lt;String, Integer&gt; devIdState;</span><br><span class="line">   <span class="keyword">private</span> MapStateDescriptor&lt;String, Integer&gt; devIdStateDesc;</span><br><span class="line">   <span class="keyword">private</span> ValueState&lt;Long&gt; countState;</span><br><span class="line">   <span class="keyword">private</span> ValueStateDescriptor&lt;Long&gt; countStateDesc;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(Configuration parameters)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">super</span>.open(parameters);</span><br><span class="line">      devIdStateDesc = <span class="keyword">new</span> MapStateDescriptor(<span class="string">"devIdState"</span>, TypeInformation.of(String.class), TypeInformation.of(Integer.class));</span><br><span class="line">      devIdState = getRuntimeContext().getMapState(devIdStateDesc);</span><br><span class="line">      countStateDesc = <span class="keyword">new</span> ValueStateDescriptor(<span class="string">"countState"</span>, TypeInformation.of(Long.class));</span><br><span class="line">      countState = getRuntimeContext().getState(countStateDesc);</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(AdData value, Context ctx, Collector&lt;AdData&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">long</span> currW = ctx.timerService().currentWatermark();</span><br><span class="line">      <span class="keyword">if</span> (ctx.getCurrentKey().f0 + <span class="number">1</span> &lt;= currW) &#123;</span><br><span class="line">         System.out.println(<span class="string">"late data:"</span> + value);</span><br><span class="line">         <span class="keyword">return</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      String devId = value.getDevId();</span><br><span class="line">      Integer match = devIdState.get(devId);</span><br><span class="line">      <span class="keyword">if</span> (!devIdState.contains(devId)) &#123;</span><br><span class="line">         <span class="comment">//表示不存在</span></span><br><span class="line">         devIdState.put(devId, <span class="number">1</span>);</span><br><span class="line">         countState.update(countState.value() + <span class="number">1</span>);</span><br><span class="line">         <span class="comment">//还需要注册一个定时器</span></span><br><span class="line">         ctx.timerService().registerEventTimeTimer(ctx.getCurrentKey().f0 + <span class="number">1</span>);</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="comment">// 数据清理通过注册定时器方式ctx.timerService().registerEventTimeTimer(ctx.getCurrentKey.time + 1)表示当watermark大于该小时结束时间+1就会执行清理动作，调用onTimer方法。</span></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onTimer</span><span class="params">(<span class="keyword">long</span> timestamp, OnTimerContext ctx, Collector&lt;AdData&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">super</span>.onTimer(timestamp, ctx, out);</span><br><span class="line">      devIdState.clear();</span><br><span class="line">      countState.clear();</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要是通过状态后台去重，tuple2.f0对应的是规整后的小时时间，当 watermark &gt; tuple2.fo的时候，为下一个小时的数据到来，清理状态数据。如果担心混了，可以id+time作为mapState的key.</p>
+<h3 id="SQL方式"><a href="#SQL方式" class="headerlink" title="SQL方式"></a>SQL方式</h3><p>select  HOUR(TUMBLE_START(ts, INTERVAL ‘1’ HOUR)),count(distinct devId)  from pv group by id TUMBLE(time, INTERVAL ‘1’ HOUR)</p>
+<p>uv 的统计我们通过内置的 <code>COUNT(DISTINCT user_id)</code>来完成，Flink SQL 内部对 COUNT DISTINCT 做了非常多的优化，因此可以放心使用。</p>
+<p>这里我们使用 <code>HOUR</code> 内置函数，从一个 TIMESTAMP 列中提取出一天中第几个小时的值。</p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/table/tuning/streaming_aggregation_optimization.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/table/tuning/streaming_aggregation_optimization.html</a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">table.optimizer.distinct-agg.split.enabled=<span class="keyword">true</span></span><br></pre></td></tr></table></figure>
+<p>如果需求是统计每日网站的uv值：</p>
+<ol>
+<li>SELECT datatime,count(DISTINCT devId) FROM pv group by datatime</li>
+<li>select count(*),datatime from(select distinct devId,datatime from pv ) a group by datatime</li>
+</ol>
+<p>两种方式对比:</p>
+<p>这两种方式最终都能得到相同的结果，但是经过分析其在内部实现上差异还是比较大，第一种在分组上选择datatime ，内部使用的累加器DistinctAccumulator 每一个datatime都会与之对应一个对象，在该维度上所有的设备id, 都会存储在该累加器对象的map中，而第二种选择首先细化分组，使用datatime+devId分开存储，然后外部使用时间维度进行计数，简单归纳就是：<br>第一种: datatime-&gt;Value{devI1,devId2..}<br>第二种: datatime+devId-&gt;row(0)<br>聚合函数中accumulator 是存储在ValueState中的，第二种方式的key会比第一种方式数量上多很多，但是其ValueState占用空间却小很多，而在实际中我们通常会选择Rocksdb方式作为状态后端，rocksdb中value大小是有上限的，第一种方式很容易到达上限，那么使用第二种方式会更加合适；(2*32上限)</p>
+<h3 id="布隆过滤器去重"><a href="#布隆过滤器去重" class="headerlink" title="布隆过滤器去重"></a>布隆过滤器去重</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BloomFilterDeduplicateProcessFunc</span> <span class="keyword">extends</span> <span class="title">KeyedProcessFunction</span>&lt;<span class="title">Tuple2</span>&lt;<span class="title">Long</span>, <span class="title">Integer</span>&gt;, <span class="title">AdData</span>, <span class="title">AdData</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> BF_CARDINAL_THRESHOLD = <span class="number">1000000</span>;</span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">double</span> BF_FALSE_POSITIVE_RATE = <span class="number">0.01</span>;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">private</span> <span class="keyword">volatile</span> BloomFilter&lt;String&gt; subOrderFilter;</span><br><span class="line"></span><br><span class="line">   <span class="keyword">private</span> ValueState&lt;Long&gt; countState;</span><br><span class="line">   <span class="keyword">private</span> ValueStateDescriptor&lt;Long&gt; countStateDesc;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(Configuration parameters)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">super</span>.open(parameters);</span><br><span class="line">      subOrderFilter = BloomFilter.create(Funnels.stringFunnel(Charset.defaultCharset()), BF_CARDINAL_THRESHOLD, BF_FALSE_POSITIVE_RATE);</span><br><span class="line">      countStateDesc = <span class="keyword">new</span> ValueStateDescriptor(<span class="string">"countState"</span>, TypeInformation.of(Long.class));</span><br><span class="line">      countState = getRuntimeContext().getState(countStateDesc);</span><br><span class="line"></span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(AdData value, Context ctx, Collector&lt;AdData&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">long</span> currW = ctx.timerService().currentWatermark();</span><br><span class="line">      <span class="keyword">if</span> (ctx.getCurrentKey().f0 + <span class="number">1</span> &lt;= currW) &#123;</span><br><span class="line">         System.out.println(<span class="string">"late data:"</span> + value);</span><br><span class="line">         <span class="keyword">return</span>;</span><br><span class="line">      &#125;</span><br><span class="line">      String devId = value.getDevId();</span><br><span class="line">      <span class="keyword">if</span> (!subOrderFilter.mightContain(devId)) &#123;</span><br><span class="line">         <span class="comment">//表示不存在</span></span><br><span class="line">         subOrderFilter.put(devId);</span><br><span class="line">         countState.update(countState.value() + <span class="number">1</span>);</span><br><span class="line">         <span class="comment">//还需要注册一个定时器</span></span><br><span class="line">         ctx.timerService().registerEventTimeTimer(ctx.getCurrentKey().f0 + <span class="number">1</span>);</span><br><span class="line">      &#125;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="comment">/**</span></span><br><span class="line"><span class="comment">    * 数据清理通过注册定时器方式ctx.timerService().registerEventTimeTimer(ctx.getCurrentKey.time + 1)表示当watermark大于该小时结束时间+1就会执行清理动作，调用onTimer方法。</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="meta">@Override</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onTimer</span><span class="params">(<span class="keyword">long</span> timestamp, OnTimerContext ctx, Collector&lt;AdData&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">super</span>.onTimer(timestamp, ctx, out);</span><br><span class="line">      subOrderFilter = BloomFilter.create(Funnels.stringFunnel(Charset.defaultCharset()), BF_CARDINAL_THRESHOLD, BF_FALSE_POSITIVE_RATE);</span><br><span class="line">      countState.clear();</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>每个分组内创建布隆过滤器。布隆过滤器的期望最大数据量应该按每天产生子订单最多的那个站点来设置，这里设为100万，并且可容忍的误判率为1%。根据上面科普文中的讲解，单个布隆过滤器需要8个哈希函数，其位图占用内存约114MB，压力不大。</p>
+<p>每当一条数据进入时，调用BloomFilter.mightContain()方法判断对应的子订单ID是否已出现过。当没出现过时，调用put()方法将其插入BloomFilter，并交给ValueState。</p>
+<h3 id="HyperLogLog去重"><a href="#HyperLogLog去重" class="headerlink" title="HyperLogLog去重"></a>HyperLogLog去重</h3><p>去重方法与上面的类似，将BloomFilter替换成对应的其他算法即可。</p>
+<p>或者通过自定义aggFunction来实现。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">HLLDistinctFunction</span> <span class="keyword">extends</span> <span class="title">AggregateFunction</span>&lt;<span class="title">Long</span>,<span class="title">HyperLogLog</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span> <span class="function"><span class="keyword">public</span> HyperLogLog <span class="title">createAccumulator</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> HyperLogLog(<span class="number">0.001</span>);</span><br><span class="line">    &#125;</span><br><span class="line">     </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">accumulate</span><span class="params">(HyperLogLog hll,String id)</span></span>&#123;</span><br><span class="line">      hll.offer(id);</span><br><span class="line">    &#125;</span><br><span class="line">     </span><br><span class="line">    <span class="meta">@Override</span> <span class="function"><span class="keyword">public</span> Long <span class="title">getValue</span><span class="params">(HyperLogLog accumulator)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> accumulator.cardinality();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用aggFunction和KeyedProcessFunction的差别在于aggFunction默认会使用内部的状态后台，每次来一条数据就会跟rocksdb交互，如果是keyedProcessFunction，取决于用户代码，processElement的写法，如果采用第一种方法状态后台的方式，那跟aggFcuntion没什么差别。</p>
+<p>看下aggFunction的源码</p>
+<p>WindowedStream.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PublicEvolving</span></span><br><span class="line"><span class="keyword">public</span> &lt;ACC, V, R&gt; <span class="function">SingleOutputStreamOperator&lt;R&gt; <span class="title">aggregate</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      AggregateFunction&lt;T, ACC, V&gt; aggregateFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">      WindowFunction&lt;V, R, K, W&gt; windowFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">      TypeInformation&lt;ACC&gt; accumulatorType,</span></span></span><br><span class="line"><span class="function"><span class="params">      TypeInformation&lt;R&gt; resultType)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">......</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (evictor != <span class="keyword">null</span>) &#123;</span><br><span class="line">....</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">   AggregatingStateDescriptor&lt;T, ACC, V&gt; stateDesc = <span class="keyword">new</span> AggregatingStateDescriptor&lt;&gt;(<span class="string">"window-contents"</span>,</span><br><span class="line">         aggregateFunction, accumulatorType.createSerializer(getExecutionEnvironment().getConfig()));</span><br><span class="line"></span><br><span class="line">   operator = <span class="keyword">new</span> WindowOperator&lt;&gt;(windowAssigner,</span><br><span class="line">         windowAssigner.getWindowSerializer(getExecutionEnvironment().getConfig()),</span><br><span class="line">         keySel,</span><br><span class="line">         input.getKeyType().createSerializer(getExecutionEnvironment().getConfig()),</span><br><span class="line">         stateDesc,</span><br><span class="line">         <span class="keyword">new</span> InternalSingleValueWindowFunction&lt;&gt;(windowFunction),</span><br><span class="line">         trigger,</span><br><span class="line">         allowedLateness,</span><br><span class="line">         lateDataOutputTag);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> input.transform(opName, resultType, operator);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要是在这边使用了AggregatingStateDescriptor，如果是process使用的是ListStateDescriptor。</p>
+<p>看下AggregatingStateDescriptor的构造函数，是会把用户定义的聚合函数作为入参。</p>
+<p>在WindowOperator中存在一个状态</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">windowState = (InternalAppendingState&lt;K, W, IN, ACC, ACC&gt;) getOrCreateKeyedState(windowSerializer, windowStateDescriptor);</span><br></pre></td></tr></table></figure>
+<p>这个状态会根据是状态后端的选择而变更。但是内部主体还是AggregatingStateDescriptor。</p>
+<p>每当一个数据到达，会调用到</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">windowState.add(element.getValue());</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ACC <span class="title">apply</span><span class="params">(ACC accumulator, IN value)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">if</span> (accumulator == <span class="keyword">null</span>) &#123;</span><br><span class="line">      accumulator = aggFunction.createAccumulator();</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> aggFunction.add(value, accumulator);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这也是为什么选用aggFunction而不是ProcessWindowFunction的原因，processWindowFunction是一个list，aggFunction是来一条数据聚合一条数据。</p>
+<p>窗口的使用小技巧可以参考</p>
+<p><a href="https://guosmilesmile.github.io/2020/01/01/Flink-Window的5个使用小技巧/" target="_blank" rel="noopener">https://guosmilesmile.github.io/2020/01/01/Flink-Window%E7%9A%845%E4%B8%AA%E4%BD%BF%E7%94%A8%E5%B0%8F%E6%8A%80%E5%B7%A7/</a></p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.jianshu.com/p/f6042288a6e3" target="_blank" rel="noopener">https://www.jianshu.com/p/f6042288a6e3</a></p>
+<p><a href="http://wuchong.me/blog/2020/02/25/demo-building-real-time-application-with-flink-sql/" target="_blank" rel="noopener">http://wuchong.me/blog/2020/02/25/demo-building-real-time-application-with-flink-sql/</a></p>
+<p><a href="https://blog.csdn.net/u013516966/article/details/103659306" target="_blank" rel="noopener">https://blog.csdn.net/u013516966/article/details/103659306</a></p>
+<p><a href="https://blog.csdn.net/u013516966/article/details/103724895#comments" target="_blank" rel="noopener">https://blog.csdn.net/u013516966/article/details/103724895#comments</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/10/Flink链路延迟监控的LatencyMarker机制实现/" rel="next" title="Flink链路延迟监控的LatencyMarker机制实现">
+                <i class="fa fa-chevron-left"></i> Flink链路延迟监控的LatencyMarker机制实现
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/17/Flink源码解析-TTL/" rel="prev" title="Flink源码解析-TTL">
+                Flink源码解析-TTL <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#实现步骤分析："><span class="nav-number">1.1.</span> <span class="nav-text">实现步骤分析：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据准备"><span class="nav-number">1.2.</span> <span class="nav-text">数据准备</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#朴素方法论"><span class="nav-number">1.3.</span> <span class="nav-text">朴素方法论</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#状态后台去重"><span class="nav-number">1.4.</span> <span class="nav-text">状态后台去重</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SQL方式"><span class="nav-number">1.5.</span> <span class="nav-text">SQL方式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#布隆过滤器去重"><span class="nav-number">1.6.</span> <span class="nav-text">布隆过滤器去重</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#HyperLogLog去重"><span class="nav-number">1.7.</span> <span class="nav-text">HyperLogLog去重</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">1.8.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

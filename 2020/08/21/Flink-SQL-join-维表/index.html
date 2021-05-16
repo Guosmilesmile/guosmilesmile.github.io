@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="语法flink sql join 维表需要使用特定的语法 1234select a.id,b.name from ubt as a join info FOR SYSTEM_TIME AS OF a.proctime as b on a.id=b.id FOR SYSTEM_TIME AS OF a.proctime 意味着每当处理左表的一条消息时，都会根据条件到维表数据库查询数据，ON语句块指定">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink SQL join 维表">
+<meta property="og:url" content="http://yoursite.com/2020/08/21/Flink-SQL-join-维表/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="语法flink sql join 维表需要使用特定的语法 1234select a.id,b.name from ubt as a join info FOR SYSTEM_TIME AS OF a.proctime as b on a.id=b.id FOR SYSTEM_TIME AS OF a.proctime 意味着每当处理左表的一条消息时，都会根据条件到维表数据库查询数据，ON语句块指定">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-09-07T14:18:27.569Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink SQL join 维表">
+<meta name="twitter:description" content="语法flink sql join 维表需要使用特定的语法 1234select a.id,b.name from ubt as a join info FOR SYSTEM_TIME AS OF a.proctime as b on a.id=b.id FOR SYSTEM_TIME AS OF a.proctime 意味着每当处理左表的一条消息时，都会根据条件到维表数据库查询数据，ON语句块指定">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/08/21/Flink-SQL-join-维表/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink SQL join 维表 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/21/Flink-SQL-join-维表/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink SQL join 维表
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-08-21 22:40:36" itemprop="dateCreated datePublished" datetime="2020-08-21T22:40:36+08:00">2020-08-21</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-09-07 22:18:27" itemprop="dateModified" datetime="2020-09-07T22:18:27+08:00">2020-09-07</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="语法"><a href="#语法" class="headerlink" title="语法"></a>语法</h3><p>flink sql join 维表需要使用特定的语法</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">select a.id,b.name </span><br><span class="line">from ubt as a </span><br><span class="line">join info FOR SYSTEM_TIME AS OF a.proctime as b </span><br><span class="line">on a.id=b.id</span><br></pre></td></tr></table></figure>
+<p>FOR SYSTEM_TIME AS OF a.proctime</p>
+<p>意味着每当处理左表的一条消息时，都会根据条件到维表数据库查询数据，ON语句块指定关联查询条件，而a.proctime是左边的处理时间字段，字段名可以随意指定，但必须是processing time，当前不支持event time，也就是说这种方法不支持根据数据流的事件时间去查维度表里的对应时刻的数据。</p>
+<h3 id="使用说明"><a href="#使用说明" class="headerlink" title="使用说明"></a>使用说明</h3><ul>
+<li>仅支持Blink planner</li>
+<li>仅支持SQL，目前不支持Table API</li>
+<li>目前不支持基于事件时间(event time)的temporal table join</li>
+<li>维表可能会不断变化，JOIN行为发生后，维表中的数据发生了变化（新增、更新或删除），则已关联的维表数据不会被同步变化</li>
+<li>维表和维表不能进行JOIN</li>
+<li>维表必须指定主键。维表JOIN时，ON的条件必须包含所有主键的等值条件</li>
+</ul>
+<h3 id="Demo"><a href="#Demo" class="headerlink" title="Demo"></a>Demo</h3><p>维表存储在MySQL中，如下创建维表数据源：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE dim_province (</span><br><span class="line">    province_id BIGINT,  -- 省份id</span><br><span class="line">    province_name  VARCHAR, -- 省份名称</span><br><span class="line"> region_name VARCHAR -- 区域名称</span><br><span class="line">) WITH (</span><br><span class="line">    &apos;connector.type&apos; = &apos;jdbc&apos;,</span><br><span class="line">    &apos;connector.url&apos; = &apos;jdbc:mysql://192.168.10.203:3306/mydw&apos;,</span><br><span class="line">    &apos;connector.table&apos; = &apos;dim_province&apos;,</span><br><span class="line">    &apos;connector.driver&apos; = &apos;com.mysql.jdbc.Driver&apos;,</span><br><span class="line">    &apos;connector.username&apos; = &apos;root&apos;,</span><br><span class="line">    &apos;connector.password&apos; = &apos;123qwe&apos;,</span><br><span class="line">    &apos;connector.lookup.cache.max-rows&apos; = &apos;5000&apos;,</span><br><span class="line">    &apos;connector.lookup.cache.ttl&apos; = &apos;10min&apos;</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>事实表存储在kafka中，数据为用户点击行为，格式为JSON，具体数据样例如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">&#123;&quot;user_id&quot;:63401,&quot;item_id&quot;:6244,&quot;cat_id&quot;:143,&quot;action&quot;:&quot;pv&quot;,&quot;province&quot;:3,&quot;ts&quot;:1573445919&#125;</span><br><span class="line">&#123;&quot;user_id&quot;:9164,&quot;item_id&quot;:2817,&quot;cat_id&quot;:611,&quot;action&quot;:&quot;fav&quot;,&quot;province&quot;:28,&quot;ts&quot;:1573420486&#125;</span><br></pre></td></tr></table></figure>
+<p>创建kafka数据源表，如下：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE user_behavior (</span><br><span class="line">    user_id BIGINT, -- 用户id</span><br><span class="line">    item_id BIGINT, -- 商品id</span><br><span class="line">    cat_id BIGINT,  -- 品类id</span><br><span class="line">    action STRING,  -- 用户行为</span><br><span class="line"> province INT,   -- 用户所在的省份</span><br><span class="line"> ts     BIGINT,  -- 用户行为发生的时间戳</span><br><span class="line">    proctime as PROCTIME(),   -- 通过计算列产生一个处理时间列</span><br><span class="line"> eventTime AS TO_TIMESTAMP(FROM_UNIXTIME(ts, &apos;yyyy-MM-dd HH:mm:ss&apos;)), -- 事件时间</span><br><span class="line">    WATERMARK FOR eventTime as eventTime - INTERVAL &apos;5&apos; SECOND  -- 在eventTime上定义watermark</span><br><span class="line">) WITH (</span><br><span class="line">    &apos;connector.type&apos; = &apos;kafka&apos;,  -- 使用 kafka connector</span><br><span class="line">    &apos;connector.version&apos; = &apos;universal&apos;,  -- kafka 版本，universal 支持 0.11 以上的版本</span><br><span class="line">    &apos;connector.topic&apos; = &apos;user_behavior&apos;,  -- kafka主题</span><br><span class="line">    &apos;connector.startup-mode&apos; = &apos;earliest-offset&apos;,  -- 偏移量，从起始 offset 开始读取</span><br><span class="line"> &apos;connector.properties.group.id&apos; = &apos;group1&apos;, -- 消费者组</span><br><span class="line">    &apos;connector.properties.zookeeper.connect&apos; = &apos;kms-2:2181,kms-3:2181,kms-4:2181&apos;,  -- zookeeper 地址</span><br><span class="line">    &apos;connector.properties.bootstrap.servers&apos; = &apos;kms-2:9092,kms-3:9092,kms-4:9092&apos;,  -- kafka broker 地址</span><br><span class="line">    &apos;format.type&apos; = &apos;json&apos;  -- 数据源格式为 json</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>创建MySQL的结果表，表示区域销量</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line">CREATE TABLE region_sales_sink (</span><br><span class="line">    region_name STRING,  -- 区域名称</span><br><span class="line">    buy_cnt BIGINT  -- 销量</span><br><span class="line">) WITH (</span><br><span class="line">  </span><br><span class="line">    &apos;connector.type&apos; = &apos;jdbc&apos;,</span><br><span class="line">    &apos;connector.url&apos; = &apos;jdbc:mysql://192.168.10.203:3306/mydw&apos;,</span><br><span class="line">    &apos;connector.table&apos; = &apos;top_region&apos;, -- MySQL中的待插入数据的表</span><br><span class="line">    &apos;connector.driver&apos; = &apos;com.mysql.jdbc.Driver&apos;,</span><br><span class="line">    &apos;connector.username&apos; = &apos;root&apos;,</span><br><span class="line">    &apos;connector.password&apos; = &apos;123qwe&apos;,</span><br><span class="line">    &apos;connector.write.flush.interval&apos; = &apos;1s&apos;</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+<p>用户行为数据与省份维表数据join</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">CREATE VIEW user_behavior_detail AS</span><br><span class="line">SELECT</span><br><span class="line">  u.user_id, </span><br><span class="line">  u.item_id,</span><br><span class="line">  u.cat_id,</span><br><span class="line">  u.action,  </span><br><span class="line">  p.province_name,</span><br><span class="line">  p.region_name</span><br><span class="line">FROM user_behavior AS u LEFT JOIN dim_province FOR SYSTEM_TIME AS OF u.proctime AS p</span><br><span class="line">ON u.province = p.province_id;</span><br></pre></td></tr></table></figure>
+<p>计算区域的销量，并将计算结果写入MySQL</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">INSERT INTO region_sales_sink</span><br><span class="line">SELECT </span><br><span class="line">  region_name,</span><br><span class="line">  COUNT(*) buy_cnt</span><br><span class="line">FROM user_behavior_detail</span><br><span class="line">WHERE action = &apos;buy&apos;</span><br><span class="line">GROUP BY region_name;</span><br></pre></td></tr></table></figure>
+<h3 id="缓存机制"><a href="#缓存机制" class="headerlink" title="缓存机制"></a>缓存机制</h3><p>按照上面的处理方式：每处理一条流里的消息，都要到数据库里查询维表，而维表一般存在第三方数据库，这就导致每次都要有远程请求，特别是数据流大的情况下，频繁的维表查询，也会对外部数据库造成很大压力、降低整体吞吐，所以对维度表进行缓存不失为一个好的策略。但是用缓存也有个潜在的风险：缓存里的数据有可能不是最新的，这要在性能和正确性之间做权衡。</p>
+<p>LRU缓存</p>
+<p>维表数据量大的情况下，可以用LRU算法缓存部分数据。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">connector.lookup.cache.max-rows:缓存最大的记录条数，默认-1</span><br><span class="line"></span><br><span class="line">connector.lookup.cache.ttl:缓存失效时间，默认-1</span><br></pre></td></tr></table></figure>
+<p>如果以上两个参数任意一个设置成-1，那就会禁用查询缓存。查询缓存底层用google guava cache实现.</p>
+<p>在做join过程中(底层是在eval函数中实现的)，一旦某个关键字join维度表，就会将关键字作为key、关联查询维度表后的值作为value，放入到缓存中，在缓存没有失效之前，如果后面再次以该关键字join，会先在缓存里查找是否有对应的值，有就直接返回，没有再去访问外部数据系统，并把结果进行缓存。流程如下：</p>
+<h3 id="实现原理"><a href="#实现原理" class="headerlink" title="实现原理"></a>实现原理</h3><p>如果要实现维表join，那定义的TableSource必须实现LookupableTableSource接口，当我们执行jdbc类型的create table sql语句时，BLink查询优化器会自动根据sql语句创建JDBCTableSource对象，同时该对象又实现了LookupableTableSource接口，因此我们创建的mysql表才支持维度查询。</p>
+<p>LookupableTableSource 源码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * A &#123;<span class="doctag">@link</span> TableSource&#125; which supports for lookup accessing via key column(s).</span></span><br><span class="line"><span class="comment"> * For example, MySQL TableSource can implement this interface to support lookup accessing.</span></span><br><span class="line"><span class="comment"> * When temporal join this MySQL table, the runtime behavior could be in a lookup fashion.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;T&gt; type of the result</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Experimental</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">LookupableTableSource</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">TableSource</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Gets the &#123;<span class="doctag">@link</span> TableFunction&#125; which supports lookup one key at a time.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> lookupKeys the chosen field names as lookup keys, it is in the defined order</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function">TableFunction&lt;T&gt; <span class="title">getLookupFunction</span><span class="params">(String[] lookupKeys)</span></span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Gets the &#123;<span class="doctag">@link</span> AsyncTableFunction&#125; which supports async lookup one key at a time.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> lookupKeys the chosen field names as lookup keys, it is in the defined order</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function">AsyncTableFunction&lt;T&gt; <span class="title">getAsyncLookupFunction</span><span class="params">(String[] lookupKeys)</span></span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Returns true if async lookup is enabled.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;The lookup function returned by &#123;<span class="doctag">@link</span> #getAsyncLookupFunction(String[])&#125; will be</span></span><br><span class="line"><span class="comment">	 * used if returns true. Otherwise, the lookup function returned by</span></span><br><span class="line"><span class="comment">	 * &#123;<span class="doctag">@link</span> #getLookupFunction(String[])&#125; will be used.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">boolean</span> <span class="title">isAsyncEnabled</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>isAsyncEnabled:是否异步访问，如果异步访问使用异步方法，否则使用同步方法，当前不支持异步访问。JDBCTableSource只支持同步操作，</p>
+<p>getAsyncLookupFunction:返回异步TableFunction函数，并发地处理多个请求和回复，从而连续的请求之间不需要阻塞等待。</p>
+<p>getLookupFunction:返回同步TableFunction函数，同步访问外部数据库，即来一条数据，通过Key去查询外部数据库，等到返回数据输出关联结果，继续处理数据，这会对系统的吞吐率有影响</p>
+<p>JDBCTableSource只支持同步look up模式，而TableFunction本质上是个UDTF(user-defined table function)：输入一条数据可能返回多条数据，也可能返回一条数据。eval则是TableFunction最重要的方法，当程序有一个输入元素时，就会调用eval一次，具体的业务逻辑实现就在这个方法里，最后将查询到的数据用collect()发送到下游。eval的核心代码：</p>
+<p>源码见JDBCLookupFunction</p>
+<p>缓存的创建<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(FunctionContext context)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			establishConnection();</span><br><span class="line">			statement = dbConn.prepareStatement(query);</span><br><span class="line">			<span class="keyword">this</span>.cache = cacheMaxSize == -<span class="number">1</span> || cacheExpireMs == -<span class="number">1</span> ? <span class="keyword">null</span> : CacheBuilder.newBuilder()</span><br><span class="line">					.expireAfterWrite(cacheExpireMs, TimeUnit.MILLISECONDS)</span><br><span class="line">					.maximumSize(cacheMaxSize)</span><br><span class="line">					.build();</span><br><span class="line">		&#125; <span class="keyword">catch</span> (SQLException sqe) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"open() failed."</span>, sqe);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (ClassNotFoundException cnfe) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">"JDBC driver class not found."</span>, cnfe);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>open 方法在进行初始化算子实例的进行调用，transient关键字主要的作用是告诉JVM，这个字段不需要序列化。</p>
+<p>之所以建议很多能够在open函数里面初始化的变量用transient，是因为这些变量本身不太需要参与序列化，<br>比如一些cache之类的；或者有些变量也做不到序列化，比如一些连接相关的对象。</p>
+<p>缓存的使用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">            statement.clearParameters();</span><br><span class="line"><span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; keys.length; i++) &#123;</span><br><span class="line">	JDBCUtils.setField(statement, keySqlTypes[i], keys[i], i);</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">try</span> (ResultSet resultSet = statement.executeQuery()) &#123;</span><br><span class="line">	<span class="keyword">if</span> (cache == <span class="keyword">null</span>) &#123;</span><br><span class="line">		<span class="keyword">while</span> (resultSet.next()) &#123;</span><br><span class="line">			collect(convertToRowFromResultSet(resultSet));</span><br><span class="line">		&#125;</span><br><span class="line">	&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">		ArrayList&lt;Row&gt; rows = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">		<span class="keyword">while</span> (resultSet.next()) &#123;</span><br><span class="line">			Row row = convertToRowFromResultSet(resultSet);</span><br><span class="line">			rows.add(row);</span><br><span class="line">			collect(row);</span><br><span class="line">		&#125;</span><br><span class="line">		rows.trimToSize();</span><br><span class="line">		cache.put(keyRow, rows);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">break</span>;</span><br></pre></td></tr></table></figure></p>
+<p>所以对于维度查询的实现逻辑也是在eval函数里，具体来说在JDBCLookupFunction类里，该函数实现了根据关键字段查找外部数据库以及数据缓存的功能，也就是说维度查询本质上是用UDTF实现的。</p>
+<p>StreamExecLookupJoinRule规则解释器负责把表达式转换成物理执行计划，StreamExecLookupJoin把执行假话转换成Look up join。</p>
+<p>Temporal Table.Join，是单流join，本质上是Lookup join：维表(被Lookup的表)作为被驱动表，左表每来一条消息，就用过滤关键词到数据库查询一次。temporal table join是轻量级的，不会保存状态数据。</p>
+<h3 id="如何自定义维表"><a href="#如何自定义维表" class="headerlink" title="如何自定义维表"></a>如何自定义维表</h3><p>main 函数<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();</span><br><span class="line">    EnvironmentSettings settings = EnvironmentSettings.newInstance().useBlinkPlanner().inStreamingMode().build();</span><br><span class="line">    StreamTableEnvironment tableEnvironment = StreamTableEnvironment.create(env,settings);</span><br><span class="line"></span><br><span class="line">    Properties properties = <span class="keyword">new</span> Properties();</span><br><span class="line">    properties.setProperty(<span class="string">"bootstrap.servers"</span>, <span class="string">"localhost:9092"</span>);</span><br><span class="line">    properties.setProperty(<span class="string">"zookeeper.connect"</span>, <span class="string">"localhost:2181"</span>);</span><br><span class="line">    properties.setProperty(<span class="string">"group.id"</span>, <span class="string">"test"</span>);</span><br><span class="line"></span><br><span class="line">    FlinkKafkaConsumer011&lt;String&gt; myConsumer = <span class="keyword">new</span> FlinkKafkaConsumer011&lt;String&gt;(<span class="string">"test"</span>, <span class="keyword">new</span> SimpleStringSchema(),properties);</span><br><span class="line">    DataStream&lt;UserTest&gt; source = env.addSource(myConsumer)</span><br><span class="line">        .map(<span class="keyword">new</span> MapFunction&lt;String, UserTest&gt;() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> UserTest <span class="title">map</span><span class="params">(String s)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">                UserTest userTest = <span class="keyword">new</span> UserTest();</span><br><span class="line">                userTest.setId(Integer.valueOf(s.split(<span class="string">","</span>)[<span class="number">0</span>]));</span><br><span class="line">                userTest.setName(s.split(<span class="string">","</span>)[<span class="number">1</span>]);</span><br><span class="line">                <span class="keyword">return</span> userTest;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"></span><br><span class="line">    tableEnvironment.registerDataStream(<span class="string">"ubt"</span>,source,<span class="string">"id,name,proctime.proctime"</span>);</span><br><span class="line"></span><br><span class="line">    MysqlAsyncLookupTableSource tableSource = MysqlAsyncLookupTableSource.Builder</span><br><span class="line">        .newBuilder().withFieldNames(<span class="keyword">new</span> String[]&#123;<span class="string">"id"</span>,<span class="string">"name"</span>&#125;)</span><br><span class="line">        .withFieldTypes(<span class="keyword">new</span> TypeInformation[] &#123;Types.INT,Types.STRING&#125;)</span><br><span class="line">        .build();</span><br><span class="line">    tableEnvironment.registerTableSource(<span class="string">"info"</span>,tableSource);</span><br><span class="line"></span><br><span class="line">    String sql = <span class="string">"select a.id,b.name from ubt as a join info FOR SYSTEM_TIME AS OF a.proctime as b on a.id=b.id"</span>;</span><br><span class="line">    Table table = tableEnvironment.sqlQuery(sql);</span><br><span class="line">    DataStream&lt;Tuple2&lt;Boolean, UserTest&gt;&gt; result = tableEnvironment.toRetractStream(table,UserTest.class);</span><br><span class="line">    result.process(<span class="keyword">new</span> ProcessFunction&lt;Tuple2&lt;Boolean,UserTest&gt;, Object&gt;() &#123;</span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(Tuple2&lt;Boolean, UserTest&gt; booleanUserTestTuple2, Context context, Collector&lt;Object&gt; collector)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (booleanUserTestTuple2.f0) &#123;</span><br><span class="line">                System.out.println(JSON.toJSONString(booleanUserTestTuple2.f1));</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;);</span><br><span class="line">    env.execute(<span class="string">""</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>MysqlAsyncLookupTableSource implements LookupableTableSource</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MysqlAsyncLookupTableSource</span> <span class="keyword">implements</span> <span class="title">LookupableTableSource</span>&lt;<span class="title">UserTest</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String[] fieldNames;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> TypeInformation[] fieldTypes;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MysqlAsyncLookupTableSource</span><span class="params">(String[] fieldNames, TypeInformation[] fieldTypes)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.fieldNames = fieldNames;</span><br><span class="line">        <span class="keyword">this</span>.fieldTypes = fieldTypes;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> TableFunction&lt;UserTest&gt; <span class="title">getLookupFunction</span><span class="params">(String[] strings)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> AsyncTableFunction&lt;UserTest&gt; <span class="title">getAsyncLookupFunction</span><span class="params">(String[] strings)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> MysqlAsyncLookupFunction.Builder.getBuilder()</span><br><span class="line">            .withFieldNames(fieldNames)</span><br><span class="line">            .withFieldTypes(fieldTypes)</span><br><span class="line">            .build();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isAsyncEnabled</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> TableSchema <span class="title">getTableSchema</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> TableSchema.builder()</span><br><span class="line">            .fields(fieldNames, TypeConversions.fromLegacyInfoToDataType(fieldTypes))</span><br><span class="line">            .build();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Builder</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> String[] fieldNames;</span><br><span class="line">        <span class="keyword">private</span> TypeInformation[] fieldTypes;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">private</span> <span class="title">Builder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Builder <span class="title">newBuilder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> Builder();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">withFieldNames</span><span class="params">(String[] fieldNames)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.fieldNames = fieldNames;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">withFieldTypes</span><span class="params">(TypeInformation[] fieldTypes)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.fieldTypes = fieldTypes;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> MysqlAsyncLookupTableSource <span class="title">build</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> MysqlAsyncLookupTableSource(fieldNames, fieldTypes);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>MysqlAsyncLookupFunction extends AsyncTableFunction</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">MysqlAsyncLookupFunction</span> <span class="keyword">extends</span> <span class="title">AsyncTableFunction</span>&lt;<span class="title">UserTest</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String[] fieldNames;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> TypeInformation[] fieldTypes;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MysqlAsyncLookupFunction</span><span class="params">(String[] fieldNames, TypeInformation[] fieldTypes)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.fieldNames = fieldNames;</span><br><span class="line">        <span class="keyword">this</span>.fieldTypes = fieldTypes;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// 每一条流数据都会调用此方法进行join</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">eval</span><span class="params">(CompletableFuture&lt;Collection&lt;UserTest&gt;&gt; resultFuture, Object... keys)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 进行维表查询</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(FunctionContext context)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// 建立连接</span></span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span></span>&#123;&#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">Builder</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> String[] fieldNames;</span><br><span class="line">        <span class="keyword">private</span> TypeInformation[] fieldTypes;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">private</span> <span class="title">Builder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Builder <span class="title">getBuilder</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> Builder();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">withFieldNames</span><span class="params">(String[] fieldNames)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.fieldNames = fieldNames;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">withFieldTypes</span><span class="params">(TypeInformation[] fieldTypes)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.fieldTypes = fieldTypes;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> MysqlAsyncLookupFunction <span class="title">build</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> MysqlAsyncLookupFunction(fieldNames, fieldTypes);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>使用<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">select a.id,b.name </span><br><span class="line">from ubt as a </span><br><span class="line">join info FOR SYSTEM_TIME AS OF a.proctime as b </span><br><span class="line">on a.id=b.id</span><br></pre></td></tr></table></figure></p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="http://apache-flink.147419.n8.nabble.com/flink-1-10-sql-td2486.html" target="_blank" rel="noopener">http://apache-flink.147419.n8.nabble.com/flink-1-10-sql-td2486.html</a></p>
+<p><a href="https://liurio.github.io/2020/03/28/Flink%E6%B5%81%E4%B8%8E%E7%BB%B4%E8%A1%A8%E7%9A%84%E5%85%B3%E8%81%94/" target="_blank" rel="noopener">https://liurio.github.io/2020/03/28/Flink%E6%B5%81%E4%B8%8E%E7%BB%B4%E8%A1%A8%E7%9A%84%E5%85%B3%E8%81%94/</a></p>
+<p><a href="https://www.jianshu.com/p/189945244f79" target="_blank" rel="noopener">Flink CookBook-Table&amp;Sql |维表Join原理解析</a> </p>
+<p><a href="https://juejin.im/post/6861595860782972941" target="_blank" rel="noopener">https://juejin.im/post/6861595860782972941</a></p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/zh/dev/table/sql/queries.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.11/zh/dev/table/sql/queries.html</a></p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.11/zh/dev/table/streaming/temporal_tables.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.11/zh/dev/table/streaming/temporal_tables.html</a></p>
+<p><a href="http://www.whitewood.me/2020/01/16/Flink-DataStream-%E5%85%B3%E8%81%94%E7%BB%B4%E8%A1%A8%E5%AE%9E%E6%88%98/" target="_blank" rel="noopener">Flink DataStream 关联维表实战</a></p>
+<p><a href="http://apache-flink.147419.n8.nabble.com/flink-open-transient-td4186.html#a4187" target="_blank" rel="noopener">flink open 时候 transient使用问问题</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/08/21/Calcite-in报错-or-子查询问题/" rel="next" title="Calcite in 过长报错">
+                <i class="fa fa-chevron-left"></i> Calcite in 过长报错
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/09/05/Calcite-带有中文引发的血案/" rel="prev" title="Calcite 带有中文引发的血案">
+                Calcite 带有中文引发的血案 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#语法"><span class="nav-number">1.</span> <span class="nav-text">语法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#使用说明"><span class="nav-number">2.</span> <span class="nav-text">使用说明</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Demo"><span class="nav-number">3.</span> <span class="nav-text">Demo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#缓存机制"><span class="nav-number">4.</span> <span class="nav-text">缓存机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#实现原理"><span class="nav-number">5.</span> <span class="nav-text">实现原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何自定义维表"><span class="nav-number">6.</span> <span class="nav-text">如何自定义维表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

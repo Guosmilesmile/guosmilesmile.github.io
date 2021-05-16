@@ -1,0 +1,949 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <url>
+    <loc>http://yoursite.com/2021/05/16/FlinkKafkaConsumer%E5%90%8CgroupId%E6%B6%88%E8%B4%B9%E9%97%AE%E9%A2%98%E6%B7%B1%E5%85%A5%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2021-05-16T06:26:19.485Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/09/07/FlinkKafkaConsumer%E9%87%8D%E5%A4%8D%E6%B6%88%E8%B4%B9%E6%95%B0%E6%8D%AE%E9%97%AE%E9%A2%98/</loc>
+    
+    <lastmod>2021-05-16T06:25:23.053Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2021/05/16/flink-%E6%B6%88%E8%B4%B9-kafka-%E6%B6%88%E8%B4%B9%E7%BB%84-offset-%E6%8F%90%E4%BA%A4/</loc>
+    
+    <lastmod>2021-05-16T03:39:48.680Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2021/05/15/%E5%85%B3%E4%BA%8EFlink%E6%B6%88%E8%B4%B9kafka%E5%BC%80%E5%90%AFcheckpoint%E5%8D%B4%E6%B2%A1%E6%9C%89%E9%85%8D%E7%BD%AE%E9%87%8D%E5%90%AF%E7%AD%96%E7%95%A5%E7%9A%84%E6%80%9D%E8%80%83/</loc>
+    
+    <lastmod>2021-05-15T07:41:45.247Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2021/05/15/Flink-on-YARN%E6%97%B6%EF%BC%8C%E5%A6%82%E4%BD%95%E7%A1%AE%E5%AE%9ATaskManager%E6%95%B0/</loc>
+    
+    <lastmod>2021-05-15T07:02:52.274Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2021/05/02/Flink-%E5%AE%9E%E6%88%98%E9%87%87%E5%9D%91%E8%AE%B0%E4%B9%8B-Kryo-%E5%BA%8F%E5%88%97%E5%8C%96/</loc>
+    
+    <lastmod>2021-05-02T07:23:26.468Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/11/21/Calcite-RBO-%E5%87%BA%E7%8E%B0-VALUES%E5%AF%BC%E8%87%B4sql%E5%8F%98%E5%9E%8B/</loc>
+    
+    <lastmod>2020-11-28T05:10:20.523Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/09/06/Flink%E5%AE%9E%E6%97%B6%E7%BB%9F%E8%AE%A1%E7%B4%AF%E8%AE%A1PV%E6%88%96%E8%80%85UV/</loc>
+    
+    <lastmod>2020-11-21T02:47:24.808Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/10/31/SqlNode-toString%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E4%BB%A5%E5%8F%8ASqlOrderBy%E6%97%A0%E6%B3%95%E6%A0%B9%E6%8D%AE%E6%96%B9%E8%A8%80%E8%87%AA%E9%80%82%E5%BA%94%E7%9A%84bug/</loc>
+    
+    <lastmod>2020-10-31T07:59:03.185Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/10/12/%E5%AE%9E%E4%BE%8B%E5%BA%94%E7%94%A8%EF%BC%9A%E8%8E%B7%E5%8F%96%E8%B6%85%E8%BF%8710s%E6%B2%A1%E6%9C%89%E6%9B%B4%E6%96%B0%E7%9A%84key/</loc>
+    
+    <lastmod>2020-10-12T12:01:21.783Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/10/09/%E5%9F%BA%E4%BA%8E%E6%96%87%E4%BB%B6%E7%9A%84%E6%89%B9%E9%87%8Fsql%E7%9A%84Flink-SQL%E6%8F%90%E4%BA%A4%E7%A8%8B%E5%BA%8F/</loc>
+    
+    <lastmod>2020-10-09T14:14:41.582Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/10/02/AggregateProjectMergeRule-%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</loc>
+    
+    <lastmod>2020-10-02T15:07:11.358Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/21/Calcite-in%E6%8A%A5%E9%94%99-or-%E5%AD%90%E6%9F%A5%E8%AF%A2%E9%97%AE%E9%A2%98/</loc>
+    
+    <lastmod>2020-10-02T11:20:12.263Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/09/26/Calcite-SqlVisitor-%E4%BD%BF%E7%94%A8%E5%92%8C%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB/</loc>
+    
+    <lastmod>2020-09-26T15:44:02.780Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/09/26/Calcite-SqlVisitor-RelShuttle-%E4%BD%BF%E7%94%A8%E5%92%8C%E6%BA%90%E7%A0%81%E8%A7%A3%E8%AF%BB/</loc>
+    
+    <lastmod>2020-09-26T10:08:41.204Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/21/Flink-SQL-join-%E7%BB%B4%E8%A1%A8/</loc>
+    
+    <lastmod>2020-09-07T14:18:27.569Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/03/Calcite-RBO%E8%A7%84%E5%88%99/</loc>
+    
+    <lastmod>2020-09-06T08:23:09.909Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/07/04/Flink-on-kubernetes-%E5%AE%95%E6%9C%BA%E6%81%A2%E5%A4%8D/</loc>
+    
+    <lastmod>2020-09-06T08:22:57.164Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/09/05/Calcite-%E5%B8%A6%E6%9C%89%E4%B8%AD%E6%96%87%E5%BC%95%E5%8F%91%E7%9A%84%E8%A1%80%E6%A1%88/</loc>
+    
+    <lastmod>2020-09-05T08:23:08.066Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/19/Flink%E7%9A%84%E7%B1%BB%E5%8A%A0%E8%BD%BD%E7%AD%96%E7%95%A5/</loc>
+    
+    <lastmod>2020-08-19T14:26:27.569Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/16/Apache-Kylin%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96/</loc>
+    
+    <lastmod>2020-08-16T14:53:26.234Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/13/%E8%A7%A3%E5%86%B3Flink1-11%E4%B8%8D%E8%83%BD%E6%8C%87%E5%AE%9ASQL%E4%BB%BB%E5%8A%A1JobName%E9%97%AE%E9%A2%98/</loc>
+    
+    <lastmod>2020-08-13T12:00:43.645Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/08/11/Calcite-RBO-rule-%E8%A7%A3%E6%9E%90%E5%92%8C%E8%87%AA%E5%AE%9A%E4%B9%89/</loc>
+    
+    <lastmod>2020-08-13T10:43:53.393Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/07/23/Flink1-11%E5%8D%87%E7%BA%A7%E5%A1%AB%E5%9D%91/</loc>
+    
+    <lastmod>2020-07-25T08:37:47.057Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/07/07/%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8jemalloc%E5%88%86%E6%9E%90flink%E4%BD%BF%E7%94%A8%E7%9A%84native-memory/</loc>
+    
+    <lastmod>2020-07-07T13:57:11.042Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/07/05/Flink%E4%B8%AD%E5%A6%82%E4%BD%95%E4%BD%BF%E7%94%A8%E7%AD%96%E7%95%A5%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2020-07-05T03:18:47.230Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/28/%E4%B8%80%E6%AC%A1kubernetes%E7%BD%91%E7%BB%9C%E9%97%AE%E9%A2%98%E6%8E%92%E6%9F%A5/</loc>
+    
+    <lastmod>2020-06-28T14:32:11.988Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/18/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-%E5%B9%BF%E6%92%AD%E6%B5%81%E5%8E%9F%E7%90%86/</loc>
+    
+    <lastmod>2020-06-18T12:18:18.146Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/17/Flink-%E5%AF%B9%E8%B1%A1%E7%9A%84%E4%B8%8D%E6%AD%A3%E7%A1%AE%E9%87%8A%E6%94%BE%EF%BC%88%E5%8F%8D%E9%9D%A2%E6%95%99%E6%9D%90/</loc>
+    
+    <lastmod>2020-06-17T14:43:49.452Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/17/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-TTL/</loc>
+    
+    <lastmod>2020-06-17T12:12:22.777Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/15/Flink-%E5%8E%BB%E9%87%8D/</loc>
+    
+    <lastmod>2020-06-15T12:55:51.645Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/07/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-Timer/</loc>
+    
+    <lastmod>2020-06-12T11:47:26.338Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/10/Flink%E9%93%BE%E8%B7%AF%E5%BB%B6%E8%BF%9F%E7%9B%91%E6%8E%A7%E7%9A%84LatencyMarker%E6%9C%BA%E5%88%B6%E5%AE%9E%E7%8E%B0/</loc>
+    
+    <lastmod>2020-06-10T14:10:10.575Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/05/27/Flink-on-native-kubernetes-%E4%BD%BF%E7%94%A8%E5%92%8C%E4%BF%AE%E6%94%B9/</loc>
+    
+    <lastmod>2020-06-08T13:51:45.550Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/06/03/Flink%E5%9F%BA%E4%BA%8Emailbox%E5%AE%9E%E7%8E%B0%E7%9A%84streamTask%E6%A8%A1%E5%9E%8B/</loc>
+    
+    <lastmod>2020-06-03T12:39:28.655Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/05/31/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-join%E5%8F%8C%E6%B5%81%E6%93%8D%E4%BD%9C%E7%9A%84%E5%AE%9E%E7%8E%B0/</loc>
+    
+    <lastmod>2020-05-31T12:26:07.387Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/05/26/Harbor%E7%89%88%E6%9C%AC%E6%97%A0%E7%BC%9D%E5%8D%87%E7%BA%A7/</loc>
+    
+    <lastmod>2020-05-26T11:49:14.535Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/</loc>
+    
+    <lastmod>2020-05-26T11:47:50.896Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/05/09/Kubernetes-%E6%97%A5%E5%BF%97%E9%87%87%E9%9B%86-EFK/</loc>
+    
+    <lastmod>2020-05-09T12:48:49.047Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/05/04/Flink-sql-client-%E5%B0%9D%E8%AF%95%E5%92%8C%E5%A2%9E%E5%8A%A0%E6%8F%90%E4%BA%A4%E6%8C%87%E5%AE%9A%E9%9B%86%E7%BE%A4%E5%8A%9F%E8%83%BD/</loc>
+    
+    <lastmod>2020-05-04T10:23:20.591Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/04/26/clickhouse%E6%8C%87%E6%A0%87%E4%B8%8A%E6%8A%A5prometheus%E5%AF%B9%E6%8E%A5grafana/</loc>
+    
+    <lastmod>2020-04-26T13:08:44.035Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/01/22/flink%E6%8C%87%E6%A0%87%E5%AF%B9%E6%8E%A5prometheus%E5%92%8Cgrafana/</loc>
+    
+    <lastmod>2020-04-26T12:40:00.481Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/04/22/Kafka-%E5%A6%82%E4%BD%95%E4%BC%98%E5%8C%96%E5%86%85%E5%AD%98%E7%BC%93%E5%86%B2%E6%9C%BA%E5%88%B6%E9%80%A0%E6%88%90%E7%9A%84%E9%A2%91%E7%B9%81-GC-%E9%97%AE%E9%A2%98/</loc>
+    
+    <lastmod>2020-04-22T12:30:55.231Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/04/22/Flink-cluster-evenly-spread-out-slots/</loc>
+    
+    <lastmod>2020-04-22T12:20:04.671Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/03/30/Flink-1-10-0-on-Kubernetes-%E6%90%AD%E5%BB%BA/</loc>
+    
+    <lastmod>2020-04-08T13:30:20.588Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/04/01/Reset-Weave/</loc>
+    
+    <lastmod>2020-04-01T12:03:55.490Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/03/01/%E8%AE%A9es%E5%88%86%E9%85%8D%E4%B8%BB%E7%B4%A2%E5%BC%95%E6%97%B6shard%E5%9D%87%E8%A1%A1/</loc>
+    
+    <lastmod>2020-03-30T12:11:20.721Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/08/03/Flink-LocalAgg/</loc>
+    
+    <lastmod>2020-03-30T08:55:50.463Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/23/Flink-on-Kubernetes-%E6%90%AD%E5%BB%BA/</loc>
+    
+    <lastmod>2020-03-30T08:36:02.242Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/01/22/prometheus%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B/</loc>
+    
+    <lastmod>2020-03-30T08:14:55.745Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/03/20/kubernetes-ingress/</loc>
+    
+    <lastmod>2020-03-26T14:47:34.362Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/01/kubernetes-%E9%AB%98%E5%8F%AF%E7%94%A8%E6%90%AD%E5%BB%BA%E5%92%8C%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1/</loc>
+    
+    <lastmod>2020-03-24T14:39:21.355Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/01/22/grafana%E5%AE%89%E8%A3%85%E6%95%99%E7%A8%8B/</loc>
+    
+    <lastmod>2020-03-24T14:05:49.044Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/03/14/Elasticsearch-%E5%B8%B8%E7%94%A8%E6%93%8D%E4%BD%9C/</loc>
+    
+    <lastmod>2020-03-14T13:09:35.249Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/03/12/%E5%B0%86%E5%85%B3%E8%81%94%E5%85%B3%E7%B3%BB%E7%9A%84%E6%95%B0%E6%8D%AE%E6%94%BE%E5%9C%A8%E5%90%8C%E4%B8%80%E4%B8%AA%E9%9B%86%E5%90%88%E4%B8%AD/</loc>
+    
+    <lastmod>2020-03-12T14:48:46.934Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/15/Flink-1-10-%E5%89%8D%E5%90%8E%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E5%AF%B9%E6%AF%94/</loc>
+    
+    <lastmod>2020-02-21T06:36:25.327Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/20/Elasticsearch-%E7%B4%A2%E5%BC%95%E8%AE%BE%E8%AE%A1%E5%AE%9E%E6%88%98%E6%8C%87%E5%8D%97/</loc>
+    
+    <lastmod>2020-02-20T08:50:19.814Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/20/%E5%B0%86ELASTICSEARCH%E5%86%99%E5%85%A5%E9%80%9F%E5%BA%A6%E4%BC%98%E5%8C%96%E5%88%B0%E6%9E%81%E9%99%90/</loc>
+    
+    <lastmod>2020-02-20T08:16:21.969Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/13/Flink-1-10-%E5%86%85%E5%AD%98%E6%A8%A1%E5%9E%8B%E5%92%8C%E9%85%8D%E7%BD%AE%EF%BC%88%E7%BF%BB%E8%AF%91%EF%BC%89/</loc>
+    
+    <lastmod>2020-02-13T09:39:55.932Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/11/kafka%E4%B8%AD%E4%BD%BF%E7%94%A8%E7%9A%84mmap%E5%92%8Cpage-cache/</loc>
+    
+    <lastmod>2020-02-11T07:47:57.800Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/02/06/Flink%E4%B8%AD%E5%A6%82%E4%BD%95%E5%9C%A8%E6%B5%81%E5%BC%8F%E8%AE%A1%E7%AE%97%E4%B8%AD%E5%AE%9E%E7%8E%B0%E5%AE%9A%E6%97%B6%E4%BB%BB%E5%8A%A1/</loc>
+    
+    <lastmod>2020-02-06T09:01:50.074Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/01/22/%E7%9B%91%E6%8E%A7-Kubernetes-%E9%9B%86%E7%BE%A4%E8%8A%82%E7%82%B9/</loc>
+    
+    <lastmod>2020-01-22T04:49:20.911Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/01/10/%E5%9C%A8kubernetes%E4%B8%AD%E9%83%A8%E7%BD%B2java%E7%A8%8B%E5%BA%8F%E5%88%86%E6%9E%90%E7%B3%BB%E7%BB%9F%E6%97%A5%E5%BF%97%EF%BC%8C%E4%B8%8D%E5%BD%93%E4%BA%BA%E8%82%89%E6%99%BA%E8%83%BD/</loc>
+    
+    <lastmod>2020-01-10T12:45:53.878Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2020/01/01/Flink-Window%E7%9A%845%E4%B8%AA%E4%BD%BF%E7%94%A8%E5%B0%8F%E6%8A%80%E5%B7%A7/</loc>
+    
+    <lastmod>2020-01-02T11:22:07.592Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/23/harbor%E5%AE%89%E8%A3%85/</loc>
+    
+    <lastmod>2019-12-23T13:17:36.761Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/22/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%B3%BB%E5%88%97-%E4%BB%A3%E7%90%86%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2019-12-22T09:14:16.185Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/14/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-SQL%E7%9B%B8%E5%85%B3/</loc>
+    
+    <lastmod>2019-12-22T04:15:15.873Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/17/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%B3%BB%E5%88%97-%E5%91%BD%E4%BB%A4%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2019-12-16T16:40:15.867Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/15/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%B3%BB%E5%88%97-%E8%B4%A3%E4%BB%BB%E9%93%BE%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2019-12-15T09:59:59.001Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/15/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F-%E5%BB%BA%E9%80%A0%E8%80%85%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2019-12-15T03:36:27.848Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/14/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%B3%BB%E5%88%97-%E5%B7%A5%E5%8E%82%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2019-12-15T03:27:13.370Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/14/Flink-%E8%87%AA%E5%AE%9A%E4%B9%89metric%E7%9B%91%E6%8E%A7/</loc>
+    
+    <lastmod>2019-12-14T09:18:41.459Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/12/14/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E7%B3%BB%E5%88%97-%E5%8D%95%E4%BE%8B%E6%A8%A1%E5%BC%8F/</loc>
+    
+    <lastmod>2019-12-14T08:53:15.028Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/11/10/Flink-%E6%B5%85%E5%85%A5%E6%B5%85%E5%87%BA%EF%BC%88%E4%BA%8C%EF%BC%89/</loc>
+    
+    <lastmod>2019-11-10T01:47:25.604Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/11/08/Flink%E4%B8%8Espark-stream%E5%9C%A8%E8%B5%84%E6%BA%90%E4%BD%BF%E7%94%A8%E4%B8%8A%E7%9A%84%E5%AF%B9%E6%AF%94/</loc>
+    
+    <lastmod>2019-11-08T12:53:37.301Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/10/31/Flink%E6%B5%85%E5%85%A5%E6%B5%85%E5%87%BA/</loc>
+    
+    <lastmod>2019-10-31T15:12:40.114Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/10/16/java-%E9%80%83%E9%80%B8%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2019-10-16T13:14:09.055Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/10/11/Flink%E8%BF%90%E8%A1%8C%E6%97%B6%E4%B9%8B%E7%BD%91%E7%BB%9C%E9%80%9A%E4%BF%A1%E5%88%86%E6%9E%90/</loc>
+    
+    <lastmod>2019-10-11T14:06:56.456Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/17/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-%E5%BA%8F%E5%88%97%E5%8C%96/</loc>
+    
+    <lastmod>2019-10-11T14:05:13.820Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/25/java%E5%A0%86%E5%A4%96%E5%86%85%E5%AD%98/</loc>
+    
+    <lastmod>2019-09-25T14:34:30.514Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/24/Flink%E6%89%B9%E5%A4%84%E7%90%86%E8%B8%A9%E5%9D%91%E5%92%8C%E8%87%AA%E5%9F%8B%E4%B9%8B%E6%97%85/</loc>
+    
+    <lastmod>2019-09-24T14:21:47.285Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/08/10/Flink-%E7%9A%84-Exactly-Once-%E5%92%8C-At-Least-Once-%E5%92%8C-Jstorm%E7%9A%84ACK/</loc>
+    
+    <lastmod>2019-09-18T15:11:05.747Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/17/java-sun-misc-Unsafe/</loc>
+    
+    <lastmod>2019-09-17T15:41:04.436Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/17/java%E5%AD%97%E8%8A%82%E5%BA%8F%E3%80%81%E4%B8%BB%E6%9C%BA%E5%AD%97%E8%8A%82%E5%BA%8F%E5%92%8C%E7%BD%91%E7%BB%9C%E5%AD%97%E8%8A%82%E5%BA%8F/</loc>
+    
+    <lastmod>2019-09-17T15:37:15.033Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/11/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-Flink-%E5%86%85%E5%AD%98%E5%9F%BA%E7%A1%80/</loc>
+    
+    <lastmod>2019-09-11T14:34:28.481Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/09/06/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-Flink%E4%B8%ADTask%E9%97%B4%E7%9A%84%E6%95%B0%E6%8D%AE%E4%BC%A0%E9%80%92/</loc>
+    
+    <lastmod>2019-09-07T04:36:32.525Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/08/28/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-TaskManager%E5%90%AF%E5%8A%A8%E4%B8%8E%E8%BF%90%E8%A1%8CTask/</loc>
+    
+    <lastmod>2019-08-29T12:25:44.630Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/28/Flink-%E9%80%9A%E4%BF%A1%E6%9C%BA%E5%88%B6%E5%92%8C%E8%83%8C%E5%8E%8B%E5%A4%84%E7%90%86/</loc>
+    
+    <lastmod>2019-08-08T13:35:33.062Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/27/Flink-%E4%BD%BF%E7%94%A8%E8%B0%83%E4%BC%98-%E4%BA%8C/</loc>
+    
+    <lastmod>2019-08-08T13:35:07.689Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/20/CLI%E6%8F%90%E4%BA%A4job%E5%88%B0JobManger%E5%88%B0TaskMnager%E8%BF%90%E8%A1%8Cjob/</loc>
+    
+    <lastmod>2019-08-04T08:43:45.757Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/27/Flink%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90-%E8%B5%84%E6%BA%90%E7%94%B3%E8%AF%B7/</loc>
+    
+    <lastmod>2019-07-27T03:14:47.020Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/26/%E4%BD%BF%E7%94%A8%E8%B0%83%E4%BC%98%E4%B8%80/</loc>
+    
+    <lastmod>2019-07-27T03:10:28.620Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/03/jstack%E6%8E%92%E6%9F%A5cpu%E9%AB%98/</loc>
+    
+    <lastmod>2019-07-18T15:13:29.663Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/09/%E4%B8%BA%E4%BB%80%E4%B9%88kafka%E8%BF%99%E4%B9%88%E5%BF%AB/</loc>
+    
+    <lastmod>2019-07-10T14:09:55.671Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/10/Kafka%E6%B6%88%E6%81%AF%E6%A0%BC%E5%BC%8F%E7%9A%84%E6%BC%94%E5%8F%98/</loc>
+    
+    <lastmod>2019-07-10T14:07:25.538Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/07/06/Trie%E6%A0%91/</loc>
+    
+    <lastmod>2019-07-06T13:49:50.449Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/06/30/Flink%E6%BA%90%E7%A0%81%E5%88%86%E6%9E%90-%E8%8E%B7%E5%8F%96JobGraph%E8%BF%87%E7%A8%8B/</loc>
+    
+    <lastmod>2019-06-29T16:12:08.383Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/06/23/Flink-%E8%8E%B7%E5%8F%96StreamGraph%E7%9A%84%E8%BF%87%E7%A8%8B/</loc>
+    
+    <lastmod>2019-06-29T16:11:53.609Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/06/11/HDFS-File-Block-%E5%92%8C-Input-Split/</loc>
+    
+    <lastmod>2019-06-11T16:03:13.400Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/18/%E7%BC%93%E5%AD%98%E4%BB%8B%E7%BB%8D/</loc>
+    
+    <lastmod>2019-06-11T16:01:09.535Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/18/%E5%8E%8B%E7%BC%A9%E7%AE%97%E6%B3%95/</loc>
+    
+    <lastmod>2019-06-11T16:01:06.638Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/18/%E5%88%86%E5%BA%93%E5%88%86%E8%A1%A8%E7%9A%84%E6%95%B0%E6%8D%AE%E5%BA%93%E5%A6%82%E4%BD%95%E8%BF%9B%E8%A1%8C%E6%95%B0%E6%8D%AE%E8%BF%81%E7%A7%BB/</loc>
+    
+    <lastmod>2019-06-11T16:01:02.975Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/18/%E5%90%91%E4%B8%8A%E8%BD%AC%E5%9E%8B%E5%92%8C%E5%90%91%E4%B8%8B%E8%BD%AC%E5%9E%8B/</loc>
+    
+    <lastmod>2019-06-11T16:00:58.887Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/24/Flink-allowedLateness/</loc>
+    
+    <lastmod>2019-06-11T16:00:54.255Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/01/Flink-Process-Function/</loc>
+    
+    <lastmod>2019-06-11T16:00:50.623Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-sideOutput/</loc>
+    
+    <lastmod>2019-06-11T16:00:46.951Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-time/</loc>
+    
+    <lastmod>2019-06-11T16:00:34.142Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/24/Flink-trigger/</loc>
+    
+    <lastmod>2019-06-11T16:00:30.718Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-UDF/</loc>
+    
+    <lastmod>2019-06-11T16:00:26.375Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Flink-WaterMark/</loc>
+    
+    <lastmod>2019-06-11T16:00:23.199Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/21/Flink-%E5%88%86%E5%B8%83%E5%BC%8F%E7%BC%93%E5%AD%98Distributed-Cache/</loc>
+    
+    <lastmod>2019-06-11T16:00:20.157Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/21/Flink-%E6%89%B9%E5%A4%84%E7%90%86-map-%E4%B8%8E-mapPartition/</loc>
+    
+    <lastmod>2019-06-11T16:00:16.950Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/FlinkDataStreamGuide/</loc>
+    
+    <lastmod>2019-06-11T15:59:59.199Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/05/flink-%E5%BC%82%E6%AD%A5io/</loc>
+    
+    <lastmod>2019-06-11T15:59:55.351Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/jstormBasic/</loc>
+    
+    <lastmod>2019-06-11T15:59:51.639Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/06/06/Flink-operattion%E7%AE%97%E5%AD%90%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</loc>
+    
+    <lastmod>2019-06-11T15:59:48.143Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/06/06/Flink-%E8%AF%BB%E5%8F%96HDFS%E4%B8%AD%E7%9A%84%E6%95%B0%E6%8D%AE%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90%E8%AF%BB%E5%8F%96/</loc>
+    
+    <lastmod>2019-06-11T15:59:44.767Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/18/%E9%80%89%E4%B8%BE/</loc>
+    
+    <lastmod>2019-06-11T15:59:23.054Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/29/QCon%E5%B9%BF%E5%B7%9E/</loc>
+    
+    <lastmod>2019-05-29T13:17:12.056Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/05/10/BitMap%E5%92%8C%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4%E5%99%A8-BloomFilter/</loc>
+    
+    <lastmod>2019-05-17T12:16:26.158Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/20/spring%E5%88%9D%E5%A7%8B%E5%8C%96-%E5%92%8C-ClassLoad%E7%B1%BB%E5%8A%A0%E8%BD%BD/</loc>
+    
+    <lastmod>2019-04-20T13:26:49.116Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/19/kafka-zero-copy/</loc>
+    
+    <lastmod>2019-04-18T13:37:54.900Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/Kafka-porducter-code-analyse/</loc>
+    
+    <lastmod>2019-04-18T13:37:49.748Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/23/kafka-partition-%E9%80%89%E6%8B%A9/</loc>
+    
+    <lastmod>2019-04-18T13:37:45.499Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/21/kafka-Coordinator/</loc>
+    
+    <lastmod>2019-04-18T13:37:41.309Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/30/java8-Map-merge%E3%80%81compute%E3%80%81computeIfAbsent%E3%80%81computeIfPresent/</loc>
+    
+    <lastmod>2019-04-18T13:37:28.652Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/25/SimpleDateFormat%E7%BA%BF%E7%A8%8B%E4%B8%8D%E5%AE%89%E5%85%A8%E4%BB%A5%E5%8F%8A%E8%A7%A3%E5%86%B3%E6%96%B9%E6%B3%95/</loc>
+    
+    <lastmod>2019-04-18T13:37:14.908Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/14/clickhouse-join%E5%92%8C%E5%B9%B6%E5%8F%91%E6%B5%8B%E8%AF%95/</loc>
+    
+    <lastmod>2019-04-18T13:33:55.435Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/04/02/clickhouse-%E5%AD%97%E5%85%B8/</loc>
+    
+    <lastmod>2019-04-01T16:11:47.152Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/31/clickhouse-global%E7%94%A8%E6%B3%95/</loc>
+    
+    <lastmod>2019-03-31T15:56:22.082Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/clickhouse-%E6%95%B0%E7%BB%84/</loc>
+    
+    <lastmod>2019-03-25T15:13:08.187Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/18/clickhouse-mergeTree/</loc>
+    
+    <lastmod>2019-03-18T15:11:46.078Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/skipTable/</loc>
+    
+    <lastmod>2019-03-17T12:54:23.096Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/2019/03/17/RedisBasic/</loc>
+    
+    <lastmod>2019-03-17T12:54:14.185Z</lastmod>
+    
+  </url>
+  
+  <url>
+    <loc>http://yoursite.com/categories/index.html</loc>
+    
+    <lastmod>2019-03-17T12:51:51.560Z</lastmod>
+    
+  </url>
+  
+</urlset>

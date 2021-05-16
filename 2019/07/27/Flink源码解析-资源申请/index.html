@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="申请资源申请资源就得从ejv.allocateResourcesForAll 即 ExecutionJobVertex的allocateResourcesForAll 方法说起。这个方法先遍历了每个ExecutionJobVertex中的所有的task，为每一个task申请一个slot。Execution.allocateAndAssignSlotForExecution方法是主要代码。 1234">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析 资源申请">
+<meta property="og:url" content="http://yoursite.com/2019/07/27/Flink源码解析-资源申请/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="申请资源申请资源就得从ejv.allocateResourcesForAll 即 ExecutionJobVertex的allocateResourcesForAll 方法说起。这个方法先遍历了每个ExecutionJobVertex中的所有的task，为每一个task申请一个slot。Execution.allocateAndAssignSlotForExecution方法是主要代码。 1234">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-07-27T03:14:47.020Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析 资源申请">
+<meta name="twitter:description" content="申请资源申请资源就得从ejv.allocateResourcesForAll 即 ExecutionJobVertex的allocateResourcesForAll 方法说起。这个方法先遍历了每个ExecutionJobVertex中的所有的task，为每一个task申请一个slot。Execution.allocateAndAssignSlotForExecution方法是主要代码。 1234">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/07/27/Flink源码解析-资源申请/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析 资源申请 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/07/27/Flink源码解析-资源申请/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析 资源申请
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-07-27 11:14:20 / 修改时间：11:14:47" itemprop="dateCreated datePublished" datetime="2019-07-27T11:14:20+08:00">2019-07-27</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="申请资源"><a href="#申请资源" class="headerlink" title="申请资源"></a>申请资源</h4><p>申请资源就得从ejv.allocateResourcesForAll 即 ExecutionJobVertex的allocateResourcesForAll 方法说起。这个方法先遍历了每个ExecutionJobVertex中的所有的task，为每一个task申请一个slot。Execution.allocateAndAssignSlotForExecution方法是主要代码。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">//ExecutionJobVertex一个job顶点，包含里头ExecutionVertex的运行和并行度。</span></span><br><span class="line"><span class="comment">// allocate the slots (obtain all their futures</span></span><br><span class="line"><span class="keyword">for</span> (ExecutionJobVertex ejv : getVerticesTopologically()) &#123;</span><br><span class="line">	<span class="comment">// these calls are not blocking, they only return futures</span></span><br><span class="line">	<span class="comment">//如果一个ExecutionJobVertex有n个并行度，返回n个并行度</span></span><br><span class="line">	Collection&lt;CompletableFuture&lt;Execution&gt;&gt; allocationFutures = ejv.allocateResourcesForAll(</span><br><span class="line">		slotProvider,</span><br><span class="line">		queued,</span><br><span class="line">		LocationPreferenceConstraint.ALL,</span><br><span class="line">		allPreviousAllocationIds,</span><br><span class="line">		timeout);<span class="comment">//申请slot</span></span><br><span class="line"></span><br><span class="line">	allAllocationFutures.addAll(allocationFutures);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">       * Defines the location preference constraint.</span></span><br><span class="line"><span class="comment">       *</span></span><br><span class="line"><span class="comment">       * &lt;p&gt; Currently, we support that all input locations have to be taken into consideration</span></span><br><span class="line"><span class="comment">       * and only those which are known at scheduling time. Note that if all input locations</span></span><br><span class="line"><span class="comment">       * are considered, then the scheduling operation can potentially take a while until all</span></span><br><span class="line"><span class="comment">       * inputs have locations assigned.</span></span><br><span class="line"><span class="comment">       */</span></span><br><span class="line">      <span class="keyword">public</span> <span class="keyword">enum</span> LocationPreferenceConstraint &#123;</span><br><span class="line">      	ALL, <span class="comment">// wait for all inputs to have a location assigned</span></span><br><span class="line">      	ANY <span class="comment">// only consider those inputs who already have a location assigned</span></span><br><span class="line">      &#125;</span><br></pre></td></tr></table></figure>
+<p>默认是使用LocationPreferenceConstraint.ALL,，等待这个task的input部署完之后，才分配。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 申请一个slot为这个JobVertex运行.这个方法返回资源和执行尝试次数，减少顶点和执行查询尝试次数的联系</span></span><br><span class="line"><span class="comment">	 * Acquires a slot for all the execution vertices of this ExecutionJobVertex. The method returns</span></span><br><span class="line"><span class="comment">	 * pairs of the slots and execution attempts, to ease correlation between vertices and execution</span></span><br><span class="line"><span class="comment">	 * attempts.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * 如果这个方法抛出异常，会释放之前申请到的所有资源</span></span><br><span class="line"><span class="comment">	 * &lt;p&gt;If this method throws an exception, it makes sure to release all so far requested slots.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> resourceProvider The resource provider from whom the slots are requested.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> queued if the allocation can be queued</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> locationPreferenceConstraint constraint for the location preferences</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> allPreviousExecutionGraphAllocationIds the allocation ids of all previous executions in the execution job graph.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> allocationTimeout timeout for allocating the individual slots</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">public</span> Collection&lt;CompletableFuture&lt;Execution&gt;&gt; allocateResourcesForAll(</span><br><span class="line">			SlotProvider resourceProvider,</span><br><span class="line">			<span class="keyword">boolean</span> queued,</span><br><span class="line">			LocationPreferenceConstraint locationPreferenceConstraint,</span><br><span class="line">			<span class="meta">@Nonnull</span> Set&lt;AllocationID&gt; allPreviousExecutionGraphAllocationIds,</span><br><span class="line">			Time allocationTimeout) &#123;</span><br><span class="line">		<span class="keyword">final</span> ExecutionVertex[] vertices = <span class="keyword">this</span>.taskVertices;</span><br><span class="line"></span><br><span class="line">		<span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>)</span><br><span class="line">		<span class="keyword">final</span> CompletableFuture&lt;Execution&gt;[] slots = <span class="keyword">new</span> CompletableFuture[vertices.length];</span><br><span class="line"></span><br><span class="line">		<span class="comment">// try to acquire a slot future for each execution.</span></span><br><span class="line">		<span class="comment">// we store the execution with the future just to be on the safe side</span></span><br><span class="line">		<span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">0</span>; i &lt; vertices.length; i++) &#123;</span><br><span class="line">			<span class="comment">// allocate the next slot (future)</span></span><br><span class="line">			<span class="keyword">final</span> Execution exec = vertices[i].getCurrentExecutionAttempt();</span><br><span class="line">			<span class="keyword">final</span> CompletableFuture&lt;Execution&gt; allocationFuture = exec.allocateAndAssignSlotForExecution(</span><br><span class="line">				resourceProvider,</span><br><span class="line">				queued,</span><br><span class="line">				locationPreferenceConstraint,</span><br><span class="line">				allPreviousExecutionGraphAllocationIds,</span><br><span class="line">				allocationTimeout);</span><br><span class="line">			slots[i] = allocationFuture;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// all good, we acquired all slots</span></span><br><span class="line">		<span class="keyword">return</span> Arrays.asList(slots);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>整体的分配资源的方法，在如下中体现<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * 从slot提供者获取一个slot给一个execution</span></span><br><span class="line"><span class="comment">	 * Allocates and assigns a slot obtained from the slot provider to the execution.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> slotProvider to obtain a new slot from</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> queued if the allocation can be queued</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> locationPreferenceConstraint constraint for the location preferences</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> allPreviousExecutionGraphAllocationIds set with all previous allocation ids in the job graph.</span></span><br><span class="line"><span class="comment">	 *                                                 Can be empty if the allocation ids are not required for scheduling.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> allocationTimeout rpcTimeout for allocating a new slot</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> Future which is completed with this execution once the slot has been assigned</span></span><br><span class="line"><span class="comment">	 * 			or with an exception if an error occurred.</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@throws</span> IllegalExecutionStateException if this method has been called while not being in the CREATED state</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> CompletableFuture&lt;Execution&gt; <span class="title">allocateAndAssignSlotForExecution</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">			SlotProvider slotProvider,</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">boolean</span> queued,</span></span></span><br><span class="line"><span class="function"><span class="params">			LocationPreferenceConstraint locationPreferenceConstraint,</span></span></span><br><span class="line"><span class="function"><span class="params">			@Nonnull Set&lt;AllocationID&gt; allPreviousExecutionGraphAllocationIds,</span></span></span><br><span class="line"><span class="function"><span class="params">			Time allocationTimeout)</span> <span class="keyword">throws</span> IllegalExecutionStateException </span>&#123;</span><br><span class="line"></span><br><span class="line">		checkNotNull(slotProvider);</span><br><span class="line"></span><br><span class="line">		assertRunningInJobMasterMainThread();</span><br><span class="line"></span><br><span class="line">		<span class="comment">//获取jobVertex的shareing 组</span></span><br><span class="line">		<span class="keyword">final</span> SlotSharingGroup sharingGroup = vertex.getJobVertex().getSlotSharingGroup();</span><br><span class="line">		<span class="keyword">final</span> CoLocationConstraint locationConstraint = vertex.getLocationConstraint();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// sanity check</span></span><br><span class="line">		<span class="keyword">if</span> (locationConstraint != <span class="keyword">null</span> &amp;&amp; sharingGroup == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(</span><br><span class="line">					<span class="string">"Trying to schedule with co-location constraint but without slot sharing allowed."</span>);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// this method only works if the execution is in the state 'CREATED'</span></span><br><span class="line">		<span class="keyword">if</span> (transitionState(CREATED, SCHEDULED)) &#123;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">final</span> SlotSharingGroupId slotSharingGroupId = sharingGroup != <span class="keyword">null</span> ? sharingGroup.getSlotSharingGroupId() : <span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">			ScheduledUnit toSchedule = locationConstraint == <span class="keyword">null</span> ?</span><br><span class="line">					<span class="keyword">new</span> ScheduledUnit(<span class="keyword">this</span>, slotSharingGroupId) :</span><br><span class="line">					<span class="keyword">new</span> ScheduledUnit(<span class="keyword">this</span>, slotSharingGroupId, locationConstraint);</span><br><span class="line"></span><br><span class="line">			<span class="comment">// try to extract previous allocation ids, if applicable, so that we can reschedule to the same slot</span></span><br><span class="line">			ExecutionVertex executionVertex = getVertex();</span><br><span class="line">			AllocationID lastAllocation = executionVertex.getLatestPriorAllocation();</span><br><span class="line"></span><br><span class="line">			<span class="comment">//上次分配过的id</span></span><br><span class="line">			Collection&lt;AllocationID&gt; previousAllocationIDs =</span><br><span class="line">				lastAllocation != <span class="keyword">null</span> ? Collections.singletonList(lastAllocation) : Collections.emptyList();</span><br><span class="line"></span><br><span class="line">			<span class="comment">//计算偏好位置，根据input的位置计算，如果上游input多于8个， 忽略。</span></span><br><span class="line">			<span class="comment">// calculate the preferred locations</span></span><br><span class="line">			<span class="keyword">final</span> CompletableFuture&lt;Collection&lt;TaskManagerLocation&gt;&gt; preferredLocationsFuture =</span><br><span class="line">				calculatePreferredLocations(locationPreferenceConstraint);</span><br><span class="line"></span><br><span class="line">			<span class="keyword">final</span> SlotRequestId slotRequestId = <span class="keyword">new</span> SlotRequestId();</span><br><span class="line"></span><br><span class="line">			<span class="keyword">final</span> CompletableFuture&lt;LogicalSlot&gt; logicalSlotFuture =</span><br><span class="line">				preferredLocationsFuture.thenCompose(</span><br><span class="line">					(Collection&lt;TaskManagerLocation&gt; preferredLocations) -&gt;</span><br><span class="line">						slotProvider.allocateSlot(</span><br><span class="line">							slotRequestId,</span><br><span class="line">							toSchedule,</span><br><span class="line">							<span class="keyword">new</span> SlotProfile(</span><br><span class="line">								ResourceProfile.UNKNOWN,</span><br><span class="line">								preferredLocations,</span><br><span class="line">								previousAllocationIDs,</span><br><span class="line">								allPreviousExecutionGraphAllocationIds),</span><br><span class="line">							queued,</span><br><span class="line">							allocationTimeout));</span><br><span class="line"></span><br><span class="line">			<span class="comment">// register call back to cancel slot request in case that the execution gets canceled</span></span><br><span class="line">			releaseFuture.whenComplete(</span><br><span class="line">				(Object ignored, Throwable throwable) -&gt; &#123;</span><br><span class="line">					<span class="keyword">if</span> (logicalSlotFuture.cancel(<span class="keyword">false</span>)) &#123;</span><br><span class="line">						slotProvider.cancelSlotRequest(</span><br><span class="line">							slotRequestId,</span><br><span class="line">							slotSharingGroupId,</span><br><span class="line">							<span class="keyword">new</span> FlinkException(<span class="string">"Execution "</span> + <span class="keyword">this</span> + <span class="string">" was released."</span>));</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;);</span><br><span class="line"></span><br><span class="line">			<span class="comment">// This forces calls to the slot pool back into the main thread, for normal and exceptional completion</span></span><br><span class="line">			<span class="keyword">return</span> logicalSlotFuture.handle(</span><br><span class="line">				(LogicalSlot logicalSlot, Throwable failure) -&gt; &#123;</span><br><span class="line"></span><br><span class="line">					<span class="keyword">if</span> (failure != <span class="keyword">null</span>) &#123;</span><br><span class="line">						<span class="keyword">throw</span> <span class="keyword">new</span> CompletionException(failure);</span><br><span class="line">					&#125;</span><br><span class="line"></span><br><span class="line">					<span class="keyword">if</span> (tryAssignResource(logicalSlot)) &#123;</span><br><span class="line">						<span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">					&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">						<span class="comment">// release the slot</span></span><br><span class="line">						logicalSlot.releaseSlot(<span class="keyword">new</span> FlinkException(<span class="string">"Could not assign logical slot to execution "</span> + <span class="keyword">this</span> + <span class="string">'.'</span>));</span><br><span class="line">						<span class="keyword">throw</span> <span class="keyword">new</span> CompletionException(</span><br><span class="line">							<span class="keyword">new</span> FlinkException(</span><br><span class="line">								<span class="string">"Could not assign slot "</span> + logicalSlot + <span class="string">" to execution "</span> + <span class="keyword">this</span> + <span class="string">" because it has already been assigned "</span>));</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;);</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// call race, already deployed, or already done</span></span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> IllegalExecutionStateException(<span class="keyword">this</span>, CREATED, state);</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure></p>
+<p>计算偏好位置。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">final</span> CompletableFuture&lt;Collection&lt;TaskManagerLocation&gt;&gt; preferredLocationsFuture =</span><br><span class="line">			calculatePreferredLocations(locationPreferenceConstraint);</span><br></pre></td></tr></table></figure></p>
+<p>主要是getVertex().getPreferredLocations();</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * Calculates the preferred locations based on the location preference constraint.</span></span><br><span class="line"><span class="comment">	 *</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> locationPreferenceConstraint constraint for the location preference</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span> Future containing the collection of preferred locations. This might not be completed if not all inputs</span></span><br><span class="line"><span class="comment">	 * 		have been a resource assigned.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@VisibleForTesting</span></span><br><span class="line">	<span class="keyword">public</span> CompletableFuture&lt;Collection&lt;TaskManagerLocation&gt;&gt; calculatePreferredLocations(LocationPreferenceConstraint locationPreferenceConstraint) &#123;</span><br><span class="line">		<span class="keyword">final</span> Collection&lt;CompletableFuture&lt;TaskManagerLocation&gt;&gt; preferredLocationFutures = getVertex().getPreferredLocations();</span><br><span class="line">        ··········</span><br><span class="line">		<span class="keyword">return</span> preferredLocationsFuture;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>如果上游的个数超过8个，那么就不考虑偏好位置的因素<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">   <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> MAX_DISTINCT_LOCATIONS_TO_CONSIDER = <span class="number">8</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (inputLocations.size() &gt; MAX_DISTINCT_LOCATIONS_TO_CONSIDER) &#123;</span><br><span class="line">						inputLocations.clear();</span><br><span class="line">						<span class="keyword">break</span>;</span><br><span class="line">					&#125;</span><br></pre></td></tr></table></figure></p>
+<p>slotProvider.allocateSlot。slotProvider的实现类SchedulerImpl.allocateSlot</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">CompletableFuture&lt;LogicalSlot&gt; allocationFuture = scheduledUnit.getSlotSharingGroupId() == <span class="keyword">null</span> ?</span><br><span class="line">			allocateSingleSlot(slotRequestId, slotProfile, allowQueuedScheduling, allocationTimeout) :</span><br><span class="line">			allocateSharedSlot(slotRequestId, scheduledUnit, slotProfile, allowQueuedScheduling, allocationTimeout);</span><br></pre></td></tr></table></figure>
+<p>一般都会有SlotSharingGroupId，因此大部分都是调用allocateSharedSlot(slotRequestId, scheduledUnit, slotProfile, allowQueuedScheduling, allocationTimeout);</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line">	<span class="function"><span class="keyword">private</span> CompletableFuture&lt;LogicalSlot&gt; <span class="title">allocateSharedSlot</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		SlotRequestId slotRequestId,</span></span></span><br><span class="line"><span class="function"><span class="params">		ScheduledUnit scheduledUnit,</span></span></span><br><span class="line"><span class="function"><span class="params">		SlotProfile slotProfile,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">boolean</span> allowQueuedScheduling,</span></span></span><br><span class="line"><span class="function"><span class="params">		Time allocationTimeout)</span> </span>&#123;</span><br><span class="line">··········</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="keyword">if</span> (scheduledUnit.getCoLocationConstraint() != <span class="keyword">null</span>) &#123;</span><br><span class="line">				multiTaskSlotLocality = allocateCoLocatedMultiTaskSlot(</span><br><span class="line">					scheduledUnit.getCoLocationConstraint(),</span><br><span class="line">					multiTaskSlotManager,</span><br><span class="line">					slotProfile,</span><br><span class="line">					allowQueuedScheduling,</span><br><span class="line">					allocationTimeout);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="comment">//生成MultiTaskSlot</span></span><br><span class="line">				multiTaskSlotLocality = allocateMultiTaskSlot(</span><br><span class="line">					scheduledUnit.getJobVertexId(),</span><br><span class="line">					multiTaskSlotManager,</span><br><span class="line">					slotProfile,</span><br><span class="line">					allowQueuedScheduling,</span><br><span class="line">					allocationTimeout);</span><br><span class="line">			&#125;</span><br><span class="line">············</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在没有colocation的情况，会调用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">multiTaskSlotLocality = allocateMultiTaskSlot(</span><br><span class="line">				scheduledUnit.getJobVertexId(),</span><br><span class="line">				multiTaskSlotManager,</span><br><span class="line">				slotProfile,</span><br><span class="line">				allowQueuedScheduling,</span><br><span class="line">				allocationTimeout);</span><br></pre></td></tr></table></figure></p>
+<h3 id="LogicalSlot、-MultiTaskSlot-、-SingleTaskSlot"><a href="#LogicalSlot、-MultiTaskSlot-、-SingleTaskSlot" class="headerlink" title="LogicalSlot、 MultiTaskSlot 、 SingleTaskSlot"></a>LogicalSlot、 MultiTaskSlot 、 SingleTaskSlot</h3><ul>
+<li>LogicalSlot:逻辑槽表示TaskManager中可以部署单个任务的资源</li>
+<li>MultiTaskSlot  资源的父节点，下面挂了很多SingleTaskSlot。</li>
+<li>SingleTaskSlot   资源的节点的最小单元，一个。</li>
+</ul>
+<p>举例：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">graph LR</span><br><span class="line">A[source]--&gt;B[map]</span><br><span class="line">A--&gt;C[map]</span><br><span class="line">C--&gt;D[sink]</span><br><span class="line">B--&gt;E[sink]</span><br></pre></td></tr></table></figure>
+<p>其实会转化为</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">graph LR</span><br><span class="line">A[MultiTaskSlot]--&gt;B[SingleTaskSlot.source]</span><br><span class="line">B--&gt;C[SingleTaskSlot]</span><br><span class="line">C--&gt;D[SingleTaskSlot.sink]</span><br><span class="line">A1[MultiTaskSlot]--&gt;B1[SingleTaskSlot.map]</span><br><span class="line">B1--&gt;C1[SingleTaskSlot.sink]</span><br></pre></td></tr></table></figure>
+<p>计算资源权重</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">   <span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Calculates the candidate's locality score.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> BiFunction&lt;Integer, Integer, Integer&gt; LOCALITY_EVALUATION_FUNCTION =</span><br><span class="line">	(localWeigh, hostLocalWeigh) -&gt; localWeigh * <span class="number">10</span> + hostLocalWeigh;</span><br><span class="line"></span><br><span class="line">   <span class="comment">/**</span></span><br><span class="line"><span class="comment"> * 先给所有偏好slot加分，遍历所有的slot，locate和host的权重为10:1，只要存在locate分数，则分配策略为locate</span></span><br><span class="line"><span class="comment"> * 然后将这个slot和策略组成SlotInfoAndLocality返回</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> availableSlots</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> locationPreferences</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> resourceProfile</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">@Nonnull</span></span><br><span class="line"><span class="function"><span class="keyword">private</span> Optional&lt;SlotInfoAndLocality&gt; <span class="title">selectWitLocationPreference</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">	@Nonnull Collection&lt;? extends SlotInfo&gt; availableSlots,</span></span></span><br><span class="line"><span class="function"><span class="params">	@Nonnull Collection&lt;TaskManagerLocation&gt; locationPreferences,</span></span></span><br><span class="line"><span class="function"><span class="params">	@Nonnull ResourceProfile resourceProfile)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// we build up two indexes, one for resource id and one for host names of the preferred locations.</span></span><br><span class="line">	<span class="keyword">final</span> Map&lt;ResourceID, Integer&gt; preferredResourceIDs = <span class="keyword">new</span> HashMap&lt;&gt;(locationPreferences.size());</span><br><span class="line">	<span class="keyword">final</span> Map&lt;String, Integer&gt; preferredFQHostNames = <span class="keyword">new</span> HashMap&lt;&gt;(locationPreferences.size());</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (TaskManagerLocation locationPreference : locationPreferences) &#123;</span><br><span class="line">		preferredResourceIDs.merge(locationPreference.getResourceID(), <span class="number">1</span>, Integer::sum);</span><br><span class="line">		preferredFQHostNames.merge(locationPreference.getFQDNHostname(), <span class="number">1</span>, Integer::sum);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	SlotInfo bestCandidate = <span class="keyword">null</span>;</span><br><span class="line">	Locality bestCandidateLocality = Locality.UNKNOWN;</span><br><span class="line">	<span class="keyword">int</span> bestCandidateScore = Integer.MIN_VALUE;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">for</span> (SlotInfo candidate : availableSlots) &#123;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (candidate.getResourceProfile().isMatching(resourceProfile)) &#123;</span><br><span class="line"></span><br><span class="line">			<span class="comment">// this gets candidate is local-weigh</span></span><br><span class="line">			Integer localWeigh = preferredResourceIDs.getOrDefault(</span><br><span class="line">				candidate.getTaskManagerLocation().getResourceID(), <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">			<span class="comment">// this gets candidate is host-local-weigh</span></span><br><span class="line">			Integer hostLocalWeigh = preferredFQHostNames.getOrDefault(</span><br><span class="line">				candidate.getTaskManagerLocation().getFQDNHostname(), <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">			<span class="keyword">int</span> candidateScore = LOCALITY_EVALUATION_FUNCTION.apply(localWeigh, hostLocalWeigh);</span><br><span class="line">			<span class="keyword">if</span> (candidateScore &gt; bestCandidateScore) &#123;</span><br><span class="line">				bestCandidateScore = candidateScore;</span><br><span class="line">				bestCandidate = candidate;</span><br><span class="line">				bestCandidateLocality = localWeigh &gt; <span class="number">0</span> ?</span><br><span class="line">					Locality.LOCAL : hostLocalWeigh &gt; <span class="number">0</span> ?</span><br><span class="line">					Locality.HOST_LOCAL : Locality.NON_LOCAL;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">// at the end of the iteration, we return the candidate with best possible locality or null.</span></span><br><span class="line">	<span class="keyword">return</span> bestCandidate != <span class="keyword">null</span> ?</span><br><span class="line">		Optional.of(SlotInfoAndLocality.of(bestCandidate, bestCandidateLocality)) :</span><br><span class="line">		Optional.empty();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>回到申请MultiTaskSlot.首先会获取已经分配的root资源槽信息.并且这个资源不含有相同的操作,如果含有来自同一个jobVertex的，会被过滤（两个map的subTask不会在同一个slot中）。然后获取计算出现有资源的最佳槽，如果有，直接分配这个root（MultiTaskSlot），并且将SingTaskSlot注册在这个root下。</p>
+<p>如果资源不够，则想resourceManager申请，通过rpc方法(slotPool.requestNewAllocatedSlot).如果已有的TaskManager没有足够的Slot，SlotManager会向ResourceManager申请新的TaskManager（在启动或者某个TaskExecutor挂掉的情况下会出现这种情况，或者yarn上再创建新的TM)。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> SlotSharingManager.<span class="function">MultiTaskSlotLocality <span class="title">allocateMultiTaskSlot</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		AbstractID groupId,</span></span></span><br><span class="line"><span class="function"><span class="params">		SlotSharingManager slotSharingManager,</span></span></span><br><span class="line"><span class="function"><span class="params">		SlotProfile slotProfile,</span></span></span><br><span class="line"><span class="function"><span class="params">		<span class="keyword">boolean</span> allowQueuedScheduling,</span></span></span><br><span class="line"><span class="function"><span class="params">		Time allocationTimeout)</span> <span class="keyword">throws</span> NoResourceAvailableException </span>&#123;</span><br><span class="line"></span><br><span class="line">		<span class="comment">//获取已经分配的root资源槽信息.并且这个资源不含有相同的操作,如果是一个jobVertex，会被过滤</span></span><br><span class="line">		Collection&lt;SlotInfo&gt; resolvedRootSlotsInfo = slotSharingManager.listResolvedRootSlotInfo(groupId);</span><br><span class="line"></span><br><span class="line">		<span class="comment">//选取最佳slot</span></span><br><span class="line">		SlotSelectionStrategy.SlotInfoAndLocality bestResolvedRootSlotWithLocality =</span><br><span class="line">			slotSelectionStrategy.selectBestSlotForProfile(resolvedRootSlotsInfo, slotProfile).orElse(<span class="keyword">null</span>);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> SlotSharingManager.MultiTaskSlotLocality multiTaskSlotLocality = bestResolvedRootSlotWithLocality != <span class="keyword">null</span> ?</span><br><span class="line">			<span class="keyword">new</span> SlotSharingManager.MultiTaskSlotLocality(</span><br><span class="line">				slotSharingManager.getResolvedRootSlot(bestResolvedRootSlotWithLocality.getSlotInfo()),</span><br><span class="line">				bestResolvedRootSlotWithLocality.getLocality()) :</span><br><span class="line">			<span class="keyword">null</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (multiTaskSlotLocality != <span class="keyword">null</span> &amp;&amp; multiTaskSlotLocality.getLocality() == Locality.LOCAL) &#123;</span><br><span class="line">			<span class="keyword">return</span> multiTaskSlotLocality;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> SlotRequestId allocatedSlotRequestId = <span class="keyword">new</span> SlotRequestId();</span><br><span class="line">		<span class="keyword">final</span> SlotRequestId multiTaskSlotRequestId = <span class="keyword">new</span> SlotRequestId();</span><br><span class="line">		<span class="comment">//从资源池中获取可以获取的资源，如果没有再去向sourceManger申请</span></span><br><span class="line">		Optional&lt;SlotAndLocality&gt; optionalPoolSlotAndLocality = tryAllocateFromAvailable(allocatedSlotRequestId, slotProfile);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (optionalPoolSlotAndLocality.isPresent()) &#123;</span><br><span class="line">			SlotAndLocality poolSlotAndLocality = optionalPoolSlotAndLocality.get();</span><br><span class="line">			<span class="keyword">if</span> (poolSlotAndLocality.getLocality() == Locality.LOCAL || bestResolvedRootSlotWithLocality == <span class="keyword">null</span>) &#123;</span><br><span class="line"></span><br><span class="line">				<span class="keyword">final</span> PhysicalSlot allocatedSlot = poolSlotAndLocality.getSlot();</span><br><span class="line">				<span class="keyword">final</span> SlotSharingManager.MultiTaskSlot multiTaskSlot = slotSharingManager.createRootSlot(</span><br><span class="line">					multiTaskSlotRequestId,</span><br><span class="line">					CompletableFuture.completedFuture(poolSlotAndLocality.getSlot()),</span><br><span class="line">					allocatedSlotRequestId);</span><br><span class="line"></span><br><span class="line">				<span class="keyword">if</span> (allocatedSlot.tryAssignPayload(multiTaskSlot)) &#123;</span><br><span class="line">					<span class="keyword">return</span> SlotSharingManager.MultiTaskSlotLocality.of(multiTaskSlot, poolSlotAndLocality.getLocality());</span><br><span class="line">				&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">					multiTaskSlot.release(<span class="keyword">new</span> FlinkException(<span class="string">"Could not assign payload to allocated slot "</span> +</span><br><span class="line">						allocatedSlot.getAllocationId() + <span class="string">'.'</span>));</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (multiTaskSlotLocality != <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="comment">// prefer slot sharing group slots over unused slots</span></span><br><span class="line">			<span class="keyword">if</span> (optionalPoolSlotAndLocality.isPresent()) &#123;</span><br><span class="line">				slotPool.releaseSlot(</span><br><span class="line">					allocatedSlotRequestId,</span><br><span class="line">					<span class="keyword">new</span> FlinkException(<span class="string">"Locality constraint is not better fulfilled by allocated slot."</span>));</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">return</span> multiTaskSlotLocality;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (allowQueuedScheduling) &#123;</span><br><span class="line">			<span class="comment">//获取一个未包含grouopid的未解析的 slot</span></span><br><span class="line">			<span class="comment">// there is no slot immediately available --&gt; check first for uncompleted slots at the slot sharing group</span></span><br><span class="line">			SlotSharingManager.MultiTaskSlot multiTaskSlot = slotSharingManager.getUnresolvedRootSlot(groupId);</span><br><span class="line"></span><br><span class="line">			<span class="keyword">if</span> (multiTaskSlot == <span class="keyword">null</span>) &#123;</span><br><span class="line">				<span class="comment">// 没有可以获取的slot了，需要从resource manager申请新的slot。</span></span><br><span class="line">				<span class="comment">// it seems as if we have to request a new slot from the resource manager, this is always the last resort!!!</span></span><br><span class="line">				<span class="keyword">final</span> CompletableFuture&lt;PhysicalSlot&gt; slotAllocationFuture = slotPool.requestNewAllocatedSlot(</span><br><span class="line">					allocatedSlotRequestId,</span><br><span class="line">					slotProfile.getResourceProfile(),</span><br><span class="line">					allocationTimeout);</span><br><span class="line"></span><br><span class="line">				<span class="comment">//创建一个root slot</span></span><br><span class="line">				multiTaskSlot = slotSharingManager.createRootSlot(</span><br><span class="line">					multiTaskSlotRequestId,</span><br><span class="line">					slotAllocationFuture,</span><br><span class="line">					allocatedSlotRequestId);</span><br><span class="line"></span><br><span class="line">				slotAllocationFuture.whenComplete(</span><br><span class="line">					(PhysicalSlot allocatedSlot, Throwable throwable) -&gt; &#123;</span><br><span class="line"></span><br><span class="line">						<span class="keyword">final</span> SlotSharingManager.TaskSlot taskSlot = slotSharingManager.getTaskSlot(multiTaskSlotRequestId);</span><br><span class="line"></span><br><span class="line">						<span class="keyword">if</span> (taskSlot != <span class="keyword">null</span>) &#123;</span><br><span class="line">							<span class="comment">// still valid</span></span><br><span class="line">							<span class="keyword">if</span> (!(taskSlot <span class="keyword">instanceof</span> SlotSharingManager.MultiTaskSlot) || throwable != <span class="keyword">null</span>) &#123;</span><br><span class="line">								taskSlot.release(throwable);</span><br><span class="line">							&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">								<span class="comment">//slot申请下来后进行任务分配</span></span><br><span class="line">								<span class="keyword">if</span> (!allocatedSlot.tryAssignPayload(((SlotSharingManager.MultiTaskSlot) taskSlot))) &#123;</span><br><span class="line">									taskSlot.release(<span class="keyword">new</span> FlinkException(<span class="string">"Could not assign payload to allocated slot "</span> +</span><br><span class="line">										allocatedSlot.getAllocationId() + <span class="string">'.'</span>));</span><br><span class="line">								&#125;</span><br><span class="line">							&#125;</span><br><span class="line">						&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">							slotPool.releaseSlot(</span><br><span class="line">								allocatedSlotRequestId,</span><br><span class="line">								<span class="keyword">new</span> FlinkException(<span class="string">"Could not find task slot with "</span> + multiTaskSlotRequestId + <span class="string">'.'</span>));</span><br><span class="line">						&#125;</span><br><span class="line">					&#125;);</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">return</span> SlotSharingManager.MultiTaskSlotLocality.of(multiTaskSlot, Locality.UNKNOWN);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> NoResourceAvailableException(<span class="string">"Could not allocate a shared slot for "</span> + groupId + <span class="string">'.'</span>);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>slotPoolImpl.requestNewAllocatedSlot–&gt;requestNewAllocatedSlotInternal</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> CompletableFuture&lt;AllocatedSlot&gt; <span class="title">requestNewAllocatedSlotInternal</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		@Nonnull SlotRequestId slotRequestId,</span></span></span><br><span class="line"><span class="function"><span class="params">		@Nonnull ResourceProfile resourceProfile,</span></span></span><br><span class="line"><span class="function"><span class="params">		@Nonnull Time timeout)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		componentMainThreadExecutor.assertRunningInMainThread();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> PendingRequest pendingRequest = <span class="keyword">new</span> PendingRequest(</span><br><span class="line">			slotRequestId,</span><br><span class="line">			resourceProfile);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// register request timeout</span></span><br><span class="line">		FutureUtils</span><br><span class="line">			.orTimeout(</span><br><span class="line">				pendingRequest.getAllocatedSlotFuture(),</span><br><span class="line">				timeout.toMilliseconds(),</span><br><span class="line">				TimeUnit.MILLISECONDS,</span><br><span class="line">				componentMainThreadExecutor)</span><br><span class="line">			.whenComplete(</span><br><span class="line">				(AllocatedSlot ignored, Throwable throwable) -&gt; &#123;</span><br><span class="line">					<span class="keyword">if</span> (throwable <span class="keyword">instanceof</span> TimeoutException) &#123;</span><br><span class="line">						timeoutPendingSlotRequest(slotRequestId);</span><br><span class="line">					&#125;</span><br><span class="line">				&#125;);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (resourceManagerGateway == <span class="keyword">null</span>) &#123;</span><br><span class="line">			stashRequestWaitingForResourceManager(pendingRequest);<span class="comment">//本地调用</span></span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			requestSlotFromResourceManager(resourceManagerGateway, pendingRequest);<span class="comment">//从resourceManager申请slot</span></span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> pendingRequest.getAllocatedSlotFuture();</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>requestSlotFromResourceManager中调用resourceManagerGateway.requestSlot发起rpc请求申请资源</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">requestSlotFromResourceManager</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> ResourceManagerGateway resourceManagerGateway,</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> PendingRequest pendingRequest)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">		checkNotNull(resourceManagerGateway);</span><br><span class="line">		checkNotNull(pendingRequest);</span><br><span class="line"></span><br><span class="line">		log.info(<span class="string">"Requesting new slot [&#123;&#125;] and profile &#123;&#125; from resource manager."</span>, pendingRequest.getSlotRequestId(), pendingRequest.getResourceProfile());</span><br><span class="line"></span><br><span class="line">		<span class="keyword">final</span> AllocationID allocationId = <span class="keyword">new</span> AllocationID();</span><br><span class="line"></span><br><span class="line">		pendingRequests.put(pendingRequest.getSlotRequestId(), allocationId, pendingRequest);</span><br><span class="line"></span><br><span class="line">		pendingRequest.getAllocatedSlotFuture().whenComplete(</span><br><span class="line">			(AllocatedSlot allocatedSlot, Throwable throwable) -&gt; &#123;</span><br><span class="line">				<span class="keyword">if</span> (throwable != <span class="keyword">null</span> || !allocationId.equals(allocatedSlot.getAllocationId())) &#123;</span><br><span class="line">					<span class="comment">// cancel the slot request if there is a failure or if the pending request has</span></span><br><span class="line">					<span class="comment">// been completed with another allocated slot</span></span><br><span class="line">					resourceManagerGateway.cancelSlotRequest(allocationId);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;);</span><br><span class="line"></span><br><span class="line">		<span class="comment">//申请资源  rpc向resourceManager</span></span><br><span class="line">		CompletableFuture&lt;Acknowledge&gt; rmResponse = resourceManagerGateway.requestSlot(</span><br><span class="line">			jobMasterId,</span><br><span class="line">			<span class="keyword">new</span> SlotRequest(jobId, allocationId, pendingRequest.getResourceProfile(), jobManagerAddress),</span><br><span class="line">			rpcTimeout);</span><br><span class="line"></span><br><span class="line">		FutureUtils.whenCompleteAsyncIfNotDone(</span><br><span class="line">			rmResponse,</span><br><span class="line">			componentMainThreadExecutor,</span><br><span class="line">			(Acknowledge ignored, Throwable failure) -&gt; &#123;</span><br><span class="line">				<span class="comment">// on failure, fail the request future</span></span><br><span class="line">				<span class="keyword">if</span> (failure != <span class="keyword">null</span>) &#123;</span><br><span class="line">					slotRequestToResourceManagerFailed(pendingRequest.getSlotRequestId(), failure);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>rpc的最后会调用到YarnResourceManager.startNewWorker(如果是yarn)启动一个新的容器</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Collection&lt;ResourceProfile&gt; <span class="title">startNewWorker</span><span class="params">(ResourceProfile resourceProfile)</span> </span>&#123;</span><br><span class="line">		Preconditions.checkArgument(</span><br><span class="line">			ResourceProfile.UNKNOWN.equals(resourceProfile),</span><br><span class="line">			<span class="string">"The YarnResourceManager does not support custom ResourceProfiles yet. It assumes that all containers have the same resources."</span>);</span><br><span class="line">		requestYarnContainer();</span><br><span class="line"></span><br><span class="line">		<span class="keyword">return</span> slotsPerWorker;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://blog.csdn.net/qq475781638/article/details/90923673" target="_blank" rel="noopener">https://blog.csdn.net/qq475781638/article/details/90923673</a></p>
+<p><a href="https://www.cnblogs.com/andyhe/p/10633692.html" target="_blank" rel="noopener">https://www.cnblogs.com/andyhe/p/10633692.html</a></p>
+<p><a href="https://zhuanlan.zhihu.com/p/36525639" target="_blank" rel="noopener">https://zhuanlan.zhihu.com/p/36525639</a></p>
+<p><a href="https://blog.csdn.net/qq_36421826/article/details/80769016" target="_blank" rel="noopener">https://blog.csdn.net/qq_36421826/article/details/80769016</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/07/27/Flink-使用调优-二/" rel="next" title="Flink 使用调优(二)">
+                <i class="fa fa-chevron-left"></i> Flink 使用调优(二)
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/07/28/Flink-通信机制和背压处理/" rel="prev" title="Flink 通信机制和背压处理">
+                Flink 通信机制和背压处理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#申请资源"><span class="nav-number">1.</span> <span class="nav-text">申请资源</span></a></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#LogicalSlot、-MultiTaskSlot-、-SingleTaskSlot"><span class="nav-number"></span> <span class="nav-text">LogicalSlot、 MultiTaskSlot 、 SingleTaskSlot</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number"></span> <span class="nav-text">Reference</span></a></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

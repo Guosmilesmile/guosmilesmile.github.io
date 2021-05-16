@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="Version   compont version     docker 19.03.8   kubernetes 1.17.4    安装docker卸载旧版本 1234567891011# 在 master 节点和 worker 节点都要执行yum remove -y docker \docker-client \docker-client-latest \docker-common \doc">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Kubernetes 、Docker环境搭建">
+<meta property="og:url" content="http://yoursite.com/2019/10/16/Kubernetes-、Docker-和-Dashboard-安装文档/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="Version   compont version     docker 19.03.8   kubernetes 1.17.4    安装docker卸载旧版本 1234567891011# 在 master 节点和 worker 节点都要执行yum remove -y docker \docker-client \docker-client-latest \docker-common \doc">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/C2982ED8E7EA4E3283950AFDEE8EF174?method=download&shareKey=7b43d29eb9f1fd10f747baf5fd5ed74b">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/D98E066CD35D47DA9F4778C9F57849DB?method=download&shareKey=c8a2b183a96d6262b48340b5beb2996d">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/1884A04AF4654E4098F5C355075E536A?method=download&shareKey=393c63946edf362518bdf54209c362da">
+<meta property="og:updated_time" content="2020-05-26T11:47:50.896Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Kubernetes 、Docker环境搭建">
+<meta name="twitter:description" content="Version   compont version     docker 19.03.8   kubernetes 1.17.4    安装docker卸载旧版本 1234567891011# 在 master 节点和 worker 节点都要执行yum remove -y docker \docker-client \docker-client-latest \docker-common \doc">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/C2982ED8E7EA4E3283950AFDEE8EF174?method=download&shareKey=7b43d29eb9f1fd10f747baf5fd5ed74b">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/10/16/Kubernetes-、Docker-和-Dashboard-安装文档/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Kubernetes 、Docker环境搭建 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/10/16/Kubernetes-、Docker-和-Dashboard-安装文档/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Kubernetes 、Docker环境搭建
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-10-16 21:13:06" itemprop="dateCreated datePublished" datetime="2019-10-16T21:13:06+08:00">2019-10-16</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-05-26 19:47:50" itemprop="dateModified" datetime="2020-05-26T19:47:50+08:00">2020-05-26</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Kubernetes/" itemprop="url" rel="index"><span itemprop="name">Kubernetes</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="Version"><a href="#Version" class="headerlink" title="Version"></a>Version</h2><table>
+<thead>
+<tr>
+<th>compont</th>
+<th>version</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>docker</td>
+<td>19.03.8</td>
+</tr>
+<tr>
+<td>kubernetes</td>
+<td>1.17.4</td>
+</tr>
+</tbody>
+</table>
+<h2 id="安装docker"><a href="#安装docker" class="headerlink" title="安装docker"></a>安装docker</h2><p>卸载旧版本</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">yum remove -y docker \</span><br><span class="line">docker-client \</span><br><span class="line">docker-client-latest \</span><br><span class="line">docker-common \</span><br><span class="line">docker-latest \</span><br><span class="line">docker-latest-logrotate \</span><br><span class="line">docker-logrotate \</span><br><span class="line">docker-selinux \</span><br><span class="line">docker-engine-selinux \</span><br><span class="line">docker-engine</span><br></pre></td></tr></table></figure>
+<p>设置 yum repository</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">yum install -y yum-utils \</span><br><span class="line">device-mapper-persistent-data \</span><br><span class="line">lvm2</span><br><span class="line">sudo yum-config-manager \</span><br><span class="line">--add-repo \</span><br><span class="line">https://download.docker.com/linux/centos/docker-ce.repo</span><br></pre></td></tr></table></figure>
+<p>安装并启动 docker<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">yum install -y docker-ce-19.03.8 docker-ce-cli-19.03.8 containerd.io</span><br><span class="line">systemctl enable docker</span><br><span class="line">systemctl start docker</span><br></pre></td></tr></table></figure></p>
+<p>检查 docker 版本</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">docker version</span><br></pre></td></tr></table></figure>
+<h3 id="安装可能遇到的报错"><a href="#安装可能遇到的报错" class="headerlink" title="安装可能遇到的报错"></a>安装可能遇到的报错</h3><p><strong>Docker安装报错container-selinux &gt;= 2.5-11</strong></p>
+<p>这个报错是container-selinux版本低或者是没安装的原因，yum 安装container-selinux 一般的yum源又找不到这个包，需要安装epel源 才能yum安装container-selinux，然后再安装docker-ce就可以了</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo</span><br><span class="line">yum install -y epel-release   container-selinux #阿里云上的epel源</span><br></pre></td></tr></table></figure>
+<h3 id="安装-nfs-utils"><a href="#安装-nfs-utils" class="headerlink" title="安装 nfs-utils"></a>安装 nfs-utils</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">yum install -y nfs-utils</span><br></pre></td></tr></table></figure>
+<p>必须先安装 nfs-utils 才能挂载 nfs 网络存储</p>
+<h3 id="K8S基本配置"><a href="#K8S基本配置" class="headerlink" title="K8S基本配置"></a>K8S基本配置</h3><p>配置K8S的yum源</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">cat &lt;&lt;EOF &gt; /etc/yum.repos.d/kubernetes.repo</span><br><span class="line">[kubernetes]</span><br><span class="line">name=Kubernetes</span><br><span class="line">baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64</span><br><span class="line">enabled=1</span><br><span class="line">gpgcheck=0</span><br><span class="line">repo_gpgcheck=0</span><br><span class="line">gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg</span><br><span class="line">       http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure>
+<p>关闭 SeLinux、swap<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">setenforce 0</span><br><span class="line">sed -i &quot;s/SELINUX=enforcing/SELINUX=disabled/g&quot; /etc/selinux/config</span><br><span class="line"></span><br><span class="line">swapoff -a</span><br><span class="line">yes | cp /etc/fstab /etc/fstab_bak</span><br><span class="line">cat /etc/fstab_bak |grep -v swap &gt; /etc/fstab</span><br></pre></td></tr></table></figure></p>
+<p>修改 /etc/sysctl.conf</p>
+<h1 id="在-master-节点和-worker-节点都要执行"><a href="#在-master-节点和-worker-节点都要执行" class="headerlink" title="在 master 节点和 worker 节点都要执行"></a>在 master 节点和 worker 节点都要执行</h1><p>vim /etc/sysctl.conf</p>
+<p>向其中添加</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">net.ipv4.ip_forward = 1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables = 1</span><br><span class="line">net.bridge.bridge-nf-call-iptables = 1</span><br></pre></td></tr></table></figure>
+<p>如下所示</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"># System default settings live in /usr/lib/sysctl.d/00-system.conf.</span><br><span class="line"># To override those settings, enter new settings here, or in an /etc/sysctl.d/&lt;name&gt;.conf file</span><br><span class="line">#</span><br><span class="line"># For more information, see sysctl.conf(5) and sysctl.d(5).</span><br><span class="line">kernel.core_uses_pid = 0</span><br><span class="line">net.ipv4.tcp_syncookies = 1</span><br><span class="line">net.ipv4.tcp_timestamps = 0</span><br><span class="line">net.ipv4.conf.all.arp_announce = 2</span><br><span class="line">net.ipv4.conf.all.arp_ignore = 1</span><br><span class="line">vm.swappiness = 0</span><br><span class="line">net.ipv4.ip_local_port_range = 22768 65000</span><br><span class="line">kernel.shmmax = 68719476736</span><br><span class="line">kernel.shmall = 4294967296</span><br><span class="line"></span><br><span class="line"># Tcp add by SSG</span><br><span class="line">net.ipv4.tcp_tw_reuse = 1</span><br><span class="line">net.ipv4.tcp_tw_recycle = 0</span><br><span class="line">net.core.netdev_max_backlog  = 262144</span><br><span class="line">net.ipv4.tcp_max_syn_backlog = 262144</span><br><span class="line">net.core.somaxconn = 65535</span><br><span class="line">net.ipv4.tcp_max_orphans = 262144</span><br><span class="line">net.ipv4.tcp_fin_timeout = 30</span><br><span class="line">net.ipv4.tcp_max_tw_buckets = 40000</span><br><span class="line"># Tcp end by SSG</span><br><span class="line"></span><br><span class="line">net.ipv4.ip_forward = 1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables = 1</span><br><span class="line">net.bridge.bridge-nf-call-iptables = 1</span><br></pre></td></tr></table></figure>
+<p>执行命令以应用</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">sysctl -p</span><br></pre></td></tr></table></figure>
+<p>安装kubelet、kubeadm、kubectl</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">yum install -y kubelet-1.17.4 kubeadm-1.17.4 kubectl-1.17.4</span><br></pre></td></tr></table></figure>
+<p>修改docker Cgroup Driver为systemd,并设置 docker 镜像<br>/etc/docker/daemon.json</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">&quot;registry-mirrors&quot;: [&quot;http://f1361db2.m.daocloud.io&quot;],</span><br><span class="line">&quot;exec-opts&quot;: [&quot;native.cgroupdriver=systemd&quot;]</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>重启 docker，并启动 kubelet<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 在 master 节点和 worker 节点都要执行</span><br><span class="line">systemctl daemon-reload</span><br><span class="line">systemctl restart docker</span><br><span class="line">systemctl enable kubelet &amp;&amp; systemctl start kubelet</span><br></pre></td></tr></table></figure></p>
+<h3 id="初始化-master-节点"><a href="#初始化-master-节点" class="headerlink" title="初始化 master 节点"></a>初始化 master 节点</h3><p>以 root 身份在 demo-master-a-1 机器上执行。</p>
+<p>创建 ./kubeadm-config.yaml</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">cat &lt;&lt;EOF &gt; ./kubeadm-config.yaml</span><br><span class="line">apiVersion: kubeadm.k8s.io/v1beta1</span><br><span class="line">kind: ClusterConfiguration</span><br><span class="line">kubernetesVersion: v1.15.1</span><br><span class="line">imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line">controlPlaneEndpoint: &quot;填上机器的ip或者域名:6443&quot;</span><br><span class="line">networking:</span><br><span class="line">  podSubnet: &quot;10.100.0.1/20&quot;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure>
+<p>podSubnet 所使用的网段不能与节点所在的网段重叠</p>
+<p>初始化 apiserver<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">kubeadm init --config=kubeadm-config.yaml --upload-certs --node-name xxx.xx.xx.xx</span><br></pre></td></tr></table></figure></p>
+<p>根据您服务器网速的情况，您需要等候 1 – 10 分钟</p>
+<p>初始化 root 用户的 kubectl 配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">rm -rf /root/.kube/</span><br><span class="line">mkdir /root/.kube/</span><br><span class="line">cp -i /etc/kubernetes/admin.conf /root/.kube/config</span><br></pre></td></tr></table></figure>
+<p>安装 calico or weave(用calico出问题，换用weave)<br>[好像需要系统内核在4.0以上]</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">kubectl apply -f https://docs.projectcalico.org/v3.6/getting-started/kubernetes/installation/hosted/kubernetes-datastore/calico-networking/1.7/calico.yaml</span><br></pre></td></tr></table></figure>
+<p>等待calico安装就绪.</p>
+<h3 id="网络组建改用weave"><a href="#网络组建改用weave" class="headerlink" title="网络组建改用weave"></a>网络组建改用weave</h3><h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f &quot;https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d &apos;\n&apos;)&amp;disable-npc=true&quot;</span><br></pre></td></tr></table></figure>
+<h3 id="网络组件用flannel"><a href="#网络组件用flannel" class="headerlink" title="网络组件用flannel"></a>网络组件用flannel</h3><p><a href="https://github.com/coreos/flannel" target="_blank" rel="noopener">https://github.com/coreos/flannel</a></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f https://raw.githubusercontent.com/coreos/flannel/master/Documentation/kube-flannel.yml</span><br></pre></td></tr></table></figure>
+<p>执行如下命令，等待 3-10 分钟，直到所有的容器组处于 Running 状态<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">watch kubectl get pod -n kube-system</span><br></pre></td></tr></table></figure></p>
+<p>检查 master 初始化结果</p>
+<p>在 master 节点 demo-master-a-1 上执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">kubectl get nodes</span><br></pre></td></tr></table></figure></p>
+<h3 id="初始化-worker节点"><a href="#初始化-worker节点" class="headerlink" title="初始化 worker节点"></a>初始化 worker节点</h3><p>获得 join命令参数</p>
+<p>在 master 节点 demo-master-a-1 节点执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">kubeadm token create --print-join-command</span><br></pre></td></tr></table></figure></p>
+<p>可获取kubeadm join 命令及参数，如下所示</p>
+<h1 id="kubeadm-token-create-命令的输出"><a href="#kubeadm-token-create-命令的输出" class="headerlink" title="kubeadm token create 命令的输出"></a>kubeadm token create 命令的输出</h1><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303</span><br></pre></td></tr></table></figure>
+<p>#初始化worker<br>针对所有的 worker 节点执行(执行上面那个从master得到的指令)</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 worker 节点执行</span><br><span class="line">kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303</span><br></pre></td></tr></table></figure>
+<p>如果需要以ip的形式不是主机名</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 worker 节点执行</span><br><span class="line">kubeadm join apiserver.demo:6443 --token mpfjma.4vjjg8flqihor4vt     --discovery-token-ca-cert-hash sha256:6f7a8e40a810323672de5eee6f4d19aa2dbdb38411845a1bf5dd63485c43d303 --node-name xxx.xxx.xx.xx</span><br></pre></td></tr></table></figure>
+<p>如果出现如下的报错<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line">error execution phase preflight: [preflight] Some fatal errors occurred:</span><br><span class="line">	[ERROR DirAvailable--etc-kubernetes-manifests]: /etc/kubernetes/manifests is not empty</span><br><span class="line">	[ERROR FileAvailable--etc-kubernetes-kubelet.conf]: /etc/kubernetes/kubelet.conf already exists</span><br><span class="line">	[ERROR Port-10250]: Port 10250 is in use</span><br><span class="line">	[ERROR FileAvailable--etc-kubernetes-pki-ca.crt]: /etc/kubernetes/pki/ca.crt already exists</span><br><span class="line">[preflight] If you know what you are doing, you can make a check non-fatal with `--ignore-preflight-errors=...`</span><br></pre></td></tr></table></figure></p>
+<p>在节点上先执行如下命令，清理kubeadm的操作，然后再重新执行join 命令：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubeadm reset</span><br></pre></td></tr></table></figure></p>
+<h3 id="检查初始化结果"><a href="#检查初始化结果" class="headerlink" title="检查初始化结果"></a>检查初始化结果</h3><p>在 master 节点 demo-master-a-1 上执行<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">kubectl get nodes</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">NAME      STATUS   ROLES    AGE   VERSION</span><br><span class="line">zhshx90   Ready    master   37m   v1.17.4</span><br><span class="line">zhshx91   Ready    &lt;none&gt;   35    v1.17.4</span><br></pre></td></tr></table></figure>
+<h3 id="移除-worker-节点"><a href="#移除-worker-节点" class="headerlink" title="移除 worker 节点"></a>移除 worker 节点</h3><p>正常情况下，您无需移除 worker 节点，如果添加到集群出错，您可以移除 worker 节点，再重新尝试添加</p>
+<p>在准备移除的 worker 节点上执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 worker 节点执行</span><br><span class="line">kubeadm reset</span><br></pre></td></tr></table></figure>
+<p>在 master 节点 demo-master-a-1 上执行</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">kubectl delete node demo-worker-x-x</span><br></pre></td></tr></table></figure>
+<p>将 demo-worker-x-x 替换为要移除的 worker 节点的名字<br>worker 节点的名字可以通过在节点 demo-master-a-1 上执行 kubectl get nodes 命令获得</p>
+<h3 id="Kubernetes-Dashboard的安装与坑"><a href="#Kubernetes-Dashboard的安装与坑" class="headerlink" title="Kubernetes Dashboard的安装与坑"></a>Kubernetes Dashboard的安装与坑</h3><p>提前声明：因为dashboard是使用https访问的，所以有证书的问题，安装后无法访问请不要慌张。</p>
+<p>获取yaml</p>
+<p>Kubernetes 默认没有部署 Dashboard，可通过如下命令安装：</p>
+<p>可以到Git上获取对应的部署文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://github.com/kubernetes/dashboard/releases</span><br></pre></td></tr></table></figure>
+<p>dashboard需要跟kubernetes的版本对应。</p>
+<p>获取对应的部署文档</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0-rc6/aio/deploy/recommended.yaml</span><br></pre></td></tr></table></figure>
+<h4 id="证书的制作，如果不需要的可以跳过"><a href="#证书的制作，如果不需要的可以跳过" class="headerlink" title="证书的制作，如果不需要的可以跳过"></a>证书的制作，如果不需要的可以跳过</h4><p>生成证书通过openssl生成自签名证书即可，不再赘述，参考如下所示：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br></pre></td><td class="code"><pre><span class="line">[root@master keys]# pwd</span><br><span class="line">/root/keys</span><br><span class="line">[root@master keys]# ls</span><br><span class="line">[root@master keys]# openssl genrsa -out dashboard.key 2048</span><br><span class="line">Generating RSA private key, 2048 bit long modulus</span><br><span class="line">.+++</span><br><span class="line">.................................................+++</span><br><span class="line">e is 65537 (0x10001)</span><br><span class="line">[root@master keys]# openssl req -new -out dashboard.csr -key dashboard.key -subj &apos;/CN=本机的ip or 域名&apos;</span><br><span class="line">[root@master keys]# ls</span><br><span class="line">dashboard.csr  dashboard.key</span><br><span class="line">[root@master keys]# </span><br><span class="line">[root@master keys]# openssl x509 -req -in dashboard.csr -signkey dashboard.key -out dashboard.crt </span><br><span class="line">Signature ok</span><br><span class="line">subject=/CN=192.168.246.200</span><br><span class="line">Getting Private key</span><br><span class="line">[root@master keys]# </span><br><span class="line">[root@master keys]# ls</span><br><span class="line">dashboard.crt  dashboard.csr  dashboard.key</span><br><span class="line">[root@master keys]# </span><br><span class="line">[root@master keys]# openssl x509 -in dashboard.crt -text -noout</span><br><span class="line">Certificate:</span><br><span class="line">    Data:</span><br><span class="line">        Version: 1 (0x0)</span><br><span class="line">        Serial Number:</span><br><span class="line">            f0:8a:26:aa:9f:24:bf:92</span><br><span class="line">    Signature Algorithm: sha256WithRSAEncryption</span><br><span class="line">        Issuer: CN=192.168.246.200</span><br><span class="line">        Validity</span><br><span class="line">            Not Before: Dec 13 08:10:36 2018 GMT</span><br><span class="line">            Not After : Jan 12 08:10:36 2019 GMT</span><br><span class="line">        Subject: CN=192.168.246.200</span><br><span class="line">        Subject Public Key Info:</span><br><span class="line">            Public Key Algorithm: rsaEncryption</span><br><span class="line">                Public-Key: (2048 bit)</span><br><span class="line">                Modulus:</span><br><span class="line">                    00:f6:7a:b4:4a:ad:bd:b3:00:9c:d1:fe:06:2d:09:</span><br><span class="line">                    cf:eb:28:54:0f:3f:6e:dc:29:6b:67:e1:9b:58:e4:</span><br><span class="line">                    82:00:15:ee:35:25:00:4c:c1:e0:1b:29:8b:b2:6b:</span><br><span class="line">                    8d:e8:09:77:66:4d:f3:9e:9d:85:36:94:80:da:1b:</span><br><span class="line">                    35:c8:a1:b3:0b:b2:7f:6f:1e:e9:fe:fc:15:1b:7b:</span><br><span class="line">                    ba:85:1f:2b:70:16:d5:c3:7f:36:18:f1:8e:44:1e:</span><br><span class="line">                    8a:13:a2:9c:b8:bf:b8:08:3f:a0:5c:ef:19:f5:ce:</span><br><span class="line">                    73:0c:3e:0a:b5:87:7a:de:25:74:36:0e:26:52:ff:</span><br><span class="line">                    4b:d0:24:40:c9:03:9a:44:f6:17:a7:d7:fa:7e:e0:</span><br><span class="line">                    fb:6a:76:5b:dc:0f:43:c2:63:f4:22:20:4c:4e:5d:</span><br><span class="line">                    b7:a0:83:54:58:1c:10:0f:57:ef:ad:1f:36:0b:8f:</span><br><span class="line">                    8d:f4:a2:52:ab:e7:39:57:ea:30:c3:1d:30:93:ee:</span><br><span class="line">                    44:7f:73:ef:41:94:e8:34:8c:c4:bb:02:d9:17:da:</span><br><span class="line">                    55:07:ff:43:6c:f3:8e:91:5f:81:03:e9:94:2e:f1:</span><br><span class="line">                    25:e7:41:86:e2:25:c4:b9:07:b4:9c:d9:04:36:31:</span><br><span class="line">                    82:43:1b:26:10:17:8c:98:4a:f3:23:69:15:1b:76:</span><br><span class="line">                    75:ae:4e:27:6f:70:4c:c6:f7:cc:75:e4:ed:48:b7:</span><br><span class="line">                    51:c5</span><br><span class="line">                Exponent: 65537 (0x10001)</span><br><span class="line">    Signature Algorithm: sha256WithRSAEncryption</span><br><span class="line">         28:55:3c:0a:66:77:2a:fd:8a:b6:81:54:59:13:d7:03:17:7f:</span><br><span class="line">         d4:fa:e4:94:2b:bc:f4:11:ea:0c:18:e9:c0:2c:02:86:eb:39:</span><br><span class="line">         12:38:19:71:6c:b8:7a:4d:03:57:59:4f:c0:50:c4:19:92:c1:</span><br><span class="line">         9f:2f:0d:18:92:9e:2b:2e:a2:44:52:9a:32:2b:75:35:fb:43:</span><br><span class="line">         66:fb:fa:32:77:ce:b8:4e:80:cb:38:52:c4:2c:17:11:1a:38:</span><br><span class="line">         c3:a9:62:43:5e:60:ae:47:d4:f7:46:12:29:f5:e4:75:35:e5:</span><br><span class="line">         90:5d:2e:4f:2f:c5:65:9a:e5:6a:4d:8a:cd:69:ba:e0:4f:43:</span><br><span class="line">         d1:ab:9a:62:74:fc:d5:88:9c:3a:ba:22:2d:38:96:fc:35:b0:</span><br><span class="line">         3c:23:f7:8c:23:07:4e:05:8e:ae:53:82:9c:fd:54:24:86:75:</span><br><span class="line">         12:a6:e9:77:62:bd:f6:bb:f9:4d:5b:64:1e:d0:48:68:31:86:</span><br><span class="line">         f5:36:b5:6b:fc:b6:36:f0:01:3c:0a:9f:2b:27:56:28:1d:1f:</span><br><span class="line">         c4:e9:f7:c6:5d:16:5e:88:c5:e0:43:00:bf:79:d7:04:2f:45:</span><br><span class="line">         57:df:e6:17:dd:5a:f8:53:e9:ca:f6:33:ed:19:f0:d9:0a:ae:</span><br><span class="line">         f0:ba:c6:5b:7e:70:af:c3:f3:a5:b0:95:b0:ee:cd:35:29:5c:</span><br><span class="line">         34:4a:ce:49</span><br></pre></td></tr></table></figure>
+<p>这样就有了证书文件dashboard.crt 和 私钥 dashboad.key</p>
+<p>可以在配置文件中，修改service 为nodeport类型，固定访问端口<br>修改前：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">kind: Service</span><br><span class="line">apiVersion: v1</span><br><span class="line">metadata:</span><br><span class="line">  labels:</span><br><span class="line">    k8s-app: kubernetes-dashboard</span><br><span class="line">  name: kubernetes-dashboard</span><br><span class="line">  namespace: kube-system</span><br><span class="line">spec:</span><br><span class="line"></span><br><span class="line">  ports:</span><br><span class="line">    - port: 443</span><br><span class="line">      targetPort: 8443</span><br><span class="line">  selector:</span><br><span class="line">    k8s-app: kubernetes-dashboard</span><br></pre></td></tr></table></figure>
+<p>修改后： 修改两个地方。type: NodePort 和  nodePort:30001</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">kind: Service</span><br><span class="line">apiVersion: v1</span><br><span class="line">metadata:</span><br><span class="line">  labels:</span><br><span class="line">    k8s-app: kubernetes-dashboard</span><br><span class="line">  name: kubernetes-dashboard</span><br><span class="line">  namespace: kube-system</span><br><span class="line">spec:</span><br><span class="line">  type: NodePort</span><br><span class="line">  ports:</span><br><span class="line">    - port: 443</span><br><span class="line">      nodePort: 30001</span><br><span class="line">      targetPort: 8443</span><br><span class="line">  selector:</span><br><span class="line">    k8s-app: kubernetes-dashboard</span><br></pre></td></tr></table></figure>
+<p>生成secret</p>
+<p>创建同名称的secret：<br>名称为： kubernetes-dashboard-certs</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">[root@master keys]# ls</span><br><span class="line">dashboard.crt  dashboard.csr  dashboard.key  kubernetes-dashboard.yaml</span><br><span class="line">[root@master keys]# kubectl -n kube-system  create secret generic kubernetes-dashboard-certs --from-file=dashboard.key --from-file=dashboard.crt </span><br><span class="line">secret/kubernetes-dashboard-certs created</span><br><span class="line">[root@master keys]# </span><br><span class="line">[root@master keys]# kubectl -n kube-system  get secret | grep dashboard</span><br><span class="line">kubernetes-dashboard-certs                        Opaque                                2      25s</span><br><span class="line">kubernetes-dashboard-key-holder                  Opaque                                2      25h</span><br><span class="line">[root@master keys]# </span><br><span class="line">[root@master keys]# kubectl -n kube-system  describe secret kubernetes-dashboard-certs  </span><br><span class="line">Name:         kubernetes-dashboard-certs</span><br><span class="line">Namespace:    kube-system</span><br><span class="line">Labels:       &lt;none&gt;</span><br><span class="line">Annotations:  &lt;none&gt;</span><br><span class="line"></span><br><span class="line">Type:  Opaque</span><br><span class="line"></span><br><span class="line">Data</span><br><span class="line">====</span><br><span class="line">dashboard.crt:  993 bytes</span><br><span class="line">dashboard.key:  1675 bytes</span><br><span class="line">[root@master keys]#</span><br></pre></td></tr></table></figure>
+<p>部署apply yaml文件</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f kubernetes-dashboard.yaml</span><br></pre></td></tr></table></figure>
+<p>查看服务状态：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">[root@master keys]# kubectl -n kube-system get svc</span><br><span class="line">NAME                   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)         AGE</span><br><span class="line">kube-dns               ClusterIP   10.96.0.10     &lt;none&gt;        53/UDP,53/TCP   15d</span><br><span class="line">kubernetes-dashboard   NodePort    10.111.32.20   &lt;none&gt;        443:30001/TCP   2m14s</span><br><span class="line">[root@master keys]#</span><br></pre></td></tr></table></figure>
+<p><img src="https://note.youdao.com/yws/api/personal/file/C2982ED8E7EA4E3283950AFDEE8EF174?method=download&amp;shareKey=7b43d29eb9f1fd10f747baf5fd5ed74b" alt="image"></p>
+<p>不过有些同学先装kubernetes-dashboard，得先删除对应的service和证书，需要通过下面的指令<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl delete -f kubernetes-dashboard.yml</span><br></pre></td></tr></table></figure></p>
+<p>如果是通过下面的方式直接装的删除语句就得修改了。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f http://mirror.faasx.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl delete -f  http://mirror.faasx.com/kubernetes/dashboard/master/src/deploy/recommended/kubernetes-dashboard.yaml</span><br></pre></td></tr></table></figure>
+<h4 id="登录"><a href="#登录" class="headerlink" title="登录"></a>登录</h4><p>Dashboard 支持 Kubeconfig 和 Token 两种认证方式，为了简化配置，我们通过配置文件 dashboard-admin.yaml 为 Dashboard 默认用户赋予 admin 权限。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">[root@ken ~]# cat dashboard-admin.yml</span><br><span class="line"></span><br><span class="line">apiVersion: rbac.authorization.k8s.io/v1beta1</span><br><span class="line">kind: ClusterRoleBinding</span><br><span class="line">metadata:</span><br><span class="line">  name: kubernetes-dashboard</span><br><span class="line">  labels: </span><br><span class="line">     k8s-app: kubernetes-dashboard</span><br><span class="line">roleRef:</span><br><span class="line">  apiGroup: rbac.authorization.k8s.io</span><br><span class="line">  kind: ClusterRole</span><br><span class="line">  name: cluster-admin</span><br><span class="line">subjects:</span><br><span class="line">- kind: ServiceAccount</span><br><span class="line">  name: kubernetes-dashboard</span><br><span class="line">  namespace: kube-system</span><br></pre></td></tr></table></figure>
+<p> 执行kubectl apply使之生效<br> <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl apply -f dashboard-admin.yml</span><br></pre></td></tr></table></figure></p>
+<p> 现在直接点击登录页面的 SKIP 就可以进入 Dashboard 了。</p>
+<p> token模式</p>
+<p> 获取token 这里有一个简单的命令：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kubectl -n kube-system describe $(kubectl -n kube-system get secret -n kube-system -o name | grep namespace) | grep token</span><br></pre></td></tr></table></figure></p>
+<h3 id="坑"><a href="#坑" class="headerlink" title="坑"></a>坑</h3><h4 id="UI"><a href="#UI" class="headerlink" title="UI"></a>UI</h4><p>ui可能会乱跑。。不一定在生成的证书的那台服务器</p>
+<p>需要修改yml，配置nodeSelector来指定pod落在指定的node上。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/D98E066CD35D47DA9F4778C9F57849DB?method=download&amp;shareKey=c8a2b183a96d6262b48340b5beb2996d" alt="image"></p>
+<h4 id="vxlan"><a href="#vxlan" class="headerlink" title="vxlan"></a>vxlan</h4><p>使用weave作为网络组件时，正常使用 ifconfig会出现vxlan,如下图</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/1884A04AF4654E4098F5C355075E536A?method=download&amp;shareKey=393c63946edf362518bdf54209c362da" alt="image"></p>
+<p>可是在某些情况，可能会没有，没有的情况在某些时候会出现网络堵塞或者容器网络有问题，导致程序假死。定时炸弹，很可怕</p>
+<p>笔主在搭建时候，20台机器，其中有7台机器没有vxlan，flink集群在高峰期的时候，吞吐死活上不去，重构集群到另一批机器就上去了。。</p>
+<p>这个时候需要观察一下内核版本</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">uname -a</span><br></pre></td></tr></table></figure>
+<p>一开始的版本是</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">3.10.0-327.36.2.el7.x86_64 #1 SMP Mon Jul 9 17:25:01 CST 2016 x86_64 x86_64 x86_64 GNU/Linux</span><br></pre></td></tr></table></figure>
+<p>正常的版本是</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">3.10.0-1062.12.1.el7 #3 SMP Mon Jul 9 17:25:01 CST 2018 x86_64 x86_64 x86_64 GNU/Linux</span><br></pre></td></tr></table></figure>
+<p>更新下内核版本即可。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum update kernel</span><br></pre></td></tr></table></figure>
+<p>然后重启服务器</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">shutdown -r now</span><br></pre></td></tr></table></figure>
+<h3 id="一键安装脚本"><a href="#一键安装脚本" class="headerlink" title="一键安装脚本"></a>一键安装脚本</h3><p>如需要自己添加仓库地址，join到集群需要自己操作</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line">yum remove -y docker \</span><br><span class="line">docker-client \</span><br><span class="line">docker-client-latest \</span><br><span class="line">docker-common \</span><br><span class="line">docker-latest \</span><br><span class="line">docker-latest-logrotate \</span><br><span class="line">docker-logrotate \</span><br><span class="line">docker-selinux \</span><br><span class="line">docker-engine-selinux \</span><br><span class="line">docker-engine</span><br><span class="line">yum install -y yum-utils \</span><br><span class="line">device-mapper-persistent-data \</span><br><span class="line">lvm2</span><br><span class="line"></span><br><span class="line">yum-config-manager \</span><br><span class="line">--add-repo \</span><br><span class="line">https://download.docker.com/linux/centos/docker-ce.repo</span><br><span class="line"></span><br><span class="line">wget -O /etc/yum.repos.d/CentOS-Base.repo http://mirrors.aliyun.com/repo/Centos-7.repo</span><br><span class="line">yum install -y epel-release container-selinux</span><br><span class="line"></span><br><span class="line">yum install -y docker-ce-19.03.8 docker-ce-cli-19.03.8 containerd.io</span><br><span class="line">systemctl enable docker</span><br><span class="line">systemctl start docker</span><br><span class="line"></span><br><span class="line">yum install -y nfs-utils</span><br><span class="line"></span><br><span class="line">cat &lt;&lt;EOF &gt; /etc/yum.repos.d/kubernetes.repo</span><br><span class="line">[kubernetes]</span><br><span class="line">name=Kubernetes</span><br><span class="line">baseurl=http://mirrors.aliyun.com/kubernetes/yum/repos/kubernetes-el7-x86_64</span><br><span class="line">enabled=1</span><br><span class="line">gpgcheck=0</span><br><span class="line">repo_gpgcheck=0</span><br><span class="line">gpgkey=http://mirrors.aliyun.com/kubernetes/yum/doc/yum-key.gpg</span><br><span class="line">       http://mirrors.aliyun.com/kubernetes/yum/doc/rpm-package-key.gpg</span><br><span class="line">EOF</span><br><span class="line"></span><br><span class="line">setenforce 0</span><br><span class="line">sed -i &quot;s/SELINUX=enforcing/SELINUX=disabled/g&quot; /etc/selinux/config</span><br><span class="line"></span><br><span class="line">swapoff -a</span><br><span class="line">yes | cp /etc/fstab /etc/fstab_bak</span><br><span class="line">cat /etc/fstab_bak |grep -v swap &gt; /etc/fstab</span><br><span class="line"></span><br><span class="line">echo &quot;net.ipv4.ip_forward = 1</span><br><span class="line">net.bridge.bridge-nf-call-ip6tables = 1</span><br><span class="line">net.bridge.bridge-nf-call-iptables = 1&quot; &gt;&gt; /etc/sysctl.conf</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">sysctl -p</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">yum install -y kubelet-1.17.4 kubeadm-1.17.4 kubectl-1.17.4</span><br><span class="line"></span><br><span class="line">sed -i &quot;s/--containerd=\/run\/containerd\/containerd.sock/--containerd=\/run\/containerd\/containerd.sock --exec-opt native.cgroupdriver=systemd/g&quot; /usr/lib/systemd/system/docker.service</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">echo &apos;&#123;</span><br><span class="line">&quot;registry-mirrors&quot;: [&quot;http://f1361db2.m.daocloud.io&quot;],</span><br><span class="line">&quot;insecure-registries&quot;:[&quot;私人仓库地址&quot;]</span><br><span class="line">&#125;</span><br><span class="line">&apos; &gt; /etc/docker/daemon.json</span><br><span class="line"></span><br><span class="line">systemctl daemon-reload</span><br><span class="line">systemctl restart docker</span><br><span class="line">systemctl enable kubelet &amp;&amp; systemctl start kubelet</span><br></pre></td></tr></table></figure>
+<h3 id="Reference-1"><a href="#Reference-1" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.kubernetes.org.cn/5650.html" target="_blank" rel="noopener">https://www.kubernetes.org.cn/5650.html</a><br><a href="https://www.jianshu.com/p/c6d560d12d50" target="_blank" rel="noopener">https://www.jianshu.com/p/c6d560d12d50</a><br><a href="https://www.cnblogs.com/kenken2018/p/10340157.html" target="_blank" rel="noopener">https://www.cnblogs.com/kenken2018/p/10340157.html</a><br><a href="https://blog.csdn.net/supermao1013/article/details/85050781" target="_blank" rel="noopener">https://blog.csdn.net/supermao1013/article/details/85050781</a>    </p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/10/11/Flink运行时之网络通信分析/" rel="next" title="Flink运行时之网络通信分析">
+                <i class="fa fa-chevron-left"></i> Flink运行时之网络通信分析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/10/16/java-逃逸分析/" rel="prev" title="java 逃逸分析">
+                java 逃逸分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Version"><span class="nav-number">1.</span> <span class="nav-text">Version</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#安装docker"><span class="nav-number">2.</span> <span class="nav-text">安装docker</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#安装可能遇到的报错"><span class="nav-number">2.1.</span> <span class="nav-text">安装可能遇到的报错</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装-nfs-utils"><span class="nav-number">2.2.</span> <span class="nav-text">安装 nfs-utils</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#K8S基本配置"><span class="nav-number">2.3.</span> <span class="nav-text">K8S基本配置</span></a></li></ol></li></ol><li class="nav-item nav-level-1"><a class="nav-link" href="#在-master-节点和-worker-节点都要执行"><span class="nav-number"></span> <span class="nav-text">在 master 节点和 worker 节点都要执行</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#初始化-master-节点"><span class="nav-number">0.1.</span> <span class="nav-text">初始化 master 节点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#网络组建改用weave"><span class="nav-number">0.2.</span> <span class="nav-text">网络组建改用weave</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">0.3.</span> <span class="nav-text">Reference</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#网络组件用flannel"><span class="nav-number">0.4.</span> <span class="nav-text">网络组件用flannel</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#初始化-worker节点"><span class="nav-number">0.5.</span> <span class="nav-text">初始化 worker节点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#kubeadm-token-create-命令的输出"><span class="nav-number"></span> <span class="nav-text">kubeadm token create 命令的输出</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#检查初始化结果"><span class="nav-number">0.1.</span> <span class="nav-text">检查初始化结果</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#移除-worker-节点"><span class="nav-number">0.2.</span> <span class="nav-text">移除 worker 节点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Kubernetes-Dashboard的安装与坑"><span class="nav-number">0.3.</span> <span class="nav-text">Kubernetes Dashboard的安装与坑</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#证书的制作，如果不需要的可以跳过"><span class="nav-number">0.3.1.</span> <span class="nav-text">证书的制作，如果不需要的可以跳过</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#登录"><span class="nav-number">0.3.2.</span> <span class="nav-text">登录</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#坑"><span class="nav-number">0.4.</span> <span class="nav-text">坑</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#UI"><span class="nav-number">0.4.1.</span> <span class="nav-text">UI</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#vxlan"><span class="nav-number">0.4.2.</span> <span class="nav-text">vxlan</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#一键安装脚本"><span class="nav-number">0.5.</span> <span class="nav-text">一键安装脚本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference-1"><span class="nav-number">0.6.</span> <span class="nav-text">Reference</span></a></li></ol></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

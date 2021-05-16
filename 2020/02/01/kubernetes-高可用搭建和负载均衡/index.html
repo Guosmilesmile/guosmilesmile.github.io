@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="架构图  原理安装keepalive，vip对外，没有ng。那么其实对外提供服务的master只有一台，除非这台挂了才会切换到下一台 。 只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。 可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置">
+<meta property="og:type" content="article">
+<meta property="og:title" content="kubernetes 高可用搭建和负载均衡">
+<meta property="og:url" content="http://yoursite.com/2020/02/01/kubernetes-高可用搭建和负载均衡/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="架构图  原理安装keepalive，vip对外，没有ng。那么其实对外提供服务的master只有一台，除非这台挂了才会切换到下一台 。 只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。 可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/77FAA4B774334108A5DB32F4270EB0FE?method=download&shareKey=0ffc47993e10884612f3ce3ffb9fec00">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6EE58799617148DB93B562D02D8DE049?method=download&shareKey=b0e00f8bc194046c595b4b385ff76b39">
+<meta property="og:updated_time" content="2020-03-24T14:39:21.355Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="kubernetes 高可用搭建和负载均衡">
+<meta name="twitter:description" content="架构图  原理安装keepalive，vip对外，没有ng。那么其实对外提供服务的master只有一台，除非这台挂了才会切换到下一台 。 只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。 可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/77FAA4B774334108A5DB32F4270EB0FE?method=download&shareKey=0ffc47993e10884612f3ce3ffb9fec00">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/02/01/kubernetes-高可用搭建和负载均衡/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>kubernetes 高可用搭建和负载均衡 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/01/kubernetes-高可用搭建和负载均衡/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">kubernetes 高可用搭建和负载均衡
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-02-01 22:18:25" itemprop="dateCreated datePublished" datetime="2020-02-01T22:18:25+08:00">2020-02-01</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-03-24 22:39:21" itemprop="dateModified" datetime="2020-03-24T22:39:21+08:00">2020-03-24</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Kubernetes/" itemprop="url" rel="index"><span itemprop="name">Kubernetes</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="架构图"><a href="#架构图" class="headerlink" title="架构图"></a>架构图</h3><p><img src="https://note.youdao.com/yws/api/personal/file/77FAA4B774334108A5DB32F4270EB0FE?method=download&amp;shareKey=0ffc47993e10884612f3ce3ffb9fec00" alt="image"></p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/6EE58799617148DB93B562D02D8DE049?method=download&amp;shareKey=b0e00f8bc194046c595b4b385ff76b39" alt="image"></p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p>安装keepalive，vip对外，没有ng。那么其实对外提供服务的master只有一台，除非这台挂了才会切换到下一台 。</p>
+<p>只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。</p>
+<p>可是，如果有一台master挂了，vip会飘到新的机器，高可用了，可是ng上的配置，还是三台呀，还是会转发到挂的机器 </p>
+<p>加了ng岂不是更没办法做到高可用 ？</p>
+<p>除非ng或者haproxy可以做到，对后端的服务做探活，如果挂了就T掉服务。</p>
+<p>haproxy提供了现成的功能，如果使用ng的话，可以配合openresty实现</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">backend https_sri</span><br><span class="line">    balance      roundrobin</span><br><span class="line">    server s1 192.168.115.5:6443  check inter 10000 fall 2 rise 2 weight 1</span><br><span class="line">    server s2 192.168.115.6:6443  check inter 10000 fall 2 rise 2 weight 1</span><br></pre></td></tr></table></figure>
+<ul>
+<li>check：表示启用对此后端服务器执行健康状态检查。</li>
+<li>inter：设置健康状态检查的时间间隔，单位为毫秒。</li>
+<li>rise：设置从故障状态转换至正常状态需要成功检查的次数，例如。“rise 2”表示2 次检查正确就认为此服务器可用。</li>
+<li>fall：设置后端服务器从正常状态转换为不可用状态需要检查的次数，例如，“fall 3”表示3 次检查失败就认为此服务器不可用。</li>
+</ul>
+<h3 id="注意"><a href="#注意" class="headerlink" title="注意"></a>注意</h3><p>三个 master 组成主节点集群，通过内网 loader balancer 实现负载均衡；至少需要三个 master 节点才可组成高可用集群，否则会出现 脑裂 现象。 </p>
+<p>最多挂一台，如果挂两台，集群就失效了。</p>
+<h3 id="安装和配置keepalived"><a href="#安装和配置keepalived" class="headerlink" title="安装和配置keepalived"></a>安装和配置keepalived</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum -y install keepalived</span><br></pre></td></tr></table></figure>
+<p>主的配置<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">global_defs &#123;</span><br><span class="line">    smtp_server 127.0.0.1</span><br><span class="line">    smtp_connect_timeout 30</span><br><span class="line">    router_id LVS</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">vrrp_script check_kube &#123;</span><br><span class="line">    script &quot;/opt/keepalived-check/kube.sh&quot;</span><br><span class="line">    interval 3</span><br><span class="line">    weight 2</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">vrrp_instance VI_1 &#123;</span><br><span class="line">    state MASTER</span><br><span class="line">    interface bond0</span><br><span class="line">    virtual_router_id 60</span><br><span class="line">    priority 110</span><br><span class="line">    advert_int 1</span><br><span class="line">    authentication &#123;</span><br><span class="line">        auth_type PASS</span><br><span class="line">        auth_pass admin123456</span><br><span class="line">    &#125;</span><br><span class="line">    virtual_ipaddress &#123;</span><br><span class="line">       10.17.134.5</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    track_script &#123;</span><br><span class="line">        check_kube</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>备的配置</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br></pre></td><td class="code"><pre><span class="line">global_defs &#123;</span><br><span class="line">    smtp_server 127.0.0.1  </span><br><span class="line">    smtp_connect_timeout 30  </span><br><span class="line">    router_id LVS</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">vrrp_script check_kube &#123;</span><br><span class="line">    script &quot;/opt/keepalived-check/kube.sh&quot;</span><br><span class="line">    interval 3</span><br><span class="line">    weight 2</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">vrrp_instance VI_1 &#123;  </span><br><span class="line">    state BACKUP</span><br><span class="line">    interface eth4</span><br><span class="line">    virtual_router_id 60  </span><br><span class="line">    priority 109  </span><br><span class="line">    advert_int 1  </span><br><span class="line">    authentication &#123;  </span><br><span class="line">        auth_type PASS  </span><br><span class="line">        auth_pass admin123456</span><br><span class="line">    &#125;  </span><br><span class="line">    virtual_ipaddress &#123;  </span><br><span class="line">       10.17.134.5</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    track_script &#123;   </span><br><span class="line">        check_kube</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>检测脚本</p>
+<p>/opt/keepalived-check/kube.sh</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">#!/bin/bash</span><br><span class="line"></span><br><span class="line">/usr/bin/killall -0 kube-apiserver 2&gt;/dev/null &amp;&amp; exit 0 || exit 1</span><br></pre></td></tr></table></figure>
+<p>如果前面是架haproxy，那么用如下脚本。因为keepalive探测haproxy的死活，haproxy探测kube-apiserver的死活。</p>
+<p>/opt/keepalived-check/haproxy.sh</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">#!/bin/bash</span><br><span class="line"></span><br><span class="line">/usr/bin/killall -0 haproxy 2&gt;/dev/null &amp;&amp; exit 0 || exit 1</span><br></pre></td></tr></table></figure>
+<p>如果是bak节点，需要修改state为BACKUP, priority为99 （priority值必须小于master节点配置值）</p>
+<h3 id="haproxy的安装"><a href="#haproxy的安装" class="headerlink" title="haproxy的安装"></a>haproxy的安装</h3><p>只用keepalived实现master ha，当api-server的访问量大的时候，会有性能瓶颈问题，通过配置haproxy，可以同时实现master的ha和流量的负载均衡。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">yum -y install haproxy</span><br></pre></td></tr></table></figure>
+<p>配置文件<br>/etc/haproxy/haproxy.cfg </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">global</span><br><span class="line">    # to have these messages end up in /var/log/haproxy.log you will</span><br><span class="line">    # need to:</span><br><span class="line">    #</span><br><span class="line">    # 1) configure syslog to accept network log events.  This is done</span><br><span class="line">    #    by adding the &apos;-r&apos; option to the SYSLOGD_OPTIONS in</span><br><span class="line">    #    /etc/sysconfig/syslog</span><br><span class="line">    #</span><br><span class="line">    # 2) configure local2 events to go to the /var/log/haproxy.log</span><br><span class="line">    #   file. A line like the following can be added to</span><br><span class="line">    #   /etc/sysconfig/syslog</span><br><span class="line">    #</span><br><span class="line">    #    local2.*                       /var/log/haproxy.log</span><br><span class="line">    #</span><br><span class="line">    #log         127.0.0.1 local2</span><br><span class="line">    log 127.0.0.1 local0 info</span><br><span class="line">    chroot      /var/lib/haproxy</span><br><span class="line">    pidfile     /var/run/haproxy.pid</span><br><span class="line">    maxconn     4000</span><br><span class="line">    user        haproxy</span><br><span class="line">    group       haproxy</span><br><span class="line">    daemon</span><br><span class="line">     # turn on stats unix socket</span><br><span class="line">    stats socket /var/lib/haproxy/stats</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    defaults</span><br><span class="line">        mode                    tcp</span><br><span class="line">        log                     global</span><br><span class="line">        retries                 3</span><br><span class="line">        timeout connect         10s</span><br><span class="line">        timeout client          1m</span><br><span class="line">        timeout server          1m</span><br><span class="line">    </span><br><span class="line">    frontend  kubernetes</span><br><span class="line">            bind *:8443</span><br><span class="line">            mode tcp</span><br><span class="line">            default_backend kubernetes_master</span><br><span class="line">    </span><br><span class="line">    backend kubernetes_master</span><br><span class="line">        balance     roundrobin</span><br><span class="line">        server master master_ip:6443 check maxconn 2000</span><br><span class="line">        server master1 master1_ip:6443 check maxconn 2000</span><br><span class="line">        server master2 master2_ip:6443 check maxconn 2000</span><br></pre></td></tr></table></figure>
+<h3 id="haproxy开启日志功能"><a href="#haproxy开启日志功能" class="headerlink" title="haproxy开启日志功能"></a>haproxy开启日志功能</h3><p>安装部署完Haproxy之后，默认是没有开启日志记录的，需要相应的手工配置使其日志功能开启。</p>
+<ul>
+<li>【创建日志记录文件夹】</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">mkdir /var/log/haproxy</span><br><span class="line">chmod a+x /var/log/haproxy</span><br></pre></td></tr></table></figure>
+<p>*【开启rsyslog记录haproxy日志功能】</p>
+<p>vim /etc/rsyslog.conf</p>
+<p>修改：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># Provides UDP syslog reception</span><br><span class="line"></span><br><span class="line">$ModLoad imudp</span><br><span class="line"></span><br><span class="line">$UDPServerRun 514</span><br></pre></td></tr></table></figure></p>
+<p>开启514 UDP监听</p>
+<p>添加：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"># Save haproxy log</span><br><span class="line"></span><br><span class="line">local0.* /var/log/haproxy/haproxy.log</span><br></pre></td></tr></table></figure></p>
+<ul>
+<li>【修改/etc/sysconfig/rsyslog】<br>vim /etc/sysconfig/rsyslog</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"># Options for rsyslogd</span><br><span class="line"></span><br><span class="line"># Syslogd options are deprecated since rsyslog v3.</span><br><span class="line"></span><br><span class="line"># If you want to use them, switch to compatibility mode 2 by &quot;-c 2&quot;</span><br><span class="line"></span><br><span class="line"># See rsyslogd(8) for more details</span><br><span class="line"></span><br><span class="line">SYSLOGD_OPTIONS=&quot;-r -m 0 -c 2&quot;</span><br></pre></td></tr></table></figure>
+<ul>
+<li>【haproxy配置】</li>
+</ul>
+<p>vim /etc/haproxy/haproxy.conf</p>
+<p>添加：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">global #在此上级目录下配置</span><br><span class="line"></span><br><span class="line">log 127.0.0.1 local0 info</span><br></pre></td></tr></table></figure></p>
+<p>配置local0事件</p>
+<ul>
+<li>【验证服务是否生效】</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">###重启服务</span><br><span class="line"></span><br><span class="line">systemctl restart haproxy</span><br><span class="line"></span><br><span class="line">systemctl restart rsyslog</span><br><span class="line"></span><br><span class="line">   </span><br><span class="line"></span><br><span class="line">###查看日志记录</span><br><span class="line"></span><br><span class="line">tailf /var/log/haproxy/haproxy.log</span><br></pre></td></tr></table></figure>
+<h3 id="新master的添加"><a href="#新master的添加" class="headerlink" title="新master的添加"></a>新master的添加</h3><p>高可用的安装方式就存在不一样的地方了。</p>
+<h4 id="一、-kubeadm-init的配置文件"><a href="#一、-kubeadm-init的配置文件" class="headerlink" title="一、 kubeadm init的配置文件"></a>一、 kubeadm init的配置文件</h4><p>kubeadm-config.yaml<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"># 只在 master 节点执行</span><br><span class="line">cat &lt;&lt;EOF &gt; ./kubeadm-config.yaml</span><br><span class="line">apiVersion: kubeadm.k8s.io/v1beta1</span><br><span class="line">kind: ClusterConfiguration</span><br><span class="line">kubernetesVersion: v1.15.1</span><br><span class="line">imageRepository: registry.cn-hangzhou.aliyuncs.com/google_containers</span><br><span class="line">controlPlaneEndpoint: &quot;填上机器的ip或者域名:8443(haproxy监听的端口)&quot;</span><br><span class="line">networking:</span><br><span class="line">  podSubnet: &quot;10.100.0.1/20&quot;</span><br><span class="line">EOF</span><br></pre></td></tr></table></figure></p>
+<p>其他的可以参考这篇文章<br><a href="https://guosmilesmile.github.io/2019/10/16/Kubernetes-%E3%80%81Docker-%E5%92%8C-Dashboard-%E5%AE%89%E8%A3%85%E6%96%87%E6%A1%A3/" target="_blank" rel="noopener">Kubernetes 、Docker 和 Dashboard 安装文档</a></p>
+<p>一、首先在master上生成新的token</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">kubeadm token create --print-join-command</span><br><span class="line"> [root@cn-hongkong nfs]# kubeadm token create --print-join-command</span><br><span class="line">kubeadm join 172.31.182.156:8443 --token ortvag.ra0654faci8y8903     --discovery-token-ca-cert-hash sha256:04755ff1aa88e7db283c85589bee31fabb7d32186612778e53a536a297fc9010</span><br></pre></td></tr></table></figure>
+<p>二、在master上生成用于新master加入的证书</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">kubeadm init phase upload-certs --upload-certs</span><br><span class="line">[root@cn-hongkong k8s_yaml]# kubeadm init phase upload-certs --experimental-upload-certs</span><br><span class="line">[upload-certs] Storing the certificates in ConfigMap &quot;kubeadm-certs&quot; in the &quot;kube-system&quot; Namespace</span><br><span class="line">[upload-certs] Using certificate key:</span><br><span class="line">f8d1c027c01baef6985ddf24266641b7c64f9fd922b15a32fce40b6b4b21e47d</span><br></pre></td></tr></table></figure>
+<p> 三、添加新master，把红色部分加到–experimental-control-plane –certificate-key后。<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">kubeadm join 172.31.182.156:8443  --token ortvag.ra0654faci8y8903 \</span><br><span class="line">  --discovery-token-ca-cert-hash sha256:04755ff1aa88e7db283c85589bee31fabb7d32186612778e53a536a297fc9010 \</span><br><span class="line">  --control-plane --certificate-key f8d1c027c01baef6985ddf24266641b7c64f9fd922b15a32fce40b6b4b21e47d</span><br></pre></td></tr></table></figure></p>
+<p>四、初始化 root 用户的 kubectl 配置</p>
+<p>每台master都要操作<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">rm -rf /root/.kube/</span><br><span class="line">mkdir /root/.kube/</span><br><span class="line">cp -i /etc/kubernetes/admin.conf /root/.kube/config</span><br></pre></td></tr></table></figure></p>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><p>kubernetes的高可用，是通过访问vip：haproxy监听端口，vip会飘逸到可用的服务器上。然后通过haproxy转发到真实的端口，可能是本机也可能是其他master。haproxy本身具有探活功能。整个高可用就串起来了。</p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/22/flink指标对接prometheus和grafana/" rel="next" title="flink指标对接prometheus和grafana">
+                <i class="fa fa-chevron-left"></i> flink指标对接prometheus和grafana
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/02/06/Flink中如何在流式计算中实现定时任务/" rel="prev" title="Flink中如何在流式计算中实现定时任务">
+                Flink中如何在流式计算中实现定时任务 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#架构图"><span class="nav-number">1.</span> <span class="nav-text">架构图</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原理"><span class="nav-number">2.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#注意"><span class="nav-number">3.</span> <span class="nav-text">注意</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#安装和配置keepalived"><span class="nav-number">4.</span> <span class="nav-text">安装和配置keepalived</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#haproxy的安装"><span class="nav-number">5.</span> <span class="nav-text">haproxy的安装</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#haproxy开启日志功能"><span class="nav-number">6.</span> <span class="nav-text">haproxy开启日志功能</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#新master的添加"><span class="nav-number">7.</span> <span class="nav-text">新master的添加</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#一、-kubeadm-init的配置文件"><span class="nav-number">7.1.</span> <span class="nav-text">一、 kubeadm init的配置文件</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#总结"><span class="nav-number">8.</span> <span class="nav-text">总结</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

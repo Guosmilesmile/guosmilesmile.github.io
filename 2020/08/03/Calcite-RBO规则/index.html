@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="规则来源于CoreRules.java AGGREGATE_PROJECT_MERGERule that recognizes an {@link Aggregate} on top of a {@link Project} and if possible aggregates through the Project or removes the Project.  通过识别聚合操作对应的投影(p">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Calcite RBO规则">
+<meta property="og:url" content="http://yoursite.com/2020/08/03/Calcite-RBO规则/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="规则来源于CoreRules.java AGGREGATE_PROJECT_MERGERule that recognizes an {@link Aggregate} on top of a {@link Project} and if possible aggregates through the Project or removes the Project.  通过识别聚合操作对应的投影(p">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-09-06T08:23:09.909Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Calcite RBO规则">
+<meta name="twitter:description" content="规则来源于CoreRules.java AGGREGATE_PROJECT_MERGERule that recognizes an {@link Aggregate} on top of a {@link Project} and if possible aggregates through the Project or removes the Project.  通过识别聚合操作对应的投影(p">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/08/03/Calcite-RBO规则/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Calcite RBO规则 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/08/03/Calcite-RBO规则/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Calcite RBO规则
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-08-03 16:40:05" itemprop="dateCreated datePublished" datetime="2020-08-03T16:40:05+08:00">2020-08-03</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-09-06 16:23:09" itemprop="dateModified" datetime="2020-09-06T16:23:09+08:00">2020-09-06</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Calcite/" itemprop="url" rel="index"><span itemprop="name">Calcite</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>规则来源于CoreRules.java</p>
+<h4 id="AGGREGATE-PROJECT-MERGE"><a href="#AGGREGATE-PROJECT-MERGE" class="headerlink" title="AGGREGATE_PROJECT_MERGE"></a>AGGREGATE_PROJECT_MERGE</h4><p>Rule that recognizes an {@link Aggregate} on top of a {@link Project} and if possible aggregates through the Project or removes the Project. </p>
+<p>通过识别聚合操作对应的投影(project),对可能的投影进行聚合或者删除。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">/**</span><br><span class="line"> * Planner rule that recognizes a &#123;@link org.apache.calcite.rel.core.Aggregate&#125;</span><br><span class="line"> * on top of a &#123;@link org.apache.calcite.rel.core.Project&#125; and if possible</span><br><span class="line"> * aggregate through the project or removes the project.</span><br><span class="line"> *</span><br><span class="line"> * &lt;p&gt;This is only possible when the grouping expressions and arguments to</span><br><span class="line"> * the aggregate functions are field references (i.e. not expressions).</span><br><span class="line"> *</span><br><span class="line"> * &lt;p&gt;In some cases, this rule has the effect of trimming: the aggregate will</span><br><span class="line"> * use fewer columns than the project did.</span><br><span class="line"> */</span><br></pre></td></tr></table></figure>
+<ul>
+<li>删除投影<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">SELECT `DATE_CD`, SUM(`IB0002001_CN000`)</span><br><span class="line">FROM (SELECT SUM(`test`), `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `CUBE2L_IB00040010_CN000`.`IDX_ID` IN (&apos;IB0002001_CN000&apos;) AND `CUBE2L_IB00040010_CN000`.`DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`) AS `IB0002001_CN000`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)])</span><br><span class="line">  LogicalProject(DATE_CD=[$0], IB0002001_CN000=[$2])</span><br><span class="line">    LogicalAggregate(group=[&#123;0&#125;], EXPR$0=[SUM($1)], IB0002001_CN000=[SUM($2)])</span><br><span class="line">      LogicalProject(DATE_CD=[$0], test=[$2], IDX_VAL=[$1])</span><br><span class="line">        LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">          LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line">After --------------------</span><br><span class="line">LogicalProject(DATE_CD=[$0], IB0002001_CN000=[$2])</span><br><span class="line">  LogicalAggregate(group=[&#123;0&#125;], EXPR$0=[SUM($1)], IB0002001_CN000=[SUM($2)])</span><br><span class="line">    LogicalProject(DATE_CD=[$0], test=[$2], IDX_VAL=[$1])</span><br><span class="line">      LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">        LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line">        </span><br><span class="line">SELECT `DATE_CD`, SUM(`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `IDX_ID` = &apos;IB0002001_CN000&apos; AND `DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `DATE_CD`</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h4 id="AGGREGATE-PROJECT-PULL-UP-CONSTANTS"><a href="#AGGREGATE-PROJECT-PULL-UP-CONSTANTS" class="headerlink" title="AGGREGATE_PROJECT_PULL_UP_CONSTANTS"></a>AGGREGATE_PROJECT_PULL_UP_CONSTANTS</h4><p>Rule that removes constant keys from an {@link Aggregate}</p>
+<p>Since the transformed relational expression has to match the original<br>relational expression, the constants are placed in a projection above the reduced aggregate. If those constants are not used, another rule will remove them from the project.</p>
+<p>对常量进行处理，如果常量在子查询和主查询都存在，那么删除在子查询中的常量。如果常量只在子查询中存在，删除对应常量。</p>
+<ul>
+<li><p>常量在子查询和主查询都存在</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line">SELECT 5, `DATE_CD`, SUM(`IB0002001_CN000`)</span><br><span class="line">FROM (SELECT 5, SUM(`test`), `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `CUBE2L_IB00040010_CN000`.`IDX_ID` IN (&apos;IB0002001_CN000&apos;) AND `CUBE2L_IB00040010_CN000`.`DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`) AS `IB0002001_CN000`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">LogicalProject(EXPR$0=[5], DATE_CD=[$0], EXPR$2=[$1])</span><br><span class="line">  LogicalAggregate(group=[&#123;0&#125;], EXPR$2=[SUM($1)])</span><br><span class="line">    LogicalProject(DATE_CD=[$0], IB0002001_CN000=[$2])</span><br><span class="line">      LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)], IB0002001_CN000=[SUM($2)])</span><br><span class="line">        LogicalProject(DATE_CD=[$0], test=[$2], IDX_VAL=[$1])</span><br><span class="line">          LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">            LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line">            </span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalProject(EXPR$0=[5], DATE_CD=[$0], EXPR$2=[$1])</span><br><span class="line">  LogicalAggregate(group=[&#123;0&#125;], EXPR$2=[SUM($1)])</span><br><span class="line">    LogicalProject(DATE_CD=[$0], IB0002001_CN000=[$2])</span><br><span class="line">      LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)], IB0002001_CN000=[SUM($2)])</span><br><span class="line">        LogicalProject(DATE_CD=[$0], test=[$2], IDX_VAL=[$1])</span><br><span class="line">          LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">            LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line">            </span><br><span class="line">SELECT 5 AS `EXPR$0`, `DATE_CD`, SUM(`IB0002001_CN000`) AS `EXPR$2`</span><br><span class="line">FROM (SELECT `DATE_CD`, SUM(`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `IDX_ID` = &apos;IB0002001_CN000&apos; AND `DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `DATE_CD`) AS `t2`</span><br><span class="line">GROUP BY `DATE_CD`</span><br></pre></td></tr></table></figure>
+</li>
+<li><p>子查询存在常量，主查询不存在</p>
+</li>
+</ul>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">SELECT `DATE_CD`, SUM(`IB0002001_CN000`)</span><br><span class="line">FROM (SELECT 5, SUM(`test`), `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `CUBE2L_IB00040010_CN000`.`IDX_ID` IN (&apos;IB0002001_CN000&apos;) AND `CUBE2L_IB00040010_CN000`.`DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`) AS `IB0002001_CN000`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)])</span><br><span class="line">  LogicalProject(DATE_CD=[$0], IB0002001_CN000=[$2])</span><br><span class="line">    LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)], IB0002001_CN000=[SUM($2)])</span><br><span class="line">      LogicalProject(DATE_CD=[$0], test=[$2], IDX_VAL=[$1])</span><br><span class="line">        LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">          LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)])</span><br><span class="line">  LogicalProject(DATE_CD=[$0], IB0002001_CN000=[$2])</span><br><span class="line">    LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)], IB0002001_CN000=[SUM($2)])</span><br><span class="line">      LogicalProject(DATE_CD=[$0], test=[$2], IDX_VAL=[$1])</span><br><span class="line">        LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">          LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">SELECT `DATE_CD`, SUM(`IB0002001_CN000`) AS `EXPR$1`</span><br><span class="line">FROM (SELECT `DATE_CD`, SUM(`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `IDX_ID` = &apos;IB0002001_CN000&apos; AND `DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `DATE_CD`) AS `t2`</span><br><span class="line">GROUP BY `DATE_CD`</span><br></pre></td></tr></table></figure>
+<h4 id="AGGREGATE-ANY-PULL-UP-CONSTANTS"><a href="#AGGREGATE-ANY-PULL-UP-CONSTANTS" class="headerlink" title="AGGREGATE_ANY_PULL_UP_CONSTANTS"></a>AGGREGATE_ANY_PULL_UP_CONSTANTS</h4><p>效果同上，上面的方法针对的是project，这个方法针对所有node。</p>
+<p>差别：上面针对LogicalProject，该方法针对RelNode</p>
+<h4 id="AGGREGATE-STAR-TABLE"><a href="#AGGREGATE-STAR-TABLE" class="headerlink" title="AGGREGATE_STAR_TABLE"></a>AGGREGATE_STAR_TABLE</h4><p>This pattern indicates that an aggregate table may exist. The rule asks<br>the star table for an aggregate table at the required level of aggregation.</p>
+<p>暂时没看懂是做什么用的。</p>
+<h4 id="AGGREGATE-PROJECT-STAR-TABLE"><a href="#AGGREGATE-PROJECT-STAR-TABLE" class="headerlink" title="AGGREGATE_PROJECT_STAR_TABLE"></a>AGGREGATE_PROJECT_STAR_TABLE</h4><p>同上</p>
+<h4 id="AGGREGATE-PROJECT-STAR-TABLE-1"><a href="#AGGREGATE-PROJECT-STAR-TABLE-1" class="headerlink" title="AGGREGATE_PROJECT_STAR_TABLE"></a>AGGREGATE_PROJECT_STAR_TABLE</h4><p>同上</p>
+<h4 id="AGGREGATE-REDUCE-FUNCTIONS"><a href="#AGGREGATE-REDUCE-FUNCTIONS" class="headerlink" title="AGGREGATE_REDUCE_FUNCTIONS"></a>AGGREGATE_REDUCE_FUNCTIONS</h4><p>将聚合函数进行拆分，例如avg拆成sum/count</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;Rewrites:</span></span><br><span class="line"><span class="comment"> * &lt;ul&gt;</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;AVG(x) &amp;rarr; SUM(x) / COUNT(x)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;STDDEV_POP(x) &amp;rarr; SQRT(</span></span><br><span class="line"><span class="comment"> *     (SUM(x * x) - SUM(x) * SUM(x) / COUNT(x))</span></span><br><span class="line"><span class="comment"> *    / COUNT(x))</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;STDDEV_SAMP(x) &amp;rarr; SQRT(</span></span><br><span class="line"><span class="comment"> *     (SUM(x * x) - SUM(x) * SUM(x) / COUNT(x))</span></span><br><span class="line"><span class="comment"> *     / CASE COUNT(x) WHEN 1 THEN NULL ELSE COUNT(x) - 1 END)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;VAR_POP(x) &amp;rarr; (SUM(x * x) - SUM(x) * SUM(x) / COUNT(x))</span></span><br><span class="line"><span class="comment"> *     / COUNT(x)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;VAR_SAMP(x) &amp;rarr; (SUM(x * x) - SUM(x) * SUM(x) / COUNT(x))</span></span><br><span class="line"><span class="comment"> *        / CASE COUNT(x) WHEN 1 THEN NULL ELSE COUNT(x) - 1 END</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;COVAR_POP(x, y) &amp;rarr; (SUM(x * y) - SUM(x, y) * SUM(y, x)</span></span><br><span class="line"><span class="comment"> *     / REGR_COUNT(x, y)) / REGR_COUNT(x, y)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;COVAR_SAMP(x, y) &amp;rarr; (SUM(x * y) - SUM(x, y) * SUM(y, x) / REGR_COUNT(x, y))</span></span><br><span class="line"><span class="comment"> *     / CASE REGR_COUNT(x, y) WHEN 1 THEN NULL ELSE REGR_COUNT(x, y) - 1 END</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;REGR_SXX(x, y) &amp;rarr; REGR_COUNT(x, y) * VAR_POP(y)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;li&gt;REGR_SYY(x, y) &amp;rarr; REGR_COUNT(x, y) * VAR_POP(x)</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;/ul&gt;</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;Since many of these rewrites introduce multiple occurrences of simpler</span></span><br><span class="line"><span class="comment"> * forms like &#123;<span class="doctag">@code</span> COUNT(x)&#125;, the rule gathers common sub-expressions as it</span></span><br><span class="line"><span class="comment"> * goes.</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
+<h4 id="AGGREGATE-MERGE"><a href="#AGGREGATE-MERGE" class="headerlink" title="AGGREGATE_MERGE"></a>AGGREGATE_MERGE</h4><p>如果顶部的聚合key是子查询的聚合key的子集，那么会合并成一个group by 语句，并且合并聚合函数</p>
+<p>For example, SUM of SUM becomes SUM; SUM of COUNT becomes COUNT;<br>MAX of MAX becomes MAX; MIN of MIN becomes MIN. AVG of AVG would not<br>match, nor would COUNT of COUNT.</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line">SELECT `DATE_CD`, SUM(`IB0002001_CN000`)</span><br><span class="line">FROM (SELECT `CUBE2L_IB00040010_CN000`.`DATE_CD`, COUNT(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `CUBE2L_IB00040010_CN000`.`IDX_ID` IN (&apos;IB0002001_CN000&apos;) AND `CUBE2L_IB00040010_CN000`.`DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`) AS `IB0002001_CN000`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)])</span><br><span class="line">  LogicalAggregate(group=[&#123;0&#125;], IB0002001_CN000=[COUNT($1)])</span><br><span class="line">    LogicalProject(DATE_CD=[$0], IDX_VAL=[$1])</span><br><span class="line">      LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">        LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[COUNT($1)])</span><br><span class="line">  LogicalProject(DATE_CD=[$0], IDX_VAL=[$1])</span><br><span class="line">    LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">      LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">SELECT `DATE_CD`, COUNT(`IDX_VAL`) AS `EXPR$1`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `IDX_ID` = &apos;IB0002001_CN000&apos; AND `DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `DATE_CD`</span><br></pre></td></tr></table></figure>
+<h4 id="AggregateRemoveRule"><a href="#AggregateRemoveRule" class="headerlink" title="AggregateRemoveRule"></a>AggregateRemoveRule</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">/**</span><br><span class="line"> * Planner rule that removes</span><br><span class="line"> * a &#123;@link org.apache.calcite.rel.core.Aggregate&#125;</span><br><span class="line"> * if it computes no aggregate functions</span><br><span class="line"> * (that is, it is implementing &#123;@code SELECT DISTINCT&#125;),</span><br><span class="line"> * or all the aggregate functions are splittable,</span><br><span class="line"> * and the underlying relational expression is already distinct.</span><br><span class="line"> */</span><br></pre></td></tr></table></figure>
+<p> 如果没有使用聚合函数，或者所有聚合函数都是可拆分的，并且基础关系表达式已经不同,则删除聚合函数</p>
+ <figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"> SELECT `DATE_CD`, SUM(`IB0002001_CN000`)</span><br><span class="line">FROM (SELECT `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `CUBE2L_IB00040010_CN000`.`IDX_ID` IN (&apos;IB0002001_CN000&apos;) AND `CUBE2L_IB00040010_CN000`.`DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`) AS `IB0002001_CN000`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)])</span><br><span class="line">  LogicalAggregate(group=[&#123;0&#125;], IB0002001_CN000=[SUM($1)])</span><br><span class="line">    LogicalProject(DATE_CD=[$0], IDX_VAL=[$1])</span><br><span class="line">      LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">        LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], IB0002001_CN000=[SUM($1)])</span><br><span class="line">  LogicalProject(DATE_CD=[$0], IDX_VAL=[$1])</span><br><span class="line">    LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">      LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">SELECT `DATE_CD`, SUM(`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `IDX_ID` = &apos;IB0002001_CN000&apos; AND `DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `DATE_CD`</span><br></pre></td></tr></table></figure>
+<h4 id="AGGREGATE-EXPAND-DISTINCT-AGGREGATES"><a href="#AGGREGATE-EXPAND-DISTINCT-AGGREGATES" class="headerlink" title="AGGREGATE_EXPAND_DISTINCT_AGGREGATES"></a>AGGREGATE_EXPAND_DISTINCT_AGGREGATES</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * Planner rule that expands distinct aggregates</span></span><br><span class="line"><span class="comment"> * (such as &#123;<span class="doctag">@code</span> COUNT(DISTINCT x)&#125;) from a</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@link</span> org.apache.calcite.rel.core.Aggregate&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;How this is done depends upon the arguments to the function. If all</span></span><br><span class="line"><span class="comment"> * functions have the same argument</span></span><br><span class="line"><span class="comment"> * (e.g. &#123;<span class="doctag">@code</span> COUNT(DISTINCT x), SUM(DISTINCT x)&#125; both have the argument</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@code</span> x&#125;) then one extra &#123;<span class="doctag">@link</span> org.apache.calcite.rel.core.Aggregate&#125; is</span></span><br><span class="line"><span class="comment"> * sufficient.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * &lt;p&gt;If there are multiple arguments</span></span><br><span class="line"><span class="comment"> * (e.g. &#123;<span class="doctag">@code</span> COUNT(DISTINCT x), COUNT(DISTINCT y)&#125;)</span></span><br><span class="line"><span class="comment"> * the rule creates separate &#123;<span class="doctag">@code</span> Aggregate&#125;s and combines using a</span></span><br><span class="line"><span class="comment"> * &#123;<span class="doctag">@link</span> org.apache.calcite.rel.core.Join&#125;.</span></span><br><span class="line"><span class="comment"> */</span></span><br></pre></td></tr></table></figure>
+<p>对distinct函数进行展开。例如将 COUNT(DISTINCT x)函数展开为两层sql，先group by x，再通过一次select count（x）得出结果</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br></pre></td><td class="code"><pre><span class="line">SELECT `DATE_CD`, SUM(DISTINCT `IB0002001_CN000`)</span><br><span class="line">FROM (SELECT `CUBE2L_IB00040010_CN000`.`DATE_CD`, SUM(`CUBE2L_IB00040010_CN000`.`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `CUBE2L_IB00040010_CN000`.`IDX_ID` IN (&apos;IB0002001_CN000&apos;) AND `CUBE2L_IB00040010_CN000`.`DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `CUBE2L_IB00040010_CN000`.`DATE_CD`) AS `IB0002001_CN000`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM(DISTINCT $1)])</span><br><span class="line">  LogicalAggregate(group=[&#123;0&#125;], IB0002001_CN000=[SUM($1)])</span><br><span class="line">    LogicalProject(DATE_CD=[$0], IDX_VAL=[$1])</span><br><span class="line">      LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">        LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0&#125;], EXPR$1=[SUM($1)])</span><br><span class="line">  LogicalAggregate(group=[&#123;0, 1&#125;])</span><br><span class="line">    LogicalAggregate(group=[&#123;0&#125;], IB0002001_CN000=[SUM($1)])</span><br><span class="line">      LogicalProject(DATE_CD=[$0], IDX_VAL=[$1])</span><br><span class="line">        LogicalFilter(condition=[AND(=($3, &apos;IB0002001_CN000&apos;), =($0, CAST(&apos;2020-05-31&apos;):DATE NOT NULL))])</span><br><span class="line">          LogicalTableScan(table=[[CUBE2L_IB00040010_CN000]])</span><br><span class="line"></span><br><span class="line">SELECT `DATE_CD`, SUM(`IB0002001_CN000`) AS `EXPR$1`</span><br><span class="line">FROM (SELECT `DATE_CD`, `IB0002001_CN000`</span><br><span class="line">FROM (SELECT `DATE_CD`, SUM(`IDX_VAL`) AS `IB0002001_CN000`</span><br><span class="line">FROM `CUBE2L_IB00040010_CN000`</span><br><span class="line">WHERE `IDX_ID` = &apos;IB0002001_CN000&apos; AND `DATE_CD` = &apos;2020-05-31&apos;</span><br><span class="line">GROUP BY `DATE_CD`) AS `t1`</span><br><span class="line">GROUP BY `DATE_CD`, `IB0002001_CN000`) AS `t2`</span><br><span class="line">GROUP BY `DATE_CD`</span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br></pre></td></tr></table></figure>
+<h4 id="AGGREGATE-EXPAND-DISTINCT-AGGREGATES-TO-JOIN"><a href="#AGGREGATE-EXPAND-DISTINCT-AGGREGATES-TO-JOIN" class="headerlink" title="AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN"></a>AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN</h4><p>同上，使用join而不是agg来完成distinct的展开。</p>
+<h4 id="AGGREGATE-FILTER-TRANSPOSE"><a href="#AGGREGATE-FILTER-TRANSPOSE" class="headerlink" title="AGGREGATE_FILTER_TRANSPOSE"></a>AGGREGATE_FILTER_TRANSPOSE</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** Rule that matches an &#123;<span class="doctag">@link</span> Aggregate&#125;</span></span><br><span class="line"><span class="comment">   * on a &#123;<span class="doctag">@link</span> Join&#125; and removes the left input</span></span><br><span class="line"><span class="comment">   * of the join provided that the left input is also a left join if</span></span><br><span class="line"><span class="comment">   * possible. */</span></span><br></pre></td></tr></table></figure>
+<p>匹配过滤器上的Aggregate并进行转置的规则，将聚合推到过滤器下方。<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">* &lt;p&gt;This rule does not directly improve performance. The aggregate will</span><br><span class="line"> * have to process more rows, to produce aggregated rows that will be thrown</span><br><span class="line"> * away. The rule might be beneficial <span class="keyword">if</span> the predicate is very expensive to</span><br><span class="line"> * evaluate. The main use of the rule is to match a query that has a filter</span><br><span class="line"> * under an aggregate to an existing aggregate table.</span><br></pre></td></tr></table></figure></p>
+<p>从说明上看，将agg提前与filter调用，这样会是的agg处理更多的行,这种规则适用于谓词过滤代价特别大的场景。</p>
+<p>目前没有试出该如何使用。</p>
+<h4 id="AGGREGATE-JOIN-JOIN-REMOVE"><a href="#AGGREGATE-JOIN-JOIN-REMOVE" class="headerlink" title="AGGREGATE_JOIN_JOIN_REMOVE"></a>AGGREGATE_JOIN_JOIN_REMOVE</h4><p>多个join的时候，删除不用的join</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">SELECT DISTINCT s.product_id, pc.product_id</span><br><span class="line">FROM sales s</span><br><span class="line">	LEFT JOIN product p ON s.product_id = p.product_id</span><br><span class="line">	LEFT JOIN product_class pc ON s.product_id = pc.product_id</span><br><span class="line">	</span><br><span class="line">become </span><br><span class="line"></span><br><span class="line">SELECT DISTINCT s.product_id, pc.product_id</span><br><span class="line">FROM sales s</span><br><span class="line">	LEFT JOIN product_class pc ON s.product_id = pc.product_id</span><br></pre></td></tr></table></figure>
+<h4 id="FILTER-REDUCE-EXPRESSIONS"><a href="#FILTER-REDUCE-EXPRESSIONS" class="headerlink" title="FILTER_REDUCE_EXPRESSIONS"></a>FILTER_REDUCE_EXPRESSIONS</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">SELECT `sal`</span><br><span class="line">FROM `emp`</span><br><span class="line">WHERE CASE WHEN `sal` = 1000 THEN CASE WHEN `sal` = 1000 THEN NULL ELSE 1 END IS NULL ELSE CASE WHEN `sal` = 2000 THEN NULL ELSE 1 END IS NULL END IS TRUE</span><br><span class="line"></span><br><span class="line">LogicalProject(sal=[$0])</span><br><span class="line">  LogicalFilter(condition=[IS TRUE(CASE(=($0, 1000), IS NULL(CASE(=($0, 1000), null:INTEGER, 1)), IS NULL(CASE(=($0, 2000), null:INTEGER, 1))))])</span><br><span class="line">    LogicalTableScan(table=[[emp]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalProject(sal=[$0])</span><br><span class="line">  LogicalFilter(condition=[OR(=($0, 1000), AND(CAST(=($0, 2000)):BOOLEAN NOT NULL, IS NOT TRUE(=($0, 1000))))])</span><br><span class="line">    LogicalTableScan(table=[[emp]])</span><br><span class="line"></span><br><span class="line">SELECT `sal`</span><br><span class="line">FROM `emp`</span><br><span class="line">WHERE `sal` = 1000 OR CAST(`sal` = 2000 AS BOOLEAN) AND `sal` = 1000 IS NOT TRUE</span><br></pre></td></tr></table></figure>
+<h4 id="UNION-TO-DISTINCT"><a href="#UNION-TO-DISTINCT" class="headerlink" title="UNION_TO_DISTINCT"></a>UNION_TO_DISTINCT</h4><p>将union语句转为group by + union</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">SELECT *</span><br><span class="line">FROM `emp`</span><br><span class="line">UNION</span><br><span class="line">SELECT *</span><br><span class="line">FROM `emp`</span><br><span class="line"></span><br><span class="line">LogicalUnion(all=[false])</span><br><span class="line">  LogicalProject(sal=[$0], deptno=[$1], empno=[$2])</span><br><span class="line">    LogicalTableScan(table=[[emp]])</span><br><span class="line">  LogicalProject(sal=[$0], deptno=[$1], empno=[$2])</span><br><span class="line">    LogicalTableScan(table=[[emp]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalAggregate(group=[&#123;0, 1, 2&#125;])</span><br><span class="line">  LogicalUnion(all=[true])</span><br><span class="line">    LogicalProject(sal=[$0], deptno=[$1], empno=[$2])</span><br><span class="line">      LogicalTableScan(table=[[emp]])</span><br><span class="line">    LogicalProject(sal=[$0], deptno=[$1], empno=[$2])</span><br><span class="line">      LogicalTableScan(table=[[emp]])</span><br><span class="line"></span><br><span class="line">SELECT `sal`, `deptno`, `empno`</span><br><span class="line">FROM (SELECT *</span><br><span class="line">FROM `emp`</span><br><span class="line">UNION ALL</span><br><span class="line">SELECT *</span><br><span class="line">FROM `emp`) AS `t1`</span><br><span class="line">GROUP BY `sal`, `deptno`, `empno`</span><br></pre></td></tr></table></figure>
+<h4 id="JOIN-EXTRACT-FILTER"><a href="#JOIN-EXTRACT-FILTER" class="headerlink" title="JOIN_EXTRACT_FILTER"></a>JOIN_EXTRACT_FILTER</h4><p>将join转为where操作</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">SELECT `emp`.`sal`</span><br><span class="line">FROM `emp`</span><br><span class="line">INNER JOIN `dept` ON `emp`.`deptno` = `dept`.`deptno`</span><br><span class="line"></span><br><span class="line">LogicalProject(sal=[$0])</span><br><span class="line">  LogicalJoin(condition=[=($1, $4)], joinType=[inner])</span><br><span class="line">    LogicalTableScan(table=[[emp]])</span><br><span class="line">    LogicalTableScan(table=[[dept]])</span><br><span class="line"></span><br><span class="line">After --------------------</span><br><span class="line"></span><br><span class="line">LogicalProject(sal=[$0])</span><br><span class="line">  LogicalFilter(condition=[=($1, $4)])</span><br><span class="line">    LogicalJoin(condition=[true], joinType=[inner])</span><br><span class="line">      LogicalTableScan(table=[[emp]])</span><br><span class="line">      LogicalTableScan(table=[[dept]])</span><br><span class="line"></span><br><span class="line">SELECT `emp`.`sal`</span><br><span class="line">FROM `emp`,</span><br><span class="line">`dept`</span><br><span class="line">WHERE `emp`.`deptno` = `dept`.`deptno`</span><br><span class="line"></span><br><span class="line">Process finished with exit code 0</span><br></pre></td></tr></table></figure>
+<p>SELECT <code>deptno</code>, COUNT(<code>ename</code>) AS <code>EXPR$1</code>, MIN(<code>EXPR$2</code>) AS <code>EXPR$2</code><br>FROM (SELECT <code>deptno</code>, <code>ename</code>, SUM(<code>sal</code>) AS <code>EXPR$2</code>, GROUPING(<code>deptno</code>, <code>ename</code>) = 0 AS <code>$g_0</code>, GROUPING(<code>deptno</code>, <code>ename</code>) = 1 AS <code>$g_1</code><br>FROM <code>emp</code><br>GROUP BY GROUPING SETS((<code>deptno</code>, <code>ename</code>), <code>deptno</code>)) AS <code>t1</code><br>GROUP BY <code>deptno</code></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/07/23/Flink1-11升级填坑/" rel="next" title="Flink1.11升级填坑">
+                <i class="fa fa-chevron-left"></i> Flink1.11升级填坑
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/08/11/Calcite-RBO-rule-解析和自定义/" rel="prev" title="Calcite RBO rule 解析和自定义">
+                Calcite RBO rule 解析和自定义 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-PROJECT-MERGE"><span class="nav-number">1.</span> <span class="nav-text">AGGREGATE_PROJECT_MERGE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-PROJECT-PULL-UP-CONSTANTS"><span class="nav-number">2.</span> <span class="nav-text">AGGREGATE_PROJECT_PULL_UP_CONSTANTS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-ANY-PULL-UP-CONSTANTS"><span class="nav-number">3.</span> <span class="nav-text">AGGREGATE_ANY_PULL_UP_CONSTANTS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-STAR-TABLE"><span class="nav-number">4.</span> <span class="nav-text">AGGREGATE_STAR_TABLE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-PROJECT-STAR-TABLE"><span class="nav-number">5.</span> <span class="nav-text">AGGREGATE_PROJECT_STAR_TABLE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-PROJECT-STAR-TABLE-1"><span class="nav-number">6.</span> <span class="nav-text">AGGREGATE_PROJECT_STAR_TABLE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-REDUCE-FUNCTIONS"><span class="nav-number">7.</span> <span class="nav-text">AGGREGATE_REDUCE_FUNCTIONS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-MERGE"><span class="nav-number">8.</span> <span class="nav-text">AGGREGATE_MERGE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AggregateRemoveRule"><span class="nav-number">9.</span> <span class="nav-text">AggregateRemoveRule</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-EXPAND-DISTINCT-AGGREGATES"><span class="nav-number">10.</span> <span class="nav-text">AGGREGATE_EXPAND_DISTINCT_AGGREGATES</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-EXPAND-DISTINCT-AGGREGATES-TO-JOIN"><span class="nav-number">11.</span> <span class="nav-text">AGGREGATE_EXPAND_DISTINCT_AGGREGATES_TO_JOIN</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-FILTER-TRANSPOSE"><span class="nav-number">12.</span> <span class="nav-text">AGGREGATE_FILTER_TRANSPOSE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#AGGREGATE-JOIN-JOIN-REMOVE"><span class="nav-number">13.</span> <span class="nav-text">AGGREGATE_JOIN_JOIN_REMOVE</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#FILTER-REDUCE-EXPRESSIONS"><span class="nav-number">14.</span> <span class="nav-text">FILTER_REDUCE_EXPRESSIONS</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#UNION-TO-DISTINCT"><span class="nav-number">15.</span> <span class="nav-text">UNION_TO_DISTINCT</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#JOIN-EXTRACT-FILTER"><span class="nav-number">16.</span> <span class="nav-text">JOIN_EXTRACT_FILTER</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

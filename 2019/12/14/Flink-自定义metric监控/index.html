@@ -1,0 +1,858 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="直接上报es1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889909192package com.metric">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 自定义metric监控">
+<meta property="og:url" content="http://yoursite.com/2019/12/14/Flink-自定义metric监控/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="直接上报es1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889909192package com.metric">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/2276E0D9C1224D38A1B425332D1AA684?method=download&shareKey=9fe64a99acbc16490a3133997f2493e3">
+<meta property="og:updated_time" content="2019-12-14T09:18:41.459Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 自定义metric监控">
+<meta name="twitter:description" content="直接上报es1234567891011121314151617181920212223242526272829303132333435363738394041424344454647484950515253545556575859606162636465666768697071727374757677787980818283848586878889909192package com.metric">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/2276E0D9C1224D38A1B425332D1AA684?method=download&shareKey=9fe64a99acbc16490a3133997f2493e3">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/12/14/Flink-自定义metric监控/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink 自定义metric监控 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/12/14/Flink-自定义metric监控/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink 自定义metric监控
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-12-14 16:57:52 / 修改时间：17:18:41" itemprop="dateCreated datePublished" datetime="2019-12-14T16:57:52+08:00">2019-12-14</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p><img src="https://note.youdao.com/yws/api/personal/file/2276E0D9C1224D38A1B425332D1AA684?method=download&amp;shareKey=9fe64a99acbc16490a3133997f2493e3" alt="image"></p>
+<h3 id="直接上报es"><a href="#直接上报es" class="headerlink" title="直接上报es"></a>直接上报es</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.metric;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"><span class="keyword">import</span> com.metric.entity.AbstractReporter;</span><br><span class="line"><span class="keyword">import</span> com.metric.entity.MeasurementInfo;</span><br><span class="line"><span class="keyword">import</span> com.metric.entity.MeasurementInfoProvider;</span><br><span class="line"><span class="keyword">import</span> com.metric.system.ConstConfig;</span><br><span class="line"><span class="keyword">import</span> com.metric.utils.*;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Gauge;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Meter;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.MetricConfig;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.reporter.Scheduled;</span><br><span class="line"><span class="keyword">import</span> org.elasticsearch.action.bulk.BulkProcessor;</span><br><span class="line"><span class="keyword">import</span> org.elasticsearch.action.index.IndexRequest;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.Logger;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.time.Instant;</span><br><span class="line"><span class="keyword">import</span> java.util.*;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlinkReport</span> <span class="keyword">extends</span> <span class="title">AbstractReporter</span>&lt;<span class="title">MeasurementInfo</span>&gt; <span class="keyword">implements</span> <span class="title">Scheduled</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOGGER = LoggerFactory.getLogger(FlinkReport.class);</span><br><span class="line">    <span class="keyword">private</span> BulkProcessor bulkProcessor;</span><br><span class="line">    <span class="keyword">private</span> Set&lt;String&gt; gaugesSet = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FlinkReport</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(<span class="keyword">new</span> MeasurementInfoProvider());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(MetricConfig config)</span> </span>&#123;</span><br><span class="line">        InitUtils.initSpringContext();</span><br><span class="line">        EsClient esClient = SpringContextUtil.getBean(EsClient.class);</span><br><span class="line">        bulkProcessor = ESUtil.getBulkProcessor(esClient.getClient());</span><br><span class="line">        gaugesSet.add(<span class="string">"outPoolUsage"</span>);</span><br><span class="line">        gaugesSet.add(<span class="string">"inPoolUsage"</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">report</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">//获取index名称</span></span><br><span class="line">            String index = ConstConfig.ES_INDEX;</span><br><span class="line">            Instant timestamp = Instant.now();</span><br><span class="line">            <span class="keyword">long</span> time = timestamp.toEpochMilli() / <span class="number">1000</span> / <span class="number">10</span> * <span class="number">10</span> * <span class="number">1000</span>;</span><br><span class="line">            String date = TimeUtil.changeLong2String(time, <span class="string">"yyyy-MM-dd"</span>);</span><br><span class="line">            Map&lt;String, Object&gt; map = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;Gauge&lt;?&gt;, MeasurementInfo&gt; entry : gauges.entrySet()) &#123;</span><br><span class="line">                MeasurementInfo measurementInfo = entry.getValue();</span><br><span class="line">                <span class="keyword">if</span> (!gaugesSet.contains(measurementInfo.getName())) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                map.put(<span class="string">"value"</span>, entry.getKey().getValue());</span><br><span class="line">                map.put(<span class="string">"timeStamp"</span>, time);</span><br><span class="line">                map.put(<span class="string">"metric_name"</span>, measurementInfo.getName());</span><br><span class="line">                Map&lt;String, String&gt; tags = measurementInfo.getTags();</span><br><span class="line">                map.putAll(tags);</span><br><span class="line">                String jsonLine = JSON.toJSONString(map);</span><br><span class="line">                <span class="keyword">this</span>.bulkProcessor.add(<span class="keyword">new</span> IndexRequest(index + <span class="string">"_"</span> + date, ConstConfig.ES_TYPE).source(jsonLine));</span><br><span class="line">            &#125;</span><br><span class="line">            map.clear();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;Meter, MeasurementInfo&gt; entry : meters.entrySet()) &#123;</span><br><span class="line">                map.put(<span class="string">"value"</span>, entry.getKey().getCount());</span><br><span class="line">                map.put(<span class="string">"timeStamp"</span>, time);</span><br><span class="line">                map.put(<span class="string">"rate"</span>, entry.getKey().getRate());</span><br><span class="line">                MeasurementInfo measurementInfo = entry.getValue();</span><br><span class="line">                map.put(<span class="string">"metric_name"</span>, measurementInfo.getName());</span><br><span class="line">                Map&lt;String, String&gt; tags = measurementInfo.getTags();</span><br><span class="line">                map.putAll(tags);</span><br><span class="line">                String jsonLine = JSON.toJSONString(map);</span><br><span class="line">                <span class="keyword">this</span>.bulkProcessor.add(<span class="keyword">new</span> IndexRequest(index + <span class="string">"_"</span> + date, ConstConfig.ES_TYPE).source(jsonLine));</span><br><span class="line">            &#125;</span><br><span class="line">            map.clear();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ConcurrentModificationException | NoSuchElementException e) &#123;</span><br><span class="line">            <span class="comment">// ignore - may happen when metrics are concurrently added or removed</span></span><br><span class="line">            <span class="comment">// report next time</span></span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.bulkProcessor.flush();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.bulkProcessor.flush();</span><br><span class="line">        <span class="keyword">this</span>.bulkProcessor.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="直接上报kafka"><a href="#直接上报kafka" class="headerlink" title="直接上报kafka"></a>直接上报kafka</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">package</span> com.metric;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> com.alibaba.fastjson.JSON;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Gauge;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Meter;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.MetricConfig;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.reporter.Scheduled;</span><br><span class="line"><span class="keyword">import</span> org.apache.kafka.clients.producer.KafkaProducer;</span><br><span class="line"><span class="keyword">import</span> org.apache.kafka.clients.producer.ProducerConfig;</span><br><span class="line"><span class="keyword">import</span> org.apache.kafka.clients.producer.ProducerRecord;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.Logger;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.time.Instant;</span><br><span class="line"><span class="keyword">import</span> java.util.*;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">FlinkReportToKafka</span> <span class="keyword">extends</span> <span class="title">AbstractReporter</span>&lt;<span class="title">MeasurementInfo</span>&gt; <span class="keyword">implements</span> <span class="title">Scheduled</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Logger LOGGER = LoggerFactory.getLogger(FlinkReportToKafka.class);</span><br><span class="line">    <span class="keyword">private</span> KafkaProducer kafkaProducer;</span><br><span class="line">    <span class="keyword">private</span> String topic;</span><br><span class="line">    <span class="keyword">private</span> Set&lt;String&gt; gaugesSet = <span class="keyword">new</span> HashSet&lt;&gt;();</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">FlinkReportToKafka</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">super</span>(<span class="keyword">new</span> MeasurementInfoProvider());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(MetricConfig config)</span> </span>&#123;</span><br><span class="line">        InitUtils.initSpringContext();</span><br><span class="line">        String kafkaServer = config.getString(<span class="string">"kafka"</span>, <span class="string">"default"</span>);</span><br><span class="line">        topic = config.getString(<span class="string">"topic"</span>, <span class="string">"default"</span>);</span><br><span class="line">        Map&lt;String, Object&gt; props = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaServer);</span><br><span class="line">        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, <span class="string">"org.apache.kafka.common.serialization.StringSerializer"</span>);</span><br><span class="line">        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, <span class="string">"org.apache.kafka.common.serialization.StringSerializer"</span>);</span><br><span class="line">        props.put(ProducerConfig.CLIENT_ID_CONFIG, <span class="string">"flink_client"</span>);</span><br><span class="line">        props.put(ProducerConfig.MAX_REQUEST_SIZE_CONFIG, PropertyUtil.getString(<span class="string">"max_size"</span>, <span class="string">"10485760"</span>));</span><br><span class="line">        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, PropertyUtil.getString(<span class="string">"buffer_mem"</span>, <span class="string">"105544320"</span>));</span><br><span class="line">        kafkaProducer = <span class="keyword">new</span> KafkaProducer&lt;String, String&gt;(props);</span><br><span class="line">        gaugesSet.add(<span class="string">"outPoolUsage"</span>.toLowerCase());</span><br><span class="line">        gaugesSet.add(<span class="string">"inPoolUsage"</span>.toLowerCase());</span><br><span class="line">        gaugesSet.add(<span class="string">"inputQueueLength"</span>.toLowerCase());</span><br><span class="line">        gaugesSet.add(<span class="string">"outputQueueLength"</span>.toLowerCase());</span><br><span class="line">        gaugesSet.add(<span class="string">"avgQueueLen"</span>.toLowerCase());</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">report</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            <span class="comment">//获取index名称</span></span><br><span class="line">            Instant timestamp = Instant.now();</span><br><span class="line">            <span class="keyword">long</span> time = timestamp.toEpochMilli() / <span class="number">1000</span> / <span class="number">10</span> * <span class="number">10</span> * <span class="number">1000</span>;</span><br><span class="line">            Map&lt;String, Object&gt; map = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;Gauge&lt;?&gt;, MeasurementInfo&gt; entry : gauges.entrySet()) &#123;</span><br><span class="line">                MeasurementInfo measurementInfo = entry.getValue();</span><br><span class="line">                String name = measurementInfo.getName();</span><br><span class="line">                <span class="keyword">boolean</span> find = <span class="keyword">false</span>;</span><br><span class="line">                <span class="keyword">for</span> (String key : gaugesSet) &#123;</span><br><span class="line">                    <span class="keyword">if</span> (name.toLowerCase().contains(key)) &#123;</span><br><span class="line">                        find = <span class="keyword">true</span>;</span><br><span class="line">                        <span class="keyword">break</span>;</span><br><span class="line">                    &#125;</span><br><span class="line">                &#125;</span><br><span class="line">                <span class="keyword">if</span> (!find) &#123;</span><br><span class="line">                    <span class="keyword">continue</span>;</span><br><span class="line">                &#125;</span><br><span class="line">                map.put(<span class="string">"value"</span>, entry.getKey().getValue());</span><br><span class="line">                map.put(<span class="string">"metric_name"</span>, measurementInfo.getName());</span><br><span class="line">                Map&lt;String, String&gt; tags = measurementInfo.getTags();</span><br><span class="line">                map.putAll(tags);</span><br><span class="line">                map.put(<span class="string">"timeStamp"</span>, time);</span><br><span class="line">                String jsonLine = JSON.toJSONString(map);</span><br><span class="line">                kafkaProducer.send(<span class="keyword">new</span> ProducerRecord&lt;&gt;(topic, UUID.randomUUID().toString(), jsonLine));</span><br><span class="line">            &#125;</span><br><span class="line">            map.clear();</span><br><span class="line"></span><br><span class="line">            <span class="keyword">for</span> (Map.Entry&lt;Meter, MeasurementInfo&gt; entry : meters.entrySet()) &#123;</span><br><span class="line">                MeasurementInfo measurementInfo = entry.getValue();</span><br><span class="line">                map.put(<span class="string">"value"</span>, entry.getKey().getCount());</span><br><span class="line">                map.put(<span class="string">"rate"</span>, entry.getKey().getRate());</span><br><span class="line">                map.put(<span class="string">"metric_name"</span>, measurementInfo.getName());</span><br><span class="line">                Map&lt;String, String&gt; tags = measurementInfo.getTags();</span><br><span class="line">                map.putAll(tags);</span><br><span class="line">                map.put(<span class="string">"timeStamp"</span>, time);</span><br><span class="line">                String jsonLine = JSON.toJSONString(map);</span><br><span class="line">                kafkaProducer.send(<span class="keyword">new</span> ProducerRecord&lt;&gt;(topic, UUID.randomUUID().toString(), jsonLine));</span><br><span class="line">            &#125;</span><br><span class="line">            map.clear();</span><br><span class="line">        &#125; <span class="keyword">catch</span> (ConcurrentModificationException | NoSuchElementException e) &#123;</span><br><span class="line">            <span class="keyword">return</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">close</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        kafkaProducer.close();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>关于metric可以上报的直接，可以到flink的官网上获取，自行扩展上面的代码</p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.9/monitoring/metrics.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.9/monitoring/metrics.html</a></p>
+<h3 id="解析部分"><a href="#解析部分" class="headerlink" title="解析部分"></a>解析部分</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">package</span> com.metric.entity;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Counter;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Gauge;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Histogram;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Meter;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.Metric;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.MetricGroup;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.reporter.MetricReporter;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.slf4j.Logger;</span><br><span class="line"><span class="keyword">import</span> org.slf4j.LoggerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.HashMap;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractReporter</span>&lt;<span class="title">MetricInfo</span>&gt; <span class="keyword">implements</span> <span class="title">MetricReporter</span> </span>&#123;</span><br><span class="line">	<span class="keyword">protected</span> <span class="keyword">final</span> Logger log = LoggerFactory.getLogger(getClass());</span><br><span class="line"></span><br><span class="line">	<span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;Gauge&lt;?&gt;, MetricInfo&gt; gauges = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">	<span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;Counter, MetricInfo&gt; counters = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">	<span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;Histogram, MetricInfo&gt; histograms = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">	<span class="keyword">protected</span> <span class="keyword">final</span> Map&lt;Meter, MetricInfo&gt; meters = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">	<span class="keyword">protected</span> <span class="keyword">final</span> MetricInfoProvider&lt;MetricInfo&gt; metricInfoProvider;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">protected</span> <span class="title">AbstractReporter</span><span class="params">(MetricInfoProvider&lt;MetricInfo&gt; metricInfoProvider)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">this</span>.metricInfoProvider = metricInfoProvider;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">notifyOfAddedMetric</span><span class="params">(Metric metric, String metricName, MetricGroup group)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">final</span> MetricInfo metricInfo = metricInfoProvider.getMetricInfo(metricName, group);</span><br><span class="line">		<span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">			<span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Counter) &#123;</span><br><span class="line">				counters.put((Counter) metric, metricInfo);</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Gauge) &#123;</span><br><span class="line">				gauges.put((Gauge&lt;?&gt;) metric, metricInfo);</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Histogram) &#123;</span><br><span class="line">				histograms.put((Histogram) metric, metricInfo);</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Meter) &#123;</span><br><span class="line">				meters.put((Meter) metric, metricInfo);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				log.warn(<span class="string">"Cannot add unknown metric type &#123;&#125;. This indicates that the reporter "</span> +</span><br><span class="line">					<span class="string">"does not support this metric type."</span>, metric.getClass().getName());</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">notifyOfRemovedMetric</span><span class="params">(Metric metric, String metricName, MetricGroup group)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">synchronized</span> (<span class="keyword">this</span>) &#123;</span><br><span class="line">			<span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Counter) &#123;</span><br><span class="line">				counters.remove(metric);</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Gauge) &#123;</span><br><span class="line">				gauges.remove(metric);</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Histogram) &#123;</span><br><span class="line">				histograms.remove(metric);</span><br><span class="line">			&#125; <span class="keyword">else</span> <span class="keyword">if</span> (metric <span class="keyword">instanceof</span> Meter) &#123;</span><br><span class="line">				meters.remove(metric);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				log.warn(<span class="string">"Cannot remove unknown metric type &#123;&#125;. This indicates that the reporter "</span> +</span><br><span class="line">					<span class="string">"does not support this metric type."</span>, metric.getClass().getName());</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">package</span> com.metric.entity;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">final</span> <span class="class"><span class="keyword">class</span> <span class="title">MeasurementInfo</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Map&lt;String, String&gt; tags;</span><br><span class="line"></span><br><span class="line">    MeasurementInfo(String name, Map&lt;String, String&gt; tags) &#123;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">        <span class="keyword">this</span>.tags = tags;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getName</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> name;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Map&lt;String, String&gt; <span class="title">getTags</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> tags;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        StringBuilder stringBuilder = <span class="keyword">new</span> StringBuilder(<span class="string">"name:"</span> + name);</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, String&gt; entry : tags.entrySet()) &#123;</span><br><span class="line">            stringBuilder.append(<span class="string">" key:"</span> + entry.getKey() + <span class="string">" value: "</span> + entry.getValue() + System.lineSeparator());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> stringBuilder.toString();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">package</span> com.metric.entity;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.annotation.VisibleForTesting;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.CharacterFilter;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.MetricGroup;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.runtime.metrics.groups.AbstractMetricGroup;</span><br><span class="line"><span class="keyword">import</span> org.apache.flink.runtime.metrics.groups.FrontMetricGroup;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> java.util.HashMap;</span><br><span class="line"><span class="keyword">import</span> java.util.Map;</span><br><span class="line"><span class="keyword">import</span> java.util.regex.Pattern;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MeasurementInfoProvider</span> <span class="keyword">implements</span> <span class="title">MetricInfoProvider</span>&lt;<span class="title">MeasurementInfo</span>&gt; </span>&#123;</span><br><span class="line">    <span class="meta">@VisibleForTesting</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">char</span> SCOPE_SEPARATOR = <span class="string">'_'</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> CharacterFilter CHARACTER_FILTER = <span class="keyword">new</span> CharacterFilter() &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">final</span> Pattern notAllowedCharacters = Pattern.compile(<span class="string">"[^a-zA-Z0-9:_]"</span>);</span><br><span class="line"></span><br><span class="line">        <span class="meta">@Override</span></span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">filterCharacters</span><span class="params">(String input)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> notAllowedCharacters.matcher(input).replaceAll(<span class="string">"_"</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">MeasurementInfoProvider</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> MeasurementInfo <span class="title">getMetricInfo</span><span class="params">(String metricName, MetricGroup group)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> MeasurementInfo(getScopedName(metricName, group), getTags(group));</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> Map&lt;String, String&gt; <span class="title">getTags</span><span class="params">(MetricGroup group)</span> </span>&#123;</span><br><span class="line">        <span class="comment">// Keys are surrounded by brackets: remove them, transforming "&lt;name&gt;" to "name".</span></span><br><span class="line">        Map&lt;String, String&gt; tags = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, String&gt; variable : group.getAllVariables().entrySet()) &#123;</span><br><span class="line">            String name = variable.getKey();</span><br><span class="line">            tags.put(name.substring(<span class="number">1</span>, name.length() - <span class="number">1</span>), variable.getValue());</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> tags;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * only return the metricName</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> metricName</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@param</span> group</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@return</span></span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">getScopedName</span><span class="params">(String metricName, MetricGroup group)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> getLogicalScope(group) + SCOPE_SEPARATOR + metricName;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">static</span> String <span class="title">getLogicalScope</span><span class="params">(MetricGroup group)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> ((FrontMetricGroup&lt;AbstractMetricGroup&lt;?&gt;&gt;) group).getLogicalScope(CHARACTER_FILTER, SCOPE_SEPARATOR);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">package</span> com.metric.entity;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.apache.flink.metrics.MetricGroup;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * A generic interface to provide custom information for metrics. See &#123;<span class="doctag">@link</span> AbstractReporter&#125;.</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@param</span> &lt;MetricInfo&gt; Custom metric information type</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">MetricInfoProvider</span>&lt;<span class="title">MetricInfo</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="function">MetricInfo <span class="title">getMetricInfo</span><span class="params">(String metricName, MetricGroup group)</span></span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="配置项："><a href="#配置项：" class="headerlink" title="配置项："></a>配置项：</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">metrics.reporters: flinkreport</span><br><span class="line">metrics.reporter.flinkreport.class: com.metric.FlinkReportToKafka</span><br><span class="line">metrics.reporter.flinkreport.kafka: kafka-address:8888</span><br><span class="line">metrics.reporter.flinkreport.topic: flink_metric</span><br></pre></td></tr></table></figure>
+<h3 id="遇到的坑"><a href="#遇到的坑" class="headerlink" title="遇到的坑"></a>遇到的坑</h3><p>在上报kafka的时候，监控配置的pom使用的kafka版本和项目使用的kafka版本是一直的，可是如果在监控程序中打入flink-kafka的依赖，程序中也打入该依赖，会出现依赖冲突，导致程序无法使用kafkaConsume。</p>
+<p>解决方法是将kafka的依赖提取，统一放入Flink平台的lib包中。只是这种方法需要固定对接的kafka版本，1.0.0以上的kafka均无碍。遇到1.0.0以下的版本需要另外打包依赖。</p>
+<h3 id="todo"><a href="#todo" class="headerlink" title="todo"></a>todo</h3><p>当时在metric的程序依赖中打的是flink-kafka的依赖，如果将依赖只打kafkaClient呢？ 可以尝试一下。</p>
+<h3 id="数据样例"><a href="#数据样例" class="headerlink" title="数据样例"></a>数据样例</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"> &#123;</span><br><span class="line">&quot;_index&quot;: &quot;flink_metric_20191214&quot;,</span><br><span class="line">&quot;_type&quot;: &quot;flink_metric&quot;,</span><br><span class="line">&quot;_id&quot;: &quot;AW8BTzbSgRLaxQUd3R-V&quot;,</span><br><span class="line">&quot;_score&quot;: 1,</span><br><span class="line">&quot;_source&quot;: &#123;</span><br><span class="line">&quot;task_name&quot;: &quot;Source: Custom Source -&gt; Flat Map -&gt; bundle function&quot;,</span><br><span class="line">&quot;task_attempt_num&quot;: &quot;0&quot;,</span><br><span class="line">&quot;timeStamp&quot;: 1576274870000,</span><br><span class="line">&quot;task_attempt_id&quot;: &quot;25d6acd2a5460a6b7405ab2ea16f38e8&quot;,</span><br><span class="line">&quot;metric_name&quot;: &quot;taskmanager_job_task_buffers_outputQueueLength&quot;,</span><br><span class="line">&quot;job_name&quot;: &quot;PlayerCountFlink&quot;,</span><br><span class="line">&quot;tm_id&quot;: &quot;cab63a63a32f4ca107908b4a5445fb3c&quot;,</span><br><span class="line">&quot;job_id&quot;: &quot;0ad7f90fc5bba9ab4b08567e9e1cab12&quot;,</span><br><span class="line">&quot;host&quot;: &quot;flink-taskmanager-9457b74bb-562hx&quot;,</span><br><span class="line">&quot;task_id&quot;: &quot;cbc357ccb763df2852fee8c4fc7d55f2&quot;,</span><br><span class="line">&quot;value&quot;: 90,</span><br><span class="line">&quot;subtask_index&quot;: &quot;2&quot;</span><br><span class="line">&#125;</span><br><span class="line">&#125;,</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line">&#123;</span><br><span class="line">&quot;_index&quot;: &quot;flink_metric_20191214&quot;,</span><br><span class="line">&quot;_type&quot;: &quot;flink_metric&quot;,</span><br><span class="line">&quot;_id&quot;: &quot;AW8BTzbSgRLaxQUd3R-n&quot;,</span><br><span class="line">&quot;_score&quot;: 1,</span><br><span class="line">&quot;_source&quot;: &#123;</span><br><span class="line">&quot;task_name&quot;: &quot;Source: Custom Source -&gt; Flat Map -&gt; bundle function&quot;,</span><br><span class="line">&quot;task_attempt_id&quot;: &quot;a3d864bda893be0a7f5027dfe72c53fb&quot;,</span><br><span class="line">&quot;operator_id&quot;: &quot;72ee2076ad4244f19e7388e24679c996&quot;,</span><br><span class="line">&quot;task_id&quot;: &quot;cbc357ccb763df2852fee8c4fc7d55f2&quot;,</span><br><span class="line">&quot;task_attempt_num&quot;: &quot;0&quot;,</span><br><span class="line">&quot;timeStamp&quot;: 1576274870000,</span><br><span class="line">&quot;operator_name&quot;: &quot;Sink: Unnamed&quot;,</span><br><span class="line">&quot;metric_name&quot;: &quot;taskmanager_job_task_numRecordsOutPerSecond&quot;,</span><br><span class="line">&quot;job_name&quot;: &quot;PlayerCountFlink&quot;,</span><br><span class="line">&quot;tm_id&quot;: &quot;cab63a63a32f4ca107908b4a5445fb3c&quot;,</span><br><span class="line">&quot;rate&quot;: 2657.8166666666666,</span><br><span class="line">&quot;job_id&quot;: &quot;0ad7f90fc5bba9ab4b08567e9e1cab12&quot;,</span><br><span class="line">&quot;host&quot;: &quot;flink-taskmanager-9457b74bb-562hx&quot;,</span><br><span class="line">&quot;value&quot;: 355256995,</span><br><span class="line">&quot;subtask_index&quot;: &quot;8&quot;</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>模板flink-metric,es版本 1.6（无奈）</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br></pre></td><td class="code"><pre><span class="line"> &#123;</span><br><span class="line">&quot;order&quot;: 0,</span><br><span class="line">&quot;template&quot;: &quot;flink_metric*&quot;,</span><br><span class="line">&quot;settings&quot;: &#123;</span><br><span class="line">&quot;index.refresh_interval&quot;: &quot;30s&quot;,</span><br><span class="line">&quot;index.replication&quot;: &quot;async&quot;,</span><br><span class="line">&quot;index.translog.durability&quot;: &quot;async&quot;,</span><br><span class="line">&quot;index.translog.flush_threshold_size&quot;: &quot;200mb&quot;,</span><br><span class="line">&quot;index.number_of_replicas&quot;: &quot;1&quot;,</span><br><span class="line">&quot;index.routing.allocation.total_shards_per_node&quot;: &quot;2&quot;,</span><br><span class="line">&quot;index.routing.allocation.require.tag&quot;: &quot;hot&quot;,</span><br><span class="line">&quot;index.routing.allocation.include.group&quot;: &quot;web1,web2,web3,web4&quot;,</span><br><span class="line">&quot;index.number_of_shards&quot;: &quot;6&quot;</span><br><span class="line">&#125;,</span><br><span class="line">&quot;mappings&quot;: &#123;</span><br><span class="line">&quot;flink_metric&quot;: &#123;</span><br><span class="line">&quot;_source&quot;: &#123;</span><br><span class="line">&quot;enabled&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;properties&quot;: &#123;</span><br><span class="line">&quot;task_name&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;task_attempt_id&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;operator_id&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;task_id&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;task_attempt_num&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;timeStamp&quot;: &#123;</span><br><span class="line">&quot;format&quot;: &quot;dateOptionalTime&quot;,</span><br><span class="line">&quot;type&quot;: &quot;date&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;operator_name&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;metric_name&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;job_name&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;tm_id&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;rate&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;no&quot;,</span><br><span class="line">&quot;type&quot;: &quot;double&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;host&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;value&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;no&quot;,</span><br><span class="line">&quot;type&quot;: &quot;double&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;,</span><br><span class="line">&quot;subtask_index&quot;: &#123;</span><br><span class="line">&quot;index&quot;: &quot;not_analyzed&quot;,</span><br><span class="line">&quot;type&quot;: &quot;string&quot;,</span><br><span class="line">&quot;doc_values&quot;: true</span><br><span class="line">&#125;</span><br><span class="line">&#125;,</span><br><span class="line">&quot;_all&quot;: &#123;</span><br><span class="line">&quot;enabled&quot;: false</span><br><span class="line">&#125;</span><br><span class="line">&#125;</span><br><span class="line">&#125;,</span><br><span class="line">&quot;aliases&quot;: &#123;&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/14/设计模式系列-单例模式/" rel="next" title="设计模式系列-单例模式">
+                <i class="fa fa-chevron-left"></i> 设计模式系列-单例模式
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/12/14/Flink源码解析-SQL相关/" rel="prev" title="Flink源码解析 SQL相关">
+                Flink源码解析 SQL相关 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#直接上报es"><span class="nav-number">1.</span> <span class="nav-text">直接上报es</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#直接上报kafka"><span class="nav-number">2.</span> <span class="nav-text">直接上报kafka</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#解析部分"><span class="nav-number">3.</span> <span class="nav-text">解析部分</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#配置项："><span class="nav-number">4.</span> <span class="nav-text">配置项：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#遇到的坑"><span class="nav-number">5.</span> <span class="nav-text">遇到的坑</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#todo"><span class="nav-number">6.</span> <span class="nav-text">todo</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#数据样例"><span class="nav-number">7.</span> <span class="nav-text">数据样例</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="这是一篇转自小米云科技的文章。 Window是Flink的核心功能之一，使用好Window对解决一些业务场景是非常有帮助的。 今天分享5个Flink Window的使用小技巧，不过在开始之前，我们先复习几个核心概念。  Window有几个核心组件：  Assigner，负责确定待处理元素所属的Window； Trigger，负责确定Window何时触发计算； Evictor，可以用来“清理”Win">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink Window的5个使用小技巧">
+<meta property="og:url" content="http://yoursite.com/2020/01/01/Flink-Window的5个使用小技巧/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="这是一篇转自小米云科技的文章。 Window是Flink的核心功能之一，使用好Window对解决一些业务场景是非常有帮助的。 今天分享5个Flink Window的使用小技巧，不过在开始之前，我们先复习几个核心概念。  Window有几个核心组件：  Assigner，负责确定待处理元素所属的Window； Trigger，负责确定Window何时触发计算； Evictor，可以用来“清理”Win">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/B0FA29A9684F4832A8F151499399A9C2?method=download&shareKey=61e62fb0f6f0720a0267d8c17eaca61e">
+<meta property="og:updated_time" content="2020-01-02T11:22:07.592Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink Window的5个使用小技巧">
+<meta name="twitter:description" content="这是一篇转自小米云科技的文章。 Window是Flink的核心功能之一，使用好Window对解决一些业务场景是非常有帮助的。 今天分享5个Flink Window的使用小技巧，不过在开始之前，我们先复习几个核心概念。  Window有几个核心组件：  Assigner，负责确定待处理元素所属的Window； Trigger，负责确定Window何时触发计算； Evictor，可以用来“清理”Win">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/B0FA29A9684F4832A8F151499399A9C2?method=download&shareKey=61e62fb0f6f0720a0267d8c17eaca61e">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/01/01/Flink-Window的5个使用小技巧/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink Window的5个使用小技巧 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/01/Flink-Window的5个使用小技巧/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink Window的5个使用小技巧
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-01-01 10:53:23" itemprop="dateCreated datePublished" datetime="2020-01-01T10:53:23+08:00">2020-01-01</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-01-02 19:22:07" itemprop="dateModified" datetime="2020-01-02T19:22:07+08:00">2020-01-02</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>这是一篇转自小米云科技的文章。</p>
+<p>Window是Flink的核心功能之一，使用好Window对解决一些业务场景是非常有帮助的。</p>
+<p>今天分享5个Flink Window的使用小技巧，不过在开始之前，我们先复习几个核心概念。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/B0FA29A9684F4832A8F151499399A9C2?method=download&amp;shareKey=61e62fb0f6f0720a0267d8c17eaca61e" alt="image"></p>
+<p>Window有几个核心组件：</p>
+<ul>
+<li>Assigner，负责确定待处理元素所属的Window；</li>
+<li>Trigger，负责确定Window何时触发计算；</li>
+<li>Evictor，可以用来“清理”Window中的元素；</li>
+<li>Function，负责处理窗口中的数据；</li>
+</ul>
+<p>Window是有状态的，这个状态和元素的Key以及Window绑定，我们可以抽象的理解为形式为(Key, Window) -&gt; WindowState的Map。</p>
+<p>Window分为两类，Keyed和Non-Keyed Window，今天我们只讨论Keyed Window。</p>
+<p>OK，接下来进入正题。</p>
+<h3 id="技巧一：Mini-Batch输出"><a href="#技巧一：Mini-Batch输出" class="headerlink" title="技巧一：Mini-Batch输出"></a>技巧一：Mini-Batch输出</h3><p>看到这个标题大家可能会很疑惑，Flink的一大优势是“纯流式计算”，相比于Mini-Batch方式在实时性上有很大优势，这里的技巧却是和Mini-Batch有关的，这不是“自断手脚”吗？<br>在解答这个疑问之前，我们先介绍一下问题背景。</p>
+<p>大部分Flink作业在处理完数据后，都要把结果写出到外部系统，比如Kafka。在写外部系统的时候，我们有如下两种方式：</p>
+<ul>
+<li>每条消息都发送一次；这种方式延迟较低，但是吞吐也比较低；</li>
+<li>“积攒”一部分消息，以Batch发送；这种方式延迟增大，但是吞吐提高；</li>
+</ul>
+<p>在实际生产中，除非对延迟要求非常高，否则使用第一种方式会给外部存储系统带来很大的QPS压力，所以一般建议采用第二种方式。</p>
+<p>这里多介绍一下，实际上很多存储系统在设计SDK的时候，已经考虑了对Batch发送的支持，比如Kafka：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">Batching is one of the big drivers of efficiency, and to enable batching the Kafka producer will attempt to accumulate data in memory and to send out larger batches in a single request.</span><br></pre></td></tr></table></figure></p>
+<p>对于这种SDK，用户在使用的时候会更加省心，只需要对每条消息调用一下send接口即可，消息会缓存在队列里，由异步线程对消息进行Batch发送。</p>
+<p>不过需要注意的是，在Flink Checkpoint的时候，一定要通过flush把未发送的数据发送出去。</p>
+<p>以FlinkKafkaProducer示意：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">FlinkKafkaProducer</span> <span class="keyword">extends</span> <span class="title">RichSinkFunction</span> <span class="keyword">implements</span> <span class="title">CheckpointedFunction</span> </span>&#123;</span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">invoke</span><span class="params">(IN next, Context context)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    kafkaProducer.send(record, callback);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">snapshotState</span><span class="params">(FunctionSnapshotContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    kafkaProducer.flush();</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果外部存储系统的SDK没有提供异步Batch发送功能的话，那就需要用户自己实现了：</p>
+<p>第一种思路是这样的，在RichSinkFunction中，通过Flink ListState缓存数据，然后根据消息数量和延迟时间来确定发送时机。<br>这种方式在原理上并没有问题，缺点是需要用户自己对状态进行维护和清理，稍微有点麻烦。</p>
+<p>其实我们可以通过Window来实现这一需求，Window自带的State，可以很好地实现缓存数据功能，并且状态的维护清理不需要用户操心。</p>
+<p>用户需要关心的主要是两个点：</p>
+<ol>
+<li>如何缓存一定数量之后触发发送；</li>
+<li>如何延迟一定时间之后触发发送；</li>
+</ol>
+<p>第一个点很好实现，通过CountWindow + ProcessWindowFunction即可实现：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">DataStream&lt;Tuple2&lt;String, Long&gt;&gt; input = ...;</span><br><span class="line"></span><br><span class="line">input</span><br><span class="line">  .keyBy(t -&gt; t.f0)</span><br><span class="line">  .countWindow(<span class="number">200</span>) <span class="comment">// batch大小</span></span><br><span class="line">  .process(<span class="keyword">new</span> BatchSendFunction());</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BatchSendFunction</span> <span class="keyword">extends</span> <span class="title">ProcessWindowFunction</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(Object o, Context context, Iterable elements, Collector out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      List&lt;Object&gt; batch = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">      <span class="keyword">for</span>(Object e: elements) &#123;</span><br><span class="line">         batch.add(e);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// batch发送</span></span><br><span class="line">      client.send(batch);</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这种方式简单有效，能应对大部分情况，但是有一个缺陷，就是无法控制延迟。</p>
+<p>如果某个Key对应的消息比较少，那可能延迟一段时间才能发到外部系统。举一个极端的例子，如果某个Key的消息数量“凑不够”设定的Batch大小，那么窗口就永远不会触发计算，这显然是不能接受的。</p>
+<p>为了解决这个问题，即满足上面的第二点，我们就需要用到Trigger了。可以通过自定义Trigger，实现根据消息的数量以及延迟来确定发送时机：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></td><td class="code"><pre><span class="line">DataStream&lt;Tuple2&lt;String, Long&gt;&gt; input = ...;</span><br><span class="line"></span><br><span class="line">input</span><br><span class="line">  .keyBy(t -&gt; t.f0)</span><br><span class="line">  .window(GlobalWindows.create())</span><br><span class="line">  .trigger(<span class="keyword">new</span> BatchSendTrigger())</span><br><span class="line">  .process(<span class="keyword">new</span> BatchSendFunction());</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BatchSendTrigger</span>&lt;<span class="title">T</span>&gt; <span class="keyword">extends</span> <span class="title">Trigger</span>&lt;<span class="title">T</span>, <span class="title">GlobalWindow</span>&gt; </span>&#123;</span><br><span class="line">   <span class="comment">// 最大缓存消息数量</span></span><br><span class="line">   <span class="keyword">long</span> maxCount;</span><br><span class="line">   <span class="comment">// 最大缓存时长</span></span><br><span class="line">   <span class="keyword">long</span> maxDelay;</span><br><span class="line"></span><br><span class="line">   <span class="comment">// 当前消息数量</span></span><br><span class="line">   <span class="keyword">int</span> elementCount;</span><br><span class="line">   <span class="comment">// processing timer的时间</span></span><br><span class="line">   <span class="keyword">long</span> timerTime;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="title">BatchSendTrigger</span><span class="params">(<span class="keyword">long</span> maxCount, <span class="keyword">long</span> maxDelay)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">this</span>.maxCount = maxCount;</span><br><span class="line">      <span class="keyword">this</span>.maxDelay = maxDelay;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onElement</span><span class="params">(T element, <span class="keyword">long</span> timestamp, GlobalWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">if</span> (elementCount == <span class="number">0</span>) &#123;</span><br><span class="line">         timerTime = ctx.getCurrentProcessingTime() + maxDelay;</span><br><span class="line">         ctx.registerProcessingTimeTimer(timerTime);</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="comment">// maxCount条件满足</span></span><br><span class="line">      <span class="keyword">if</span> (++elementCount &gt;= maxCount) &#123;</span><br><span class="line">         elementCount = <span class="number">0</span>;</span><br><span class="line">         ctx.deleteProcessingTimeTimer(timerTime);</span><br><span class="line">         <span class="keyword">return</span> TriggerResult.FIRE_AND_PURGE;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> time, GlobalWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="comment">// maxDelay条件满足</span></span><br><span class="line">      elementCount = <span class="number">0</span>;</span><br><span class="line">      <span class="keyword">return</span> TriggerResult.FIRE_AND_PURGE;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onEventTime</span><span class="params">(<span class="keyword">long</span> time, GlobalWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clear</span><span class="params">(GlobalWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="技巧二：去重"><a href="#技巧二：去重" class="headerlink" title="技巧二：去重"></a>技巧二：去重</h3><p>消息去重是分布式计算中一个很常见的需求，以Kafka为例，如果网络不稳定或者Kafka Producer所在的进程失败重启，都有可能造成Topic中消息的重复。那么如何在消费Topic数据的时候去重，自然成了业务关心的问题。</p>
+<p>消息去重有两个关键点：</p>
+<ol>
+<li>数据的唯一ID；</li>
+<li>数据重复的时间跨度；</li>
+</ol>
+<p>数据的唯一ID是用来判断是否重复的标准。时间跨度决定了ID对应的状态保存的时长，如果无限存储下去，一定会造成内存和效率问题。</p>
+<p>如果使用Flink实现去重的话，首先想到的思路可能是这样的：自定义一个FilterFunction，通过HashMap&lt;ID, Boolean&gt;来保存消息是否出现的状态；为了避免HashMap持续增长，我们可以使用Guava中支持过期配置的Cache来保存数据。</p>
+<p>代码示意如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DedupeFilterFunction</span> <span class="keyword">extends</span> <span class="title">RichFilterFunction</span> </span>&#123;</span><br><span class="line">    LoadingCache&lt;ID, Boolean&gt; cache;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(Configuration parameters)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">       cache = CacheBuilder.newBuilder()</span><br><span class="line">        <span class="comment">// 设置过期时间</span></span><br><span class="line">      .expireAfterWrite(timeout, TimeUnit.MILLISECONDS)</span><br><span class="line">      .build(...);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">filter</span><span class="params">(T value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ID key = value.getID();</span><br><span class="line">        <span class="keyword">boolean</span> seen = cache.get(key);</span><br><span class="line">        <span class="keyword">if</span> (!seen) &#123;</span><br><span class="line">            cache.put(key, <span class="keyword">true</span>);</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>这段代码看起来已经能够很好地解决我们的需求了，但是有一个问题，如果作业异常重启的话，Cache中的状态就都丢失了。因此这种方式还需要再加一些逻辑，可以通过实现CheckpointedFunction接口，在snapshotState和initializeState的时候，对Cache中的数据进行保存和恢复。</p>
+<p>这里就不展开具体代码了，我们直接看一下如何通过Window实现去重。</p>
+<p>大致思路是这样的，首先通过keyBy操作，把相同ID的数据发往下游同一个节点；下游窗口保存并处理数据，只发送一条数据到下游。</p>
+<p>这里有两个关键点：</p>
+<ol>
+<li>窗口的大小与数据重复的时间跨度有关；</li>
+<li>窗口的状态不需要也不应该保存所有数据，只需要保存一条即可；</li>
+</ol>
+<p>代码示意如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">DataStream input = ...;</span><br><span class="line"></span><br><span class="line">input</span><br><span class="line">  .keyBy(...)</span><br><span class="line">  .timeWindow(Time.minutes(<span class="number">2</span>))</span><br><span class="line">  .reduce(<span class="keyword">new</span> ReduceFunction&lt;String&gt;() &#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">reduce</span><span class="params">(String s, String t1)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> s;</span><br><span class="line">        &#125;</span><br><span class="line">   &#125;)</span><br></pre></td></tr></table></figure>
+<p>这个实现看起来简单有效，但是有两个问题：</p>
+<p>第一个问题，Tumbling Window的窗口划分是和窗口大小对齐的，和我们的预期并不符。</p>
+<p>如上2min的窗口划分产生的窗口类似于[00: 00, 00: 02), [00: 02, 00: 04) …。如果某条消息在00: 01到达，那么1min之后该窗口就会触发计算。这样数据重复检测的时间跨度就缩小为了1min，这样会影响去重的效果。</p>
+<p>这个问题我们可以通过Session Window来解决，比如ProcessingTimeSessionWindows.withGap(Time.minutes(2))。</p>
+<p>不过这里的2min表示的是“如果间隔2min没有重复数据到达的话，则判定为后续没有重复数据”，和上面timeWindow的参数表示的含义是不同的。</p>
+<p>第二个问题， 由于需要等窗口结束的时候才触发计算，从而导致了数据发送到下游的延迟较大。</p>
+<p>这个可以通过自定义Trigger来解决，当第一条消息到达的时候，就触发计算，且后续不再触发新的计算。</p>
+<p>修改后的代码示意如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br></pre></td><td class="code"><pre><span class="line">DataStream input = ...;</span><br><span class="line"></span><br><span class="line">input</span><br><span class="line">  .keyBy(...)</span><br><span class="line">  .window(ProcessingTimeSessionWindows.withGap(Time.minutes(<span class="number">2</span>)))</span><br><span class="line">  .trigger(<span class="keyword">new</span> DedupTrigger(Time.minutes(<span class="number">2</span>).toMilliseconds()))</span><br><span class="line">  .reduce(<span class="keyword">new</span> ReduceFunction&lt;String&gt;() &#123;</span><br><span class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">reduce</span><span class="params">(String s, String t1)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">            <span class="keyword">return</span> s;</span><br><span class="line">        &#125;</span><br><span class="line">   &#125;)</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">DedupTrigger</span> <span class="keyword">extends</span> <span class="title">Trigger</span>&lt;<span class="title">Object</span>, <span class="title">TimeWindow</span>&gt; </span>&#123;</span><br><span class="line">    <span class="keyword">long</span> sessionGap;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">DedupTrigger</span><span class="params">(<span class="keyword">long</span> sessionGap)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.sessionGap = sessionGap;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onElement</span><span class="params">(Object element, <span class="keyword">long</span> timestamp, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// 如果窗口大小和session gap大小相同，则判断为第一条数据；</span></span><br><span class="line">        <span class="keyword">if</span> (window.getEnd() - window.getStart() == sessionGap) &#123;</span><br><span class="line">            <span class="keyword">return</span> TriggerResult.FIRE;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> time, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onEventTime</span><span class="params">(<span class="keyword">long</span> time, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clear</span><span class="params">(TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">canMerge</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMerge</span><span class="params">(TimeWindow window, OnMergeContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>说明一下，这里是通过判断窗口大小是否和Session Gap大小相同来判断是否为第一条数据的，这是因为第二条消息到达后，窗口Merge会导致窗口变大。</p>
+<p>极端情况是两条消息的处理间隔小于1ms，不过考虑到实际生产中数据重复产生的场景，这种极端情况可以不考虑。如果不放心，可以考虑通过ValueState<boolean>来保存并判断是否为第一条数据，这里不展示具体代码了。</boolean></p>
+<h3 id="技巧三：以“天”划分窗口"><a href="#技巧三：以“天”划分窗口" class="headerlink" title="技巧三：以“天”划分窗口"></a>技巧三：以“天”划分窗口</h3><p>具体需求大致是这样的，以自然天划分窗口，每隔5min触发一次计算。这个需求并不复杂，但是挺常见，我们简单讨论一下。</p>
+<p>首先想到的是Tumbling Window，timeWindow(Time.days(1))，但是这样无法实现每隔5min触发一次计算。<br>然后想到的是通过Sliding Window，timeWindow(Time.days(1), Time.minutes(5))，但是这样的窗口切分并不是自然天，而是大小为一天的滑动窗口。</p>
+<p>这里我们可以通过Tumbling Window + 自定义Trigger的方式来实现。不过需要注意的是，业务需要的自然天一般是指本地时间（东八区）的自然天，但是Flink的窗口切分默认按照UTC进行计算。好在Flink提供了接口来满足类似需求，TumblingProcessingTimeWindows#of(Time size, Time offset)。</p>
+<p>代码示意如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">DataStream input = ...;</span><br><span class="line"></span><br><span class="line">input</span><br><span class="line">  .keyBy(...)</span><br><span class="line">  .window(TumblingProcessingTimeWindows.of(Time.days(<span class="number">1</span>), Time.hours(-<span class="number">8</span>)))</span><br><span class="line">  .trigger(<span class="keyword">new</span> Trigger&lt;String, TimeWindow&gt;() &#123;</span><br><span class="line"></span><br><span class="line">      <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onElement</span><span class="params">(String element, <span class="keyword">long</span> timestamp, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">          <span class="comment">// 触发计算的间隔</span></span><br><span class="line">          <span class="keyword">long</span> interval = Time.minutes(<span class="number">5</span>).toMilliseconds();</span><br><span class="line">          <span class="keyword">long</span> timer = TimeWindow.getWindowStartWithOffset(ctx.getCurrentProcessingTime(), <span class="number">0</span>, interval) + interval;</span><br><span class="line">          ctx.registerProcessingTimeTimer(timer);</span><br><span class="line"></span><br><span class="line">          <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> time, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">          <span class="keyword">return</span> TriggerResult.FIRE;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="function"><span class="keyword">public</span> TriggerResult <span class="title">onEventTime</span><span class="params">(<span class="keyword">long</span> time, TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">          <span class="keyword">return</span> TriggerResult.CONTINUE;</span><br><span class="line">      &#125;</span><br><span class="line"></span><br><span class="line">      <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clear</span><span class="params">(TimeWindow window, TriggerContext ctx)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      &#125;</span><br><span class="line">  &#125;)</span><br><span class="line">  .reduce(...)</span><br></pre></td></tr></table></figure>
+<h3 id="技巧四：慎用ProcessWindowFunction"><a href="#技巧四：慎用ProcessWindowFunction" class="headerlink" title="技巧四：慎用ProcessWindowFunction"></a>技巧四：慎用ProcessWindowFunction</h3><p>关于ProcessWindowFunction的缺点，官方文档有说明：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">This comes at the cost of performance and resource consumption, because elements cannot be incrementally aggregated but instead need to be buffered internally until the window is considered ready for processing.</span><br></pre></td></tr></table></figure></p>
+<p>相较于ReduceFunction/AggregateFunction/FoldFunction的可以提前对数据进行聚合处理，ProcessWindowFunction是把数据缓存起来，在Trigger触发计算之后再处理，可以把其对应的WindowState简单理解成形式为(Key, Window) -&gt; List<streamrecord>的Map。</streamrecord></p>
+<p>虽然我们在上面“Mini-Batch输出”章节中用到了ProcessWindowFunction，但是考虑到设定的Window最大数据量比较少，所以问题并不大。但如果窗口时间跨度比较大，比如几个小时甚至一天，那么缓存大量数据就可能会导致较严重的内存和效率问题了，尤其是以filesystem作为state backend的作业，很容易出现OOM异常。</p>
+<p>我们以求窗口中数值的平均值为例，ProcessWindowFunction可能是这样的:<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AvgProcessWindowFunction</span> <span class="keyword">extends</span> <span class="title">ProcessWindowFunction</span>&lt;<span class="title">Long</span>, <span class="title">Double</span>, <span class="title">Long</span>, <span class="title">TimeWindow</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">process</span><span class="params">(Long integer, Context context, Iterable&lt;Long&gt; elements, Collector&lt;Double&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> cnt = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">double</span> sum = <span class="number">0</span>;</span><br><span class="line">        <span class="comment">// elements 缓存了所有数据</span></span><br><span class="line">        <span class="keyword">for</span> (<span class="keyword">long</span> e : elements) &#123;</span><br><span class="line">            cnt++;</span><br><span class="line">            sum += e;</span><br><span class="line">        &#125;</span><br><span class="line">        out.collect(sum / cnt);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>AggregateFunction可以对每个窗口只保存Sum和Count值：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AvgAggregateFunction</span> <span class="keyword">implements</span> <span class="title">AggregateFunction</span>&lt;<span class="title">Long</span>, <span class="title">Tuple2</span>&lt;<span class="title">Long</span>, <span class="title">Long</span>&gt;, <span class="title">Double</span>&gt; </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> Tuple2&lt;Long, Long&gt; <span class="title">createAccumulator</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">// Accumulator是内容为&lt;SUM, COUNT&gt;的Tuple</span></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Tuple2&lt;&gt;(<span class="number">0L</span>, <span class="number">0L</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Tuple2&lt;Long, Long&gt; <span class="title">add</span><span class="params">(Long in, Tuple2&lt;Long, Long&gt; acc)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Tuple2&lt;&gt;(acc.f0 + in, acc.f1 + <span class="number">1L</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Double <span class="title">getResult</span><span class="params">(Tuple2&lt;Long, Long&gt; acc)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> ((<span class="keyword">double</span>) acc.f0) / acc.f1;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Tuple2&lt;Long, Long&gt; <span class="title">merge</span><span class="params">(Tuple2&lt;Long, Long&gt; acc0, Tuple2&lt;Long, Long&gt; acc1)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">new</span> Tuple2&lt;&gt;(acc0.f0 + acc1.f0, acc0.f1 + acc1.f1);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>可以看出AggregateFunction在节省内存上的优势。<br>不过需要注意的是，如果同时指定了Evictor的话，那么即使使用 ReduceFunction/AggregateFunction/FoldFunction，Window也会缓存所有数据，以提供给Evictor进行过滤，因此要慎重使用。</p>
+<p>这里通过源码简单说明一下：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">// WindowedStream</span><br><span class="line">public SingleOutputStreamOperator aggregate(...) &#123;</span><br><span class="line">    ...</span><br><span class="line">    if (evictor != null) &#123;</span><br><span class="line">        TypeSerializer&lt;StreamRecord&lt;T&gt;&gt; streamRecordSerializer =</span><br><span class="line">                (TypeSerializer&lt;StreamRecord&lt;T&gt;&gt;) new StreamElementSerializer(input.getType().createSerializer(getExecutionEnvironment().getConfig()));</span><br><span class="line">        // 如果配置了Evictor，则通过ListState保存原始StreamRecord数据；</span><br><span class="line">        ListStateDescriptor&lt;StreamRecord&lt;T&gt;&gt; stateDesc =</span><br><span class="line">                new ListStateDescriptor&lt;&gt;(&quot;window-contents&quot;, streamRecordSerializer);</span><br><span class="line"></span><br><span class="line">        operator = new EvictingWindowOperator&lt;&gt;(...)</span><br><span class="line"></span><br><span class="line">    &#125; else &#123;</span><br><span class="line">        // 如果没有配置Evictor，则通过AggregatingStateDescriptor保存Accumulator状态</span><br><span class="line">        AggregatingStateDescriptor&lt;T, ACC, V&gt; stateDesc = new AggregatingStateDescriptor&lt;&gt;(&quot;window-contents&quot;,</span><br><span class="line">                aggregateFunction, accumulatorType.createSerializer(getExecutionEnvironment().getConfig()));</span><br><span class="line"></span><br><span class="line">        operator = new WindowOperator&lt;&gt;(...);</span><br><span class="line">    &#125;</span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<h4 id="为什么使用agg可以节省内存加快计算呢？"><a href="#为什么使用agg可以节省内存加快计算呢？" class="headerlink" title="为什么使用agg可以节省内存加快计算呢？"></a>为什么使用agg可以节省内存加快计算呢？</h4><p>如果agg和process都在1min的窗口内，到1分钟到了再把List拿出来，只是有没有把List暴露出来，那没什么意义呢。</p>
+<p>我们直接上源码，看看flink是怎么操作的。</p>
+<p>WindowedStream.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PublicEvolving</span></span><br><span class="line"><span class="keyword">public</span> &lt;ACC, V, R&gt; <span class="function">SingleOutputStreamOperator&lt;R&gt; <span class="title">aggregate</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      AggregateFunction&lt;T, ACC, V&gt; aggregateFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">      WindowFunction&lt;V, R, K, W&gt; windowFunction,</span></span></span><br><span class="line"><span class="function"><span class="params">      TypeInformation&lt;ACC&gt; accumulatorType,</span></span></span><br><span class="line"><span class="function"><span class="params">      TypeInformation&lt;R&gt; resultType)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">......</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (evictor != <span class="keyword">null</span>) &#123;</span><br><span class="line">....</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">   AggregatingStateDescriptor&lt;T, ACC, V&gt; stateDesc = <span class="keyword">new</span> AggregatingStateDescriptor&lt;&gt;(<span class="string">"window-contents"</span>,</span><br><span class="line">         aggregateFunction, accumulatorType.createSerializer(getExecutionEnvironment().getConfig()));</span><br><span class="line"></span><br><span class="line">   operator = <span class="keyword">new</span> WindowOperator&lt;&gt;(windowAssigner,</span><br><span class="line">         windowAssigner.getWindowSerializer(getExecutionEnvironment().getConfig()),</span><br><span class="line">         keySel,</span><br><span class="line">         input.getKeyType().createSerializer(getExecutionEnvironment().getConfig()),</span><br><span class="line">         stateDesc,</span><br><span class="line">         <span class="keyword">new</span> InternalSingleValueWindowFunction&lt;&gt;(windowFunction),</span><br><span class="line">         trigger,</span><br><span class="line">         allowedLateness,</span><br><span class="line">         lateDataOutputTag);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">return</span> input.transform(opName, resultType, operator);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>主要是在这边使用了AggregatingStateDescriptor，如果是process使用的是ListStateDescriptor。</p>
+<p>看下AggregatingStateDescriptor的构造函数，是会把用户定义的聚合函数作为入参。</p>
+<p>在WindowOperator中存在一个状态</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">windowState = (InternalAppendingState&lt;K, W, IN, ACC, ACC&gt;) getOrCreateKeyedState(windowSerializer, windowStateDescriptor);</span><br></pre></td></tr></table></figure>
+<p>这个状态会根据是状态后端的选择而变更。但是内部主体还是AggregatingStateDescriptor。</p>
+<p>每当一个数据到达，会调用到<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">windowState.add(element.getValue());</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> ACC <span class="title">apply</span><span class="params">(ACC accumulator, IN value)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">if</span> (accumulator == <span class="keyword">null</span>) &#123;</span><br><span class="line">      accumulator = aggFunction.createAccumulator();</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">return</span> aggFunction.add(value, accumulator);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure></p>
+<p>因此状态中存储的都是聚合后的数据，可以提高吞吐，节省内存</p>
+<h3 id="技巧五：慎用“细粒度”的SlidingWindow"><a href="#技巧五：慎用“细粒度”的SlidingWindow" class="headerlink" title="技巧五：慎用“细粒度”的SlidingWindow"></a>技巧五：慎用“细粒度”的SlidingWindow</h3><p>使用SlidingWindow的时候需要指定window_size和window_slide，这里的”细粒度“是指window_size/window_slide特别大的滑动窗口。</p>
+<p>以timeWindow(Time.days(1), Time.minutes(5))为例，Flink会为每个Key维护days(1) / minutes(5) = 288个窗口，总的窗口数量是keys * 288。由于每个窗口会维护单独的状态，并且每个元素会应用到其所属的所有窗口，这样就会给作业的状态保存以及计算效率带来很大影响。</p>
+<p>有如下解决思路可以尝试：</p>
+<p>第一，通过TumblingWindow + 自定义Trigger来实现，如“技巧三”中所示的方法；</p>
+<p>第二，不使用Window，通过ProcessFunction实现。通过Flink State来保存聚合状态，在processElement中更新状态并设定Timer，在onTimer中把聚合结果发往下游。</p>
+<p>代码示意如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyProcessFunction</span> <span class="keyword">extends</span> <span class="title">ProcessFunction</span>&lt;<span class="title">Object</span>, <span class="title">Object</span>&gt; </span>&#123;</span><br><span class="line">   MapState&lt;Object, Object&gt; state;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">open</span><span class="params">(Configuration parameters)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">super</span>.open(parameters);</span><br><span class="line">      state = getRuntimeContext().getMapState(<span class="keyword">new</span> MapStateDescriptor&lt;Object, Object&gt;(...));</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(Object value, Context ctx, Collector&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="comment">// 触发计算的间隔</span></span><br><span class="line">      <span class="keyword">long</span> interval = Time.minutes(<span class="number">5</span>).toMilliseconds();</span><br><span class="line">      <span class="keyword">long</span> timer = TimeWindow.getWindowStartWithOffset(ctx.timerService().currentProcessingTime(), <span class="number">0</span>, interval) + interval;</span><br><span class="line">      ctx.timerService().registerProcessingTimeTimer(timer);</span><br><span class="line">      <span class="comment">// 根据消息更新State</span></span><br><span class="line">      state.put(...);</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onTimer</span><span class="params">(<span class="keyword">long</span> timestamp, OnTimerContext ctx, Collector&lt;Object&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">      <span class="keyword">super</span>.onTimer(timestamp, ctx, out);</span><br><span class="line">      <span class="comment">// 根据State计算结果</span></span><br><span class="line">      Object result = ...;</span><br><span class="line">      out.collect(result);</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://mp.weixin.qq.com/s/7QQhZJ1h-6O7B0e8NPo4aA" target="_blank" rel="noopener">https://mp.weixin.qq.com/s/7QQhZJ1h-6O7B0e8NPo4aA</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/12/23/Flink-on-Kubernetes-搭建/" rel="next" title="Flink  1.9.1 on Kubernetes 搭建">
+                <i class="fa fa-chevron-left"></i> Flink  1.9.1 on Kubernetes 搭建
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/10/在kubernetes中部署java程序分析系统日志，不当人肉智能/" rel="prev" title="在kubernetes中部署java程序分析系统日志，不当人肉智能">
+                在kubernetes中部署java程序分析系统日志，不当人肉智能 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#技巧一：Mini-Batch输出"><span class="nav-number">1.</span> <span class="nav-text">技巧一：Mini-Batch输出</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#技巧二：去重"><span class="nav-number">2.</span> <span class="nav-text">技巧二：去重</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#技巧三：以“天”划分窗口"><span class="nav-number">3.</span> <span class="nav-text">技巧三：以“天”划分窗口</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#技巧四：慎用ProcessWindowFunction"><span class="nav-number">4.</span> <span class="nav-text">技巧四：慎用ProcessWindowFunction</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#为什么使用agg可以节省内存加快计算呢？"><span class="nav-number">4.1.</span> <span class="nav-text">为什么使用agg可以节省内存加快计算呢？</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#技巧五：慎用“细粒度”的SlidingWindow"><span class="nav-number">5.</span> <span class="nav-text">技巧五：慎用“细粒度”的SlidingWindow</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

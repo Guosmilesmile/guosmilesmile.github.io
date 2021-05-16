@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景目前flink on kubernetes的版本是standalone，资源释放的问题是一个比较头大的问题，如果作业cancel，程序开了别的线程或者内存出现泄漏，都会导致TM有问题。 native kubernetes的seesion模式可以比较好的解决，跟yarn模式一样，可以较好的解决该问题。 版本   组件 版本     flink 1.10.1   kubernetes 1.17.4">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink on native kubernetes 使用和修改">
+<meta property="og:url" content="http://yoursite.com/2020/05/27/Flink-on-native-kubernetes-使用和修改/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景目前flink on kubernetes的版本是standalone，资源释放的问题是一个比较头大的问题，如果作业cancel，程序开了别的线程或者内存出现泄漏，都会导致TM有问题。 native kubernetes的seesion模式可以比较好的解决，跟yarn模式一样，可以较好的解决该问题。 版本   组件 版本     flink 1.10.1   kubernetes 1.17.4">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-06-08T13:51:45.550Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink on native kubernetes 使用和修改">
+<meta name="twitter:description" content="背景目前flink on kubernetes的版本是standalone，资源释放的问题是一个比较头大的问题，如果作业cancel，程序开了别的线程或者内存出现泄漏，都会导致TM有问题。 native kubernetes的seesion模式可以比较好的解决，跟yarn模式一样，可以较好的解决该问题。 版本   组件 版本     flink 1.10.1   kubernetes 1.17.4">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/27/Flink-on-native-kubernetes-使用和修改/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink on native kubernetes 使用和修改 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/27/Flink-on-native-kubernetes-使用和修改/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink on native kubernetes 使用和修改
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-05-27 21:00:26" itemprop="dateCreated datePublished" datetime="2020-05-27T21:00:26+08:00">2020-05-27</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-06-08 21:51:45" itemprop="dateModified" datetime="2020-06-08T21:51:45+08:00">2020-06-08</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>目前flink on kubernetes的版本是standalone，资源释放的问题是一个比较头大的问题，如果作业cancel，程序开了别的线程或者内存出现泄漏，都会导致TM有问题。</p>
+<p>native kubernetes的seesion模式可以比较好的解决，跟yarn模式一样，可以较好的解决该问题。</p>
+<h3 id="版本"><a href="#版本" class="headerlink" title="版本"></a>版本</h3><table>
+<thead>
+<tr>
+<th>组件</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flink</td>
+<td>1.10.1</td>
+</tr>
+<tr>
+<td>kubernetes</td>
+<td>1.17.4</td>
+</tr>
+<tr>
+<td>java</td>
+<td>jdk-8u252</td>
+</tr>
+</tbody>
+</table>
+<p>以上版本比较麻烦，会出现特殊情况，需要自行构建flink镜像，降低jdk8的版本</p>
+<table>
+<thead>
+<tr>
+<th>组件</th>
+<th>版本</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>flink</td>
+<td>1.10.1</td>
+</tr>
+<tr>
+<td>kubernetes</td>
+<td>1.15.1</td>
+</tr>
+<tr>
+<td>java</td>
+<td>jdk-8u252</td>
+</tr>
+</tbody>
+</table>
+<p>以上版本可以直接根据官方方法建构</p>
+<h3 id="Native-Kubernetes-Setup"><a href="#Native-Kubernetes-Setup" class="headerlink" title="Native Kubernetes Setup"></a>Native Kubernetes Setup</h3><h4 id="创建好角色和赋权"><a href="#创建好角色和赋权" class="headerlink" title="创建好角色和赋权"></a>创建好角色和赋权</h4><p>rbac.yaml </p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="attr">apiVersion:</span> <span class="string">v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ServiceAccount</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">flink</span></span><br><span class="line"><span class="attr">  namespace:</span> <span class="string">flink</span></span><br><span class="line"><span class="meta">---</span></span><br><span class="line"></span><br><span class="line"><span class="attr">apiVersion:</span> <span class="string">rbac.authorization.k8s.io/v1</span></span><br><span class="line"><span class="attr">kind:</span> <span class="string">ClusterRoleBinding</span></span><br><span class="line"><span class="attr">metadata:</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">flink-role-binding</span></span><br><span class="line"><span class="attr">roleRef:</span></span><br><span class="line"><span class="attr">  apiGroup:</span> <span class="string">rbac.authorization.k8s.io</span></span><br><span class="line"><span class="attr">  kind:</span> <span class="string">ClusterRole</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">edit</span></span><br><span class="line"><span class="attr">subjects:</span></span><br><span class="line"><span class="attr">- kind:</span> <span class="string">ServiceAccount</span></span><br><span class="line"><span class="attr">  name:</span> <span class="string">flink</span></span><br><span class="line"><span class="attr">  namespace:</span> <span class="string">flink</span></span><br></pre></td></tr></table></figure>
+<h5 id="修改日志输出"><a href="#修改日志输出" class="headerlink" title="修改日志输出"></a>修改日志输出</h5><p>默认情况下, JobManager 和 TaskManager 只会将 log 写到各自 pod 的 /opt/flink/log 。如果想通过 kubectl logs 看到日志，需要将 log 输出到控制台。要做如下修改 FLINK_HOME/conf 目录下的 log4j.properties 文件。(修改提交机即可)</p>
+<p>log4j.rootLogger=INFO, file, console</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"># Log all infos to the console</span><br><span class="line">log4j.appender.console=org.apache.log4j.ConsoleAppender</span><br><span class="line">log4j.appender.console.layout=org.apache.log4j.PatternLayout</span><br><span class="line">log4j.appender.console.layout.ConversionPattern=%d&#123;yyyy-MM-dd HH:mm:ss,SSS&#125; %-5p %-60c %x - %m%n</span><br></pre></td></tr></table></figure>
+<p>然后启动 session cluster 的命令行需要带上参数:</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Dkubernetes.container-start-command-template=&quot;%java% %classpath% %jvmmem% %jvmopts% %logging% %class% %args%&quot;</span><br></pre></td></tr></table></figure>
+<h4 id="启动-session-cluster"><a href="#启动-session-cluster" class="headerlink" title="启动 session cluster"></a>启动 session cluster</h4><p>如下命令是启动一个每个 TaskManager 是4G内存，2个CPU，4个slot 的 session cluster。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bin/kubernetes-session.sh -Dkubernetes.container-start-command-template=&quot;%java% %classpath% %jvmmem% %jvmopts% %logging% %class% %args%&quot; -Dkubernetes.cluster-id=kaibo-test -Dtaskmanager.memory.process.size=4096m -Dkubernetes.taskmanager.cpu=2 -Dtaskmanager.numberOfTaskSlots=4</span><br></pre></td></tr></table></figure>
+<p>如果其他集群参数需要添加的，通过-D继续补充</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line">/usr/local/flink/flink-1.10.1/bin/kubernetes-session.sh \</span><br><span class="line">          -Dkubernetes.cluster-id=ipcode \</span><br><span class="line">          -Dkubernetes.jobmanager.service-account=flink \</span><br><span class="line">          -Dtaskmanager.memory.process.size=4096m \</span><br><span class="line">          -Dkubernetes.taskmanager.cpu=2 \</span><br><span class="line">          -Dtaskmanager.numberOfTaskSlots=1 \</span><br><span class="line">          -Dkubernetes.namespace=flink-ipcode \</span><br><span class="line">          -Djobstore.expiration-time=172800 \</span><br><span class="line">          -Dtaskmanager.memory.managed.fraction=0.2 \</span><br><span class="line">          -Dtaskmanager.memory.jvm-metaspace.size=256m \</span><br><span class="line">          -Dkubernetes.container-start-command-template=&quot;%java% %classpath% %jvmmem% %jvmopts% %logging% %class% %args%&quot; \</span><br><span class="line">          -Dakka.framesize=104857600b \</span><br><span class="line">          -Dkubernetes.container.image.pull-secrets=harbor-regsecret \</span><br><span class="line">          -Dkubernetes.container.image=kube-master.net:8876/flink:1.10.1-8u242-1</span><br></pre></td></tr></table></figure>
+<h4 id="提交任务"><a href="#提交任务" class="headerlink" title="提交任务"></a>提交任务</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/usr/local/flink/flink-1.10.1/bin/flink run -d  -e kubernetes-session -Dkubernetes.cluster-id=ipcode  -Dkubernetes.namespace=flink-ipcode  -c study.IpCodeToHdfsFlink project-1.0.0.jar</span><br></pre></td></tr></table></figure>
+<p>指定命名空间等参数，才可以提交到对应的集群。</p>
+<h4 id="取消集群"><a href="#取消集群" class="headerlink" title="取消集群"></a>取消集群</h4><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo &apos;stop&apos; | /usr/local/flink/flink-1.10.1/bin/kubernetes-session.sh -Dkubernetes.cluster-id=ipcode  -Dkubernetes.namespace=flink-ipcode  -Dexecution.attached=true</span><br></pre></td></tr></table></figure>
+<h3 id="flink-1-10-1-和kubernetes-1-17-4的冲突"><a href="#flink-1-10-1-和kubernetes-1-17-4的冲突" class="headerlink" title="flink 1.10.1 和kubernetes 1.17.4的冲突"></a>flink 1.10.1 和kubernetes 1.17.4的冲突</h3><p>镜像的jdk版本是java 8u252，目前Flink on K8s不能和java 8u252一起工作，<br>解法是使用8u252以下的jdk版本或者升级到jdk11</p>
+<p><a href="http://apache-flink.147419.n8.nabble.com/native-kubernetes-kubernetes-td3360.html" target="_blank" rel="noopener">http://apache-flink.147419.n8.nabble.com/native-kubernetes-kubernetes-td3360.html</a></p>
+<h3 id="flink-降低jdk版本，构建自己的镜像"><a href="#flink-降低jdk版本，构建自己的镜像" class="headerlink" title="flink 降低jdk版本，构建自己的镜像"></a>flink 降低jdk版本，构建自己的镜像</h3><p>从<a href="https://github.com/apache/flink-docker/tree/master/1.10/scala_2.11-debian" target="_blank" rel="noopener">https://github.com/apache/flink-docker/tree/master/1.10/scala_2.11-debian</a><br>上获取Dockerfile和docker-entrypoint.sh，放于同级目录。</p>
+<p>将jdk改为</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FROM adoptopenjdk/openjdk8:jdk8u242-b08</span><br></pre></td></tr></table></figure>
+<p>apt-get多下载wget和gnupg，可以多下载需要的工具，例如vim等等</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"># Install dependencies</span><br><span class="line">RUN set -ex; \</span><br><span class="line">  apt-get update; \</span><br><span class="line">  apt-get -y install libsnappy1v5 gettext-base vim wget gnupg; \</span><br><span class="line">  rm -rf /var/lib/apt/lists/*</span><br></pre></td></tr></table></figure>
+<p>修改镜像的时区</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &amp;&amp; echo &apos;Asia/Shanghai&apos; &gt;/etc/timezone</span><br></pre></td></tr></table></figure>
+<p>添加需要的依赖到镜像中</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">ADD ./lib/* /opt/flink/lib/</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">[root@cz-flink-live-master flink-1.10.1]# ll</span><br><span class="line">total 20</span><br><span class="line">-rw-r--r-- 1 root root 4145 May 27 14:54 docker-entrypoint.sh</span><br><span class="line">-rw-r--r-- 1 root root 3751 May 27 18:58 Dockerfile</span><br><span class="line">drwxr-xr-x 2 root root 4096 May 27 18:45 lib</span><br><span class="line">-rw-r--r-- 1 root root  151 May 27 18:53 push.sh</span><br><span class="line">[root@cz-flink-live-master flink-1.10.1]# ls lib/</span><br><span class="line">flink-metric-1.0.3.jar  flink-metrics-core-1.10.1.jar  flink-metrics-prometheus_2.11-1.10.1.jar  flink-shaded-hadoop-2-uber-2.8.3-7.0.jar</span><br></pre></td></tr></table></figure>
+<p>最终文件如下</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line">FROM adoptopenjdk/openjdk8:jdk8u242-b08</span><br><span class="line"></span><br><span class="line"># Install dependencies</span><br><span class="line">RUN set -ex; \</span><br><span class="line">  apt-get update; \</span><br><span class="line">  apt-get -y install libsnappy1v5 gettext-base vim wget gnupg; \</span><br><span class="line">  rm -rf /var/lib/apt/lists/*</span><br><span class="line"></span><br><span class="line"># Grab gosu for easy step-down from root</span><br><span class="line">ENV GOSU_VERSION 1.11</span><br><span class="line">RUN set -ex; \</span><br><span class="line">  wget -nv -O /usr/local/bin/gosu &quot;https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture)&quot;; \</span><br><span class="line">  wget -nv -O /usr/local/bin/gosu.asc &quot;https://github.com/tianon/gosu/releases/download/$GOSU_VERSION/gosu-$(dpkg --print-architecture).asc&quot;; \</span><br><span class="line">  export GNUPGHOME=&quot;$(mktemp -d)&quot;; \</span><br><span class="line">  for server in ha.pool.sks-keyservers.net $(shuf -e \</span><br><span class="line">                          hkp://p80.pool.sks-keyservers.net:80 \</span><br><span class="line">                          keyserver.ubuntu.com \</span><br><span class="line">                          hkp://keyserver.ubuntu.com:80 \</span><br><span class="line">                          pgp.mit.edu) ; do \</span><br><span class="line">      gpg --batch --keyserver &quot;$server&quot; --recv-keys B42F6819007F00F88E364FD4036A9C25BF357DD4 &amp;&amp; break || : ; \</span><br><span class="line">  done &amp;&amp; \</span><br><span class="line">  gpg --batch --verify flink.tgz.asc flink.tgz; \</span><br><span class="line">    gpgconf --kill all; \</span><br><span class="line">    rm -rf &quot;$GNUPGHOME&quot; flink.tgz.asc; \</span><br><span class="line">  fi; \</span><br><span class="line">  \</span><br><span class="line">  tar -xf flink.tgz --strip-components=1; \</span><br><span class="line">  rm flink.tgz; \</span><br><span class="line">  \</span><br><span class="line">  chown -R flink:flink .;</span><br><span class="line"># Configure container</span><br><span class="line">COPY docker-entrypoint.sh /</span><br><span class="line">ENTRYPOINT [&quot;/docker-entrypoint.sh&quot;]</span><br><span class="line">EXPOSE 6123 8081</span><br><span class="line">CMD [&quot;help&quot;]</span><br><span class="line">ADD ./lib/* /opt/flink/lib/</span><br><span class="line">RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &amp;&amp; echo &apos;Asia/Shanghai&apos; &gt;/etc/timezone</span><br></pre></td></tr></table></figure>
+<p>通过如下指令构建镜像，推到私人仓库上</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">docker build -t=&apos;kube-master.net:8876/study/flink:1.10.1-8u242-1&apos; .</span><br><span class="line">docker push kube-master.net:8876/study/flink:1.10.1-8u242-1</span><br></pre></td></tr></table></figure>
+<h3 id="最新解决方法"><a href="#最新解决方法" class="headerlink" title="最新解决方法"></a>最新解决方法</h3><p>看到git上关于kubernetes-client could not work with java 8u252[1]的问题。根据flink英文邮件列表[2]中的方法添加如下参数，可以正常解决jdk版本的问题<br>-Dcontainerized.master.env.HTTP2_DISABLE=true</p>
+<p>[1] <a href="https://github.com/fabric8io/kubernetes-client/issues/2212" target="_blank" rel="noopener">https://github.com/fabric8io/kubernetes-client/issues/2212</a><br>[2] <a href="http://apache-flink-user-mailing-list-archive.2336050.n4.nabble.com/Native-K8S-not-creating-TMs-td35703.html" target="_blank" rel="noopener">http://apache-flink-user-mailing-list-archive.2336050.n4.nabble.com/Native-K8S-not-creating-TMs-td35703.html</a></p>
+<h3 id="Attention"><a href="#Attention" class="headerlink" title="Attention"></a>Attention</h3><p>现在Flink 1.10.1版本，没办法指定私有仓库的secret，需要等1.11版本才支持，第一次需要在每台服务器上提前拉去镜像，这点比较麻烦。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">-Dkubernetes.container.image.pull-secrets=harbor-regsecret</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://github.com/apache/flink-docker" target="_blank" rel="noopener">flink-docker git官方镜像地址</a></p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.10/ops/deployment/native_kubernetes.html" target="_blank" rel="noopener">Native Kubernetes Setup Beta</a></p>
+<p><a href="http://apache-flink.147419.n8.nabble.com/native-kubernetes-kubernetes-td3360.html" target="_blank" rel="noopener">native kubernetes在不同kubernetes版本构建失败问题</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/05/26/Harbor版本无缝升级/" rel="next" title="Harbor版本无缝升级">
+                <i class="fa fa-chevron-left"></i> Harbor版本无缝升级
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/31/Flink源码解析-join双流操作的实现/" rel="prev" title="Flink源码解析-join双流操作的实现">
+                Flink源码解析-join双流操作的实现 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#版本"><span class="nav-number">2.</span> <span class="nav-text">版本</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Native-Kubernetes-Setup"><span class="nav-number">3.</span> <span class="nav-text">Native Kubernetes Setup</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#创建好角色和赋权"><span class="nav-number">3.1.</span> <span class="nav-text">创建好角色和赋权</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#修改日志输出"><span class="nav-number">3.1.1.</span> <span class="nav-text">修改日志输出</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#启动-session-cluster"><span class="nav-number">3.2.</span> <span class="nav-text">启动 session cluster</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#提交任务"><span class="nav-number">3.3.</span> <span class="nav-text">提交任务</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#取消集群"><span class="nav-number">3.4.</span> <span class="nav-text">取消集群</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flink-1-10-1-和kubernetes-1-17-4的冲突"><span class="nav-number">4.</span> <span class="nav-text">flink 1.10.1 和kubernetes 1.17.4的冲突</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flink-降低jdk版本，构建自己的镜像"><span class="nav-number">5.</span> <span class="nav-text">flink 降低jdk版本，构建自己的镜像</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#最新解决方法"><span class="nav-number">6.</span> <span class="nav-text">最新解决方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Attention"><span class="nav-number">7.</span> <span class="nav-text">Attention</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">8.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

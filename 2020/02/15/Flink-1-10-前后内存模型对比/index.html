@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="新旧内存模型1.10 之前的内存模式  Flink 内存主要指 TaskManager 运行时提供的内存资源。 TaskManager 主要由几个内部组件构成:   负责和 JobManager 等进程通信的 actor 系统 负责在内存不足时将数据溢写到磁盘和读回的 IOManager 负责内存管理的 MemoryManager。  其中 actor 系统和 MemoryManager 会要求大">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink 1.10 前后内存模型对比">
+<meta property="og:url" content="http://yoursite.com/2020/02/15/Flink-1-10-前后内存模型对比/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="新旧内存模型1.10 之前的内存模式  Flink 内存主要指 TaskManager 运行时提供的内存资源。 TaskManager 主要由几个内部组件构成:   负责和 JobManager 等进程通信的 actor 系统 负责在内存不足时将数据溢写到磁盘和读回的 IOManager 负责内存管理的 MemoryManager。  其中 actor 系统和 MemoryManager 会要求大">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/6AEE4C670C9E48F09E31E92F1A1EE71E?method=download&shareKey=0b4e60db900be929da570ba01ba4afbe">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/74E93C992E78417FAC24C8E603D2DF72?method=download&shareKey=5f4c2cd2feeec20b8de565f23d0a81e7">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/180E7F756B5E4F7B976C65CF960D3788?method=download&shareKey=77bb768e9f739f1e4594b6ad4c7a241d">
+<meta property="og:updated_time" content="2020-02-21T06:36:25.327Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink 1.10 前后内存模型对比">
+<meta name="twitter:description" content="新旧内存模型1.10 之前的内存模式  Flink 内存主要指 TaskManager 运行时提供的内存资源。 TaskManager 主要由几个内部组件构成:   负责和 JobManager 等进程通信的 actor 系统 负责在内存不足时将数据溢写到磁盘和读回的 IOManager 负责内存管理的 MemoryManager。  其中 actor 系统和 MemoryManager 会要求大">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/6AEE4C670C9E48F09E31E92F1A1EE71E?method=download&shareKey=0b4e60db900be929da570ba01ba4afbe">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/02/15/Flink-1-10-前后内存模型对比/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink 1.10 前后内存模型对比 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/02/15/Flink-1-10-前后内存模型对比/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink 1.10 前后内存模型对比
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-02-15 22:47:17" itemprop="dateCreated datePublished" datetime="2020-02-15T22:47:17+08:00">2020-02-15</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-02-21 14:36:25" itemprop="dateModified" datetime="2020-02-21T14:36:25+08:00">2020-02-21</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="新旧内存模型"><a href="#新旧内存模型" class="headerlink" title="新旧内存模型"></a>新旧内存模型</h2><p>1.10 之前的内存模式</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/6AEE4C670C9E48F09E31E92F1A1EE71E?method=download&amp;shareKey=0b4e60db900be929da570ba01ba4afbe" alt="image"></p>
+<p>Flink 内存主要指 TaskManager 运行时提供的内存资源。</p>
+<p>TaskManager 主要由几个内部组件构成: </p>
+<ul>
+<li>负责和 JobManager 等进程通信的 actor 系统</li>
+<li>负责在内存不足时将数据溢写到磁盘和读回的 IOManager</li>
+<li>负责内存管理的 MemoryManager。</li>
+</ul>
+<p>其中 actor 系统和 MemoryManager 会要求大量的内存。相应地，Flink 将 TaskManager 的运行时 JVM heap 分为 Network Buffers、MemoryManager 和 Free 三个区域（在 streaming 模式下只存在 Network Buffers 和 Free 两个区域，因为算子不需要缓存一次读入的大量数据）。</p>
+<p>1.10 开始的内存模型</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/74E93C992E78417FAC24C8E603D2DF72?method=download&amp;shareKey=5f4c2cd2feeec20b8de565f23d0a81e7" alt="image"></p>
+<h3 id="调整原因"><a href="#调整原因" class="headerlink" title="调整原因"></a>调整原因</h3><p>TaskExecutor 在不同部署模式下具体负责作业执行的进程，可以简单视为 TaskManager。目前 TaskManager 的内存配置存在不一致以及不够直观的问题，具体有以下几点:</p>
+<ul>
+<li>流批作业内容配置不一致。Managed Memory 只覆盖 DataSet API，而 DataStream API 的则主要使用 JVM 的 heap 内存，相比前者需要更多的调优参数且内存消耗更难把控。</li>
+<li>RocksDB 占用的 native 内存并不在内存管理里，导致使用 RocksDB 时内存需要很多手动调优。</li>
+<li>不同部署模式下，Flink 内存计算算法不同，并且令人难以理解。</li>
+</ul>
+<p>针对这些问题，FLIP-49[4] 提议通过将 Managed Memory 的用途拓展至 DataStream 以解决这个问题。DataStream 中主要占用内存的是 StateBackend，它可以从管理 Managed Memory 的 MemoryManager 预留部分内存或分配内存。通过这种方式同一个 Flink 配置可以运行 Batch 作业和 Streaming 作业，有利于流批统一。</p>
+<p>下图是两个模型的对比</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/180E7F756B5E4F7B976C65CF960D3788?method=download&amp;shareKey=77bb768e9f739f1e4594b6ad4c7a241d" alt="image"></p>
+<p>很明显的差别是Flink的 Managed Memory 从 heap转移到了off-heap</p>
+<table>
+<thead>
+<tr>
+<th>分区</th>
+<th>内存类型</th>
+<th>描述</th>
+<th>配置项</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Framework Heap Memory</td>
+<td>heap</td>
+<td>Flink 框架消耗的 heap 内存</td>
+<td>taskmanager.memory.framework.heap</td>
+<td>128mb</td>
+</tr>
+<tr>
+<td>Task Heap Memory</td>
+<td>heap</td>
+<td>用户代码使用的 heap 内存</td>
+<td>taskmanager.memory.</td>
+</tr>
+<tr>
+<td>task.heap</td>
+<td>无</td>
+</tr>
+<tr>
+<td>Task Off-Heap Memory</td>
+<td>off-heap</td>
+<td>用户代码使用的 off-heap 内存</td>
+<td>taskmanager.memory.</td>
+</tr>
+<tr>
+<td>task.offheap</td>
+<td>0b</td>
+</tr>
+<tr>
+<td>Shuffle Memory</td>
+<td>off-heap</td>
+<td>网络传输/suffle 使用的内存</td>
+<td>taskmanager.memory.shuffle.[min/max/fraction]</td>
+<td>min=64mb, max=1gb, fraction=0.1 </td>
+</tr>
+<tr>
+<td>Managed Heap Memory</td>
+<td>heap</td>
+<td>Managed Memory 使用的 heap 内存</td>
+<td>taskmanager.memory.managed.[size/fraction]</td>
+<td>fraction=0.5</td>
+</tr>
+<tr>
+<td>Managed Off-heap Memory</td>
+<td>off-heap</td>
+<td>Managed Memory 使用的 off-heap 内存</td>
+<td>taskmanager.memory.managed.offheap-fraction</td>
+<td>0.0</td>
+</tr>
+<tr>
+<td>JVM Metaspace</td>
+<td>off-heap</td>
+<td>JVM metaspace 使用的 off-heap 内存</td>
+<td>taskmanager.memory.jvm-metaspace</td>
+<td>192mb</td>
+</tr>
+<tr>
+<td>JVM Overhead</td>
+<td>off-heap</td>
+<td>JVM 本身使用的内存</td>
+<td>taskmanager.memory.jvm-overhead.[min/max/fraction]</td>
+<td>min=128mb, max=1gb, fraction=0.1)</td>
+</tr>
+<tr>
+<td>Total Flink Memory</td>
+<td>heap &amp; off-heap    Flink</td>
+<td>框架使用的总内存，是以上除 JVM Metaspace 和 JVM Overhead 以外所有分区的总和</td>
+<td>taskmanager.memory.total-flink.size</td>
+<td>无</td>
+</tr>
+<tr>
+<td>otal Process Memory</td>
+<td>heap &amp; off-heap</td>
+<td>进程使用的总内存，是所有分区的总和，包括 JVM Metaspace 和 JVM Overhead</td>
+<td>taskmanager.memory.total-process.size</td>
+<td>无</td>
+</tr>
+</tbody>
+</table>
+<p>值得注意的是有 3 个分区是没有默认值的，包括 Framework Heap Memory、Total Flink Memory 和 Total Process Memory，它们是决定总内存的最关键参数，三者分别满足不同部署模式的需要。比如在 Standalone 默认下，用户可以配置 Framework Heap Memory 来限制用户代码使用的 heap 内存；而在 YARN 部署模式下，用户可以通过配置 YARN container 的资源来间接设置 Total Process Memory，如果是docker之类的，需要设置这个参数。</p>
+<p>在旧的模型中，如果配置了taskmanager.heap.size的内存为10G，并且限制了容器的内存为10G，那么堆外内存(network buffer、RocksDB 占用的 native 内存里)和jvm本身需要的内存(cut-off)将无内存可分配，直接导致容器被kill掉，不够直观。</p>
+<p>在新的内存模型中，直接以Total Process Memory开发出来作为内存配置，直接等价于容器的内存，就可以比较直观的进行调整。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">jobmanager.rpc.address: flink-jobmanager</span><br><span class="line">    taskmanager.numberOfTaskSlots: 15</span><br><span class="line">    blob.server.port: 6124</span><br><span class="line">    jobmanager.rpc.port: 6123</span><br><span class="line">    taskmanager.rpc.port: 6122</span><br><span class="line">    taskmanager.memory.process.size: 30000m</span><br><span class="line">    jobmanager.heap.size: 1024m</span><br><span class="line">    jobstore.expiration-time: 172800</span><br><span class="line">    taskmanager.memory.managed.fraction: 0.2</span><br><span class="line">    taskmanager.network.memory.min: 2gb</span><br><span class="line">    taskmanager.network.memory.max: 3gb</span><br><span class="line">    taskmanager.memory.task.off-heap.size: 1024m</span><br><span class="line">    taskmanager.network.memory.floating-buffers-per-gate: 16</span><br><span class="line">    taskmanager.network.memory.buffers-per-channel: 4</span><br><span class="line">    akka.ask.timeout: 30s </span><br><span class="line">    akka.framesize: 104857600b</span><br><span class="line">    restart-strategy: failure-rate</span><br></pre></td></tr></table></figure>
+<h3 id="Referenece"><a href="#Referenece" class="headerlink" title="Referenece"></a>Referenece</h3><p><a href="https://www.whitewood.me/2019/10/17/Flink-1-10-%E7%BB%86%E7%B2%92%E5%BA%A6%E8%B5%84%E6%BA%90%E7%AE%A1%E7%90%86%E8%A7%A3%E6%9E%90/" target="_blank" rel="noopener">https://www.whitewood.me/2019/10/17/Flink-1-10-%E7%BB%86%E7%B2%92%E5%BA%A6%E8%B5%84%E6%BA%90%E7%AE%A1%E7%90%86%E8%A7%A3%E6%9E%90/</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/02/13/Flink-1-10-内存模型和配置（翻译）/" rel="next" title="Flink 1.10 内存模型和配置（翻译）">
+                <i class="fa fa-chevron-left"></i> Flink 1.10 内存模型和配置（翻译）
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/02/20/将ELASTICSEARCH写入速度优化到极限/" rel="prev" title="将ELASTICSEARCH写入速度优化到极限">
+                将ELASTICSEARCH写入速度优化到极限 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#新旧内存模型"><span class="nav-number">1.</span> <span class="nav-text">新旧内存模型</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#调整原因"><span class="nav-number">1.1.</span> <span class="nav-text">调整原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Referenece"><span class="nav-number">1.2.</span> <span class="nav-text">Referenece</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

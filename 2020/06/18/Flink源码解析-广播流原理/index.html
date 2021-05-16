@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="使用详情见https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html 1234567891011121314151617181920212223242526// a map descriptor to store the name of the rule (st">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析-广播流原理">
+<meta property="og:url" content="http://yoursite.com/2020/06/18/Flink源码解析-广播流原理/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="使用详情见https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html 1234567891011121314151617181920212223242526// a map descriptor to store the name of the rule (st">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-06-18T12:18:18.146Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析-广播流原理">
+<meta name="twitter:description" content="使用详情见https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html 1234567891011121314151617181920212223242526// a map descriptor to store the name of the rule (st">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/06/18/Flink源码解析-广播流原理/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析-广播流原理 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/18/Flink源码解析-广播流原理/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析-广播流原理
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-06-18 20:16:49 / 修改时间：20:18:18" itemprop="dateCreated datePublished" datetime="2020-06-18T20:16:49+08:00">2020-06-18</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="使用"><a href="#使用" class="headerlink" title="使用"></a>使用</h3><p>详情见<a href="https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html</a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="comment">// a map descriptor to store the name of the rule (string) and the rule itself.</span></span><br><span class="line">MapStateDescriptor&lt;String, Rule&gt; ruleStateDescriptor = <span class="keyword">new</span> MapStateDescriptor&lt;&gt;(</span><br><span class="line">			<span class="string">"RulesBroadcastState"</span>,</span><br><span class="line">			BasicTypeInfo.STRING_TYPE_INFO,</span><br><span class="line">			TypeInformation.of(<span class="keyword">new</span> TypeHint&lt;Rule&gt;() &#123;&#125;));</span><br><span class="line">		</span><br><span class="line"><span class="comment">// broadcast the rules and create the broadcast state</span></span><br><span class="line">BroadcastStream&lt;Rule&gt; ruleBroadcastStream = ruleStream</span><br><span class="line">                        .broadcast(ruleStateDescriptor);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">DataStream&lt;String&gt; output = colorPartitionedStream</span><br><span class="line">                 .connect(ruleBroadcastStream)</span><br><span class="line">                 .process(</span><br><span class="line">                     </span><br><span class="line">                     <span class="comment">// type arguments in our KeyedBroadcastProcessFunction represent: </span></span><br><span class="line">                     <span class="comment">//   1. the key of the keyed stream</span></span><br><span class="line">                     <span class="comment">//   2. the type of elements in the non-broadcast side</span></span><br><span class="line">                     <span class="comment">//   3. the type of elements in the broadcast side</span></span><br><span class="line">                     <span class="comment">//   4. the type of the result, here a string</span></span><br><span class="line">                     </span><br><span class="line">                     <span class="keyword">new</span> KeyedBroadcastProcessFunction&lt;Color, Item, Rule, String&gt;() &#123;</span><br><span class="line">                         <span class="comment">// my matching logic</span></span><br><span class="line">                     &#125;</span><br><span class="line">                 );</span><br></pre></td></tr></table></figure>
+<p>如果colorPartitionedStream是一个KeyedStream，那么process使用的是KeyedBroadcastProcessFunction，如果是一个普通的DataStream，那么用的是BroadcastProcessFunction。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">BroadcastProcessFunction</span>&lt;<span class="title">IN1</span>, <span class="title">IN2</span>, <span class="title">OUT</span>&gt; <span class="keyword">extends</span> <span class="title">BaseBroadcastProcessFunction</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(IN1 value, ReadOnlyContext ctx, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">processBroadcastElement</span><span class="params">(IN2 value, Context ctx, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">KeyedBroadcastProcessFunction</span>&lt;<span class="title">KS</span>, <span class="title">IN1</span>, <span class="title">IN2</span>, <span class="title">OUT</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(IN1 value, ReadOnlyContext ctx, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">void</span> <span class="title">processBroadcastElement</span><span class="params">(IN2 value, Context ctx, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onTimer</span><span class="params">(<span class="keyword">long</span> timestamp, OnTimerContext ctx, Collector&lt;OUT&gt; out)</span> <span class="keyword">throws</span> Exception</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>官网提供的demo</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">new</span> KeyedBroadcastProcessFunction&lt;Color, Item, Rule, String&gt;() &#123;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// store partial matches, i.e. first elements of the pair waiting for their second element</span></span><br><span class="line">    <span class="comment">// we keep a list as we may have many first elements waiting</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> MapStateDescriptor&lt;String, List&lt;Item&gt;&gt; mapStateDesc =</span><br><span class="line">        <span class="keyword">new</span> MapStateDescriptor&lt;&gt;(</span><br><span class="line">            <span class="string">"items"</span>,</span><br><span class="line">            BasicTypeInfo.STRING_TYPE_INFO,</span><br><span class="line">            <span class="keyword">new</span> ListTypeInfo&lt;&gt;(Item.class));</span><br><span class="line"></span><br><span class="line">    <span class="comment">// identical to our ruleStateDescriptor above</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> MapStateDescriptor&lt;String, Rule&gt; ruleStateDescriptor = </span><br><span class="line">        <span class="keyword">new</span> MapStateDescriptor&lt;&gt;(</span><br><span class="line">            <span class="string">"RulesBroadcastState"</span>,</span><br><span class="line">            BasicTypeInfo.STRING_TYPE_INFO,</span><br><span class="line">            TypeInformation.of(<span class="keyword">new</span> TypeHint&lt;Rule&gt;() &#123;&#125;));</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processBroadcastElement</span><span class="params">(Rule value,</span></span></span><br><span class="line"><span class="function"><span class="params">                                        Context ctx,</span></span></span><br><span class="line"><span class="function"><span class="params">                                        Collector&lt;String&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ctx.getBroadcastState(ruleStateDescriptor).put(value.name, value);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement</span><span class="params">(Item value,</span></span></span><br><span class="line"><span class="function"><span class="params">                               ReadOnlyContext ctx,</span></span></span><br><span class="line"><span class="function"><span class="params">                               Collector&lt;String&gt; out)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> MapState&lt;String, List&lt;Item&gt;&gt; state = getRuntimeContext().getMapState(mapStateDesc);</span><br><span class="line">        <span class="keyword">final</span> Shape shape = value.getShape();</span><br><span class="line">    </span><br><span class="line">        <span class="keyword">for</span> (Map.Entry&lt;String, Rule&gt; entry :</span><br><span class="line">                ctx.getBroadcastState(ruleStateDescriptor).immutableEntries()) &#123;</span><br><span class="line">            <span class="keyword">final</span> String ruleName = entry.getKey();</span><br><span class="line">            <span class="keyword">final</span> Rule rule = entry.getValue();</span><br><span class="line">    </span><br><span class="line">            List&lt;Item&gt; stored = state.get(ruleName);</span><br><span class="line">            <span class="keyword">if</span> (stored == <span class="keyword">null</span>) &#123;</span><br><span class="line">                stored = <span class="keyword">new</span> ArrayList&lt;&gt;();</span><br><span class="line">            &#125;</span><br><span class="line">    </span><br><span class="line">            <span class="keyword">if</span> (shape == rule.second &amp;&amp; !stored.isEmpty()) &#123;</span><br><span class="line">                <span class="keyword">for</span> (Item i : stored) &#123;</span><br><span class="line">                    out.collect(<span class="string">"MATCH: "</span> + i + <span class="string">" - "</span> + value);</span><br><span class="line">                &#125;</span><br><span class="line">                stored.clear();</span><br><span class="line">            &#125;</span><br><span class="line">    </span><br><span class="line">            <span class="comment">// there is no else&#123;&#125; to cover if rule.first == rule.second</span></span><br><span class="line">            <span class="keyword">if</span> (shape.equals(rule.first)) &#123;</span><br><span class="line">                stored.add(value);</span><br><span class="line">            &#125;</span><br><span class="line">    </span><br><span class="line">            <span class="keyword">if</span> (stored.isEmpty()) &#123;</span><br><span class="line">                state.remove(ruleName);</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                state.put(ruleName, stored);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>需要注意的是，目前广播流的状态都保存在内存中，RocksDB 状态后端目前还不支持广播状态。</p>
+<h3 id="分析源码"><a href="#分析源码" class="headerlink" title="分析源码"></a>分析源码</h3><h4 id="MapStateDescriptor"><a href="#MapStateDescriptor" class="headerlink" title="MapStateDescriptor"></a>MapStateDescriptor</h4><p>首先要说明一些概念：</p>
+<ul>
+<li>Flink中包含两种基础的状态：Keyed State和Operator State。</li>
+<li>Keyed State和Operator State又可以 以两种形式存在：原始状态和托管状态。</li>
+<li>托管状态是由Flink框架管理的状态，如ValueState, ListState, MapState等。</li>
+<li>raw state即原始状态，由用户自行管理状态具体的数据结构，框架在做checkpoint的时候，使用byte[]来读写状态内容，对其内部数据结构一无所知。</li>
+<li>MapState是托管状态的一种：即状态值为一个map。用户通过<code>put</code>或<code>putAll</code>方法添加元素。</li>
+</ul>
+<p>根据dataStream的不同决定了选用不同的state。</p>
+<hr>
+<p>DataStream.broadcast</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PublicEvolving</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> BroadcastStream&lt;T&gt; <span class="title">broadcast</span><span class="params">(<span class="keyword">final</span> MapStateDescriptor&lt;?, ?&gt;... broadcastStateDescriptors)</span> </span>&#123;</span><br><span class="line">   Preconditions.checkNotNull(broadcastStateDescriptors);</span><br><span class="line">   <span class="keyword">final</span> DataStream&lt;T&gt; broadcastStream = setConnectionType(<span class="keyword">new</span> BroadcastPartitioner&lt;&gt;());</span><br><span class="line">   <span class="keyword">return</span> <span class="keyword">new</span> BroadcastStream&lt;&gt;(environment, broadcastStream, broadcastStateDescriptors);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在初始构造的时候，做了如下的事情</p>
+<ul>
+<li>将partitioning设置为BroadcastPartitioner，这个分区策略是将数据发送到所有的下游，如果有n个channel，那就是每个channel都发一份数据。</li>
+<li>用dataStream和状态描述创建一个BroadcastStream</li>
+</ul>
+<p>BroadcastStream没什么特别的，属性如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">BroadcastStream</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> StreamExecutionEnvironment environment;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> DataStream&lt;T&gt; inputStream;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * The &#123;<span class="doctag">@link</span> org.apache.flink.api.common.state.StateDescriptor state descriptors&#125; of the</span></span><br><span class="line"><span class="comment">	 * registered &#123;<span class="doctag">@link</span> org.apache.flink.api.common.state.BroadcastState broadcast states&#125;. These</span></span><br><span class="line"><span class="comment">	 * states have &#123;<span class="doctag">@code</span> key-value&#125; format.</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> List&lt;MapStateDescriptor&lt;?, ?&gt;&gt; broadcastStateDescriptors;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在DataStream.connect(BroadcastStream)的时候构建出关键类BroadcastConnectedStream</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PublicEvolving</span></span><br><span class="line"><span class="keyword">public</span> &lt;R&gt; <span class="function">BroadcastConnectedStream&lt;T, R&gt; <span class="title">connect</span><span class="params">(BroadcastStream&lt;R&gt; broadcastStream)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="keyword">new</span> BroadcastConnectedStream&lt;&gt;(</span><br><span class="line">			environment,</span><br><span class="line">			<span class="keyword">this</span>,</span><br><span class="line">			Preconditions.checkNotNull(broadcastStream),</span><br><span class="line">			broadcastStream.getBroadcastStateDescriptor());</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在构造函数上，将dataStream和broadcastStream复制给input1和input2，作为TwoInput。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="title">BroadcastConnectedStream</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> StreamExecutionEnvironment env,</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> DataStream&lt;IN1&gt; input1,</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> BroadcastStream&lt;IN2&gt; input2,</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> List&lt;MapStateDescriptor&lt;?, ?&gt;&gt; broadcastStateDescriptors)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">this</span>.environment = requireNonNull(env);</span><br><span class="line">		<span class="keyword">this</span>.inputStream1 = requireNonNull(input1);</span><br><span class="line">		<span class="keyword">this</span>.inputStream2 = requireNonNull(input2);</span><br><span class="line">		<span class="keyword">this</span>.broadcastStateDescriptors = requireNonNull(broadcastStateDescriptors);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>用户代码DataStream.connect(BroadcastStream).process()的时候调用process方法将真正的计算操作交给了CoBroadcastWithKeyedOperator</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@PublicEvolving</span></span><br><span class="line"><span class="keyword">public</span> &lt;KS, OUT&gt; <span class="function">SingleOutputStreamOperator&lt;OUT&gt; <span class="title">process</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">final</span> KeyedBroadcastProcessFunction&lt;KS, IN1, IN2, OUT&gt; function,</span></span></span><br><span class="line"><span class="function"><span class="params">      <span class="keyword">final</span> TypeInformation&lt;OUT&gt; outTypeInfo)</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">   Preconditions.checkNotNull(function);</span><br><span class="line">   Preconditions.checkArgument(inputStream1 <span class="keyword">instanceof</span> KeyedStream,</span><br><span class="line">         <span class="string">"A KeyedBroadcastProcessFunction can only be used on a keyed stream."</span>);</span><br><span class="line"></span><br><span class="line">   TwoInputStreamOperator&lt;IN1, IN2, OUT&gt; operator =</span><br><span class="line">         <span class="keyword">new</span> CoBroadcastWithKeyedOperator&lt;&gt;(clean(function), broadcastStateDescriptors);</span><br><span class="line">   <span class="keyword">return</span> transform(<span class="string">"Co-Process-Broadcast-Keyed"</span>, outTypeInfo, operator);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>CoBroadcastWithKeyedOperator</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement1</span><span class="params">(StreamRecord&lt;IN1&gt; element)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		collector.setTimestamp(element);</span><br><span class="line">		rContext.setElement(element);</span><br><span class="line">		userFunction.processElement(element.getValue(), rContext, collector);</span><br><span class="line">		rContext.setElement(<span class="keyword">null</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">processElement2</span><span class="params">(StreamRecord&lt;IN2&gt; element)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		collector.setTimestamp(element);</span><br><span class="line">		rwContext.setElement(element);</span><br><span class="line">		userFunction.processBroadcastElement(element.getValue(), rwContext, collector);</span><br><span class="line">		rwContext.setElement(<span class="keyword">null</span>);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>本质上，其实还是双流join，只是没有数据late或者其他watermark之类的判断，广播流的数据存储在用户定义的state中，另一条从state中获取，形成广播流的join效果。</p>
+<hr>
+<p>状态的创建主要是在CoBroadcastWithKeyedOperator.open方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">for</span> (MapStateDescriptor&lt;?, ?&gt; descriptor: broadcastStateDescriptors) &#123;</span><br><span class="line">			broadcastStates.put(descriptor, getOperatorStateBackend().getBroadcastState(descriptor));</span><br><span class="line">		&#125;</span><br></pre></td></tr></table></figure>
+<h4 id="OperatorStateBackEnd"><a href="#OperatorStateBackEnd" class="headerlink" title="OperatorStateBackEnd"></a>OperatorStateBackEnd</h4><p>OperatorStateBackEnd 主要管理OperatorState. 目前只有一种实现: DefaultOperatorStateBackend。</p>
+<p>BroadcastState的实现也只有一个HeapBroadcastState，所以广播流的状态都保存在内存中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> &lt;K, V&gt; <span class="function">BroadcastState&lt;K, V&gt; <span class="title">getBroadcastState</span><span class="params">(<span class="keyword">final</span> MapStateDescriptor&lt;K, V&gt; stateDescriptor)</span> <span class="keyword">throws</span> StateMigrationException </span>&#123;</span><br><span class="line"></span><br><span class="line">		Preconditions.checkNotNull(stateDescriptor);</span><br><span class="line">		String name = Preconditions.checkNotNull(stateDescriptor.getName());</span><br><span class="line"></span><br><span class="line">		BackendWritableBroadcastState&lt;K, V&gt; previous =</span><br><span class="line">			(BackendWritableBroadcastState&lt;K, V&gt;) accessedBroadcastStatesByName.get(name);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (previous != <span class="keyword">null</span>) &#123;</span><br><span class="line">			checkStateNameAndMode(</span><br><span class="line">					previous.getStateMetaInfo().getName(),</span><br><span class="line">					name,</span><br><span class="line">					previous.getStateMetaInfo().getAssignmentMode(),</span><br><span class="line">					OperatorStateHandle.Mode.BROADCAST);</span><br><span class="line">			<span class="keyword">return</span> previous;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		stateDescriptor.initializeSerializerUnlessSet(getExecutionConfig());</span><br><span class="line">		TypeSerializer&lt;K&gt; broadcastStateKeySerializer = Preconditions.checkNotNull(stateDescriptor.getKeySerializer());</span><br><span class="line">		TypeSerializer&lt;V&gt; broadcastStateValueSerializer = Preconditions.checkNotNull(stateDescriptor.getValueSerializer());</span><br><span class="line"></span><br><span class="line">		BackendWritableBroadcastState&lt;K, V&gt; broadcastState =</span><br><span class="line">			(BackendWritableBroadcastState&lt;K, V&gt;) registeredBroadcastStates.get(name);</span><br><span class="line"></span><br><span class="line">		<span class="keyword">if</span> (broadcastState == <span class="keyword">null</span>) &#123;</span><br><span class="line">			broadcastState = <span class="keyword">new</span> HeapBroadcastState&lt;&gt;(</span><br><span class="line">					<span class="keyword">new</span> RegisteredBroadcastStateBackendMetaInfo&lt;&gt;(</span><br><span class="line">							name,</span><br><span class="line">							OperatorStateHandle.Mode.BROADCAST,</span><br><span class="line">							broadcastStateKeySerializer,</span><br><span class="line">							broadcastStateValueSerializer));</span><br><span class="line">			registeredBroadcastStates.put(name, broadcastState);</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			<span class="comment">// has restored state; check compatibility of new state access</span></span><br><span class="line"></span><br><span class="line">			checkStateNameAndMode(</span><br><span class="line">					broadcastState.getStateMetaInfo().getName(),</span><br><span class="line">					name,</span><br><span class="line">					broadcastState.getStateMetaInfo().getAssignmentMode(),</span><br><span class="line">					OperatorStateHandle.Mode.BROADCAST);</span><br><span class="line"></span><br><span class="line">			RegisteredBroadcastStateBackendMetaInfo&lt;K, V&gt; restoredBroadcastStateMetaInfo = broadcastState.getStateMetaInfo();</span><br><span class="line"></span><br><span class="line">			<span class="comment">// check whether new serializers are incompatible</span></span><br><span class="line">			TypeSerializerSchemaCompatibility&lt;K&gt; keyCompatibility =</span><br><span class="line">				restoredBroadcastStateMetaInfo.updateKeySerializer(broadcastStateKeySerializer);</span><br><span class="line">			<span class="keyword">if</span> (keyCompatibility.isIncompatible()) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> StateMigrationException(<span class="string">"The new key typeSerializer for broadcast state must not be incompatible."</span>);</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			TypeSerializerSchemaCompatibility&lt;V&gt; valueCompatibility =</span><br><span class="line">				restoredBroadcastStateMetaInfo.updateValueSerializer(broadcastStateValueSerializer);</span><br><span class="line">			<span class="keyword">if</span> (valueCompatibility.isIncompatible()) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> StateMigrationException(<span class="string">"The new value typeSerializer for broadcast state must not be incompatible."</span>);</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			broadcastState.setStateMetaInfo(restoredBroadcastStateMetaInfo);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		accessedBroadcastStatesByName.put(name, broadcastState);</span><br><span class="line">		<span class="keyword">return</span> broadcastState;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">broadcastState = <span class="keyword">new</span> HeapBroadcastState&lt;&gt;(</span><br><span class="line">      <span class="keyword">new</span> RegisteredBroadcastStateBackendMetaInfo&lt;&gt;(</span><br><span class="line">            name,</span><br><span class="line">            OperatorStateHandle.Mode.BROADCAST,</span><br><span class="line">            broadcastStateKeySerializer,</span><br><span class="line">            broadcastStateValueSerializer));</span><br><span class="line">registeredBroadcastStates.put(name, broadcastState);</span><br></pre></td></tr></table></figure>
+<p>可以看出这部分是放在内存中的</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://www.cnblogs.com/rossiXYZ/p/12594315.html" target="_blank" rel="noopener">https://www.cnblogs.com/rossiXYZ/p/12594315.html</a></p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.10/dev/stream/state/broadcast_state.html</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/17/Flink-对象的不正确释放（反面教材/" rel="next" title="Flink 对象的不正确释放和内存泄露（反面教材">
+                <i class="fa fa-chevron-left"></i> Flink 对象的不正确释放和内存泄露（反面教材
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/28/一次kubernetes网络问题排查/" rel="prev" title="一次kubernetes网络问题排查">
+                一次kubernetes网络问题排查 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#使用"><span class="nav-number">1.</span> <span class="nav-text">使用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#分析源码"><span class="nav-number">2.</span> <span class="nav-text">分析源码</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#MapStateDescriptor"><span class="nav-number">2.1.</span> <span class="nav-text">MapStateDescriptor</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#OperatorStateBackEnd"><span class="nav-number">2.2.</span> <span class="nav-text">OperatorStateBackEnd</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">3.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

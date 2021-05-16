@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景是否遇到过服务器cpu温度高导致降频，磁盘只读等服务器问题。如果你遇到的问题不多或者你只用云服务，那恭喜你，可以跳过这篇文章。如果你被各种辣鸡服务器困扰，还被半死不活的服务器拖后腿导致集群性能短板，那么摆脱人肉智能，需要针对系统日志进行分析。 怎么判断服务器是否有问题简单点的通过观察系统日志来判断是否有问题1/var/log/messages 该日志可以反馈很多问题。 例如  Temperat">
+<meta property="og:type" content="article">
+<meta property="og:title" content="在kubernetes中部署java程序分析系统日志，不当人肉智能">
+<meta property="og:url" content="http://yoursite.com/2020/01/10/在kubernetes中部署java程序分析系统日志，不当人肉智能/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景是否遇到过服务器cpu温度高导致降频，磁盘只读等服务器问题。如果你遇到的问题不多或者你只用云服务，那恭喜你，可以跳过这篇文章。如果你被各种辣鸡服务器困扰，还被半死不活的服务器拖后腿导致集群性能短板，那么摆脱人肉智能，需要针对系统日志进行分析。 怎么判断服务器是否有问题简单点的通过观察系统日志来判断是否有问题1/var/log/messages 该日志可以反馈很多问题。 例如  Temperat">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-01-10T12:45:53.878Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="在kubernetes中部署java程序分析系统日志，不当人肉智能">
+<meta name="twitter:description" content="背景是否遇到过服务器cpu温度高导致降频，磁盘只读等服务器问题。如果你遇到的问题不多或者你只用云服务，那恭喜你，可以跳过这篇文章。如果你被各种辣鸡服务器困扰，还被半死不活的服务器拖后腿导致集群性能短板，那么摆脱人肉智能，需要针对系统日志进行分析。 怎么判断服务器是否有问题简单点的通过观察系统日志来判断是否有问题1/var/log/messages 该日志可以反馈很多问题。 例如  Temperat">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/01/10/在kubernetes中部署java程序分析系统日志，不当人肉智能/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>在kubernetes中部署java程序分析系统日志，不当人肉智能 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/01/10/在kubernetes中部署java程序分析系统日志，不当人肉智能/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">在kubernetes中部署java程序分析系统日志，不当人肉智能
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-01-10 20:45:21 / 修改时间：20:45:53" itemprop="dateCreated datePublished" datetime="2020-01-10T20:45:21+08:00">2020-01-10</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Kubernetes/" itemprop="url" rel="index"><span itemprop="name">Kubernetes</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h3><p>是否遇到过服务器cpu温度高导致降频，磁盘只读等服务器问题。如果你遇到的问题不多或者你只用云服务，那恭喜你，可以跳过这篇文章。如果你被各种辣鸡服务器困扰，还被半死不活的服务器拖后腿导致集群性能短板，那么摆脱人肉智能，需要针对系统日志进行分析。</p>
+<h3 id="怎么判断服务器是否有问题"><a href="#怎么判断服务器是否有问题" class="headerlink" title="怎么判断服务器是否有问题"></a>怎么判断服务器是否有问题</h3><p>简单点的通过观察系统日志来判断是否有问题<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">/var/log/messages</span><br></pre></td></tr></table></figure></p>
+<p>该日志可以反馈很多问题。</p>
+<p>例如</p>
+<ul>
+<li>Temperature above threshold, cpu clock throttled（cpu温度高导致的降频）</li>
+<li>I/O error，dev sdh (磁盘有问题)</li>
+<li>memory 有问题等等</li>
+</ul>
+<h3 id="采集文件"><a href="#采集文件" class="headerlink" title="采集文件"></a>采集文件</h3><p>针对系统日志的读取和采集，需要针对一个不断生成数据的文件不停的采集，市面上现在有很多开源的组件可以完成，例如filebeat、logstash、flume等等。如果要自己手动开发呢，需要怎么办呢。</p>
+<p>java版本的可以采用apace的common io来完成。</p>
+<p>他采用的是线程方式来监控文件内容的变化</p>
+<p>1、Tailer类（采用线程的方式进行文件的内容变法）</p>
+<p>2、TailerListener类</p>
+<p>3、TailerListenerAdapter类，该类是集成了TailerListener的实现空的接口方式</p>
+<p>实例代码如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">import</span> org.apache.commons.io.FileUtils;  </span><br><span class="line"><span class="keyword">import</span> org.apache.commons.io.IOUtils;  </span><br><span class="line"><span class="keyword">import</span> org.apache.commons.io.input.Tailer;  </span><br><span class="line"><span class="keyword">import</span> org.apache.commons.io.input.TailerListenerAdapter;  </span><br><span class="line">  </span><br><span class="line"><span class="keyword">import</span> java.io.File;  </span><br><span class="line">  </span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TailerTest</span> </span>&#123;  </span><br><span class="line">  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String []args)</span> <span class="keyword">throws</span> Exception</span>&#123;  </span><br><span class="line">        TailerTest tailerTest = <span class="keyword">new</span> TailerTest();  </span><br><span class="line">        tailerTest.test();  </span><br><span class="line">        <span class="keyword">boolean</span> flag = <span class="keyword">true</span>;  </span><br><span class="line">        File file = <span class="keyword">new</span> File(<span class="string">"C:/Users/hadoop/Desktop/test/1.txt"</span>);  </span><br><span class="line">  </span><br><span class="line">        <span class="keyword">while</span>(flag)&#123;  </span><br><span class="line">            Thread.sleep(<span class="number">1000</span>);  </span><br><span class="line">            FileUtils.write(file,<span class="string">""</span>+System.currentTimeMillis()+ IOUtils.LINE_SEPARATOR,<span class="keyword">true</span>);  </span><br><span class="line">        &#125;  </span><br><span class="line">  </span><br><span class="line">    &#125;  </span><br><span class="line">  </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">test</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span>&#123;  </span><br><span class="line">        File file = <span class="keyword">new</span> File(<span class="string">"C:/Users/hadoop/Desktop/test/1.txt"</span>);  </span><br><span class="line">        FileUtils.touch(file);  </span><br><span class="line">  </span><br><span class="line">        Tailer tailer = <span class="keyword">new</span> Tailer(file,<span class="keyword">new</span> TailerListenerAdapter()&#123;  </span><br><span class="line">  </span><br><span class="line">            <span class="meta">@Override</span>  </span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fileNotFound</span><span class="params">()</span> </span>&#123;  <span class="comment">//文件没有找到  </span></span><br><span class="line">                System.out.println(<span class="string">"文件没有找到"</span>);  </span><br><span class="line">                <span class="keyword">super</span>.fileNotFound();  </span><br><span class="line">            &#125;  </span><br><span class="line">  </span><br><span class="line">            <span class="meta">@Override</span>  </span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">fileRotated</span><span class="params">()</span> </span>&#123;  <span class="comment">//文件被外部的输入流改变  </span></span><br><span class="line">                System.out.println(<span class="string">"文件rotated"</span>);  </span><br><span class="line">                <span class="keyword">super</span>.fileRotated();  </span><br><span class="line">            &#125;  </span><br><span class="line">  </span><br><span class="line">            <span class="meta">@Override</span>  </span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(String line)</span> </span>&#123; <span class="comment">//增加的文件的内容  </span></span><br><span class="line">                System.out.println(<span class="string">"文件line:"</span>+line);  </span><br><span class="line">                <span class="keyword">super</span>.handle(line);  </span><br><span class="line">            &#125;  </span><br><span class="line">  </span><br><span class="line">            <span class="meta">@Override</span>  </span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">handle</span><span class="params">(Exception ex)</span> </span>&#123;  </span><br><span class="line">                ex.printStackTrace();  </span><br><span class="line">                <span class="keyword">super</span>.handle(ex);  </span><br><span class="line">            &#125;  </span><br><span class="line">  </span><br><span class="line">        &#125;,<span class="number">4000</span>,<span class="keyword">true</span>);  </span><br><span class="line">        <span class="keyword">new</span> Thread(tailer).start();  </span><br><span class="line">    &#125;  </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>文件的路径最好是通过参数传递进去。这样可以做到可变。</p>
+<h3 id="如何部署以及该程序的可用性"><a href="#如何部署以及该程序的可用性" class="headerlink" title="如何部署以及该程序的可用性"></a>如何部署以及该程序的可用性</h3><ol>
+<li>需要的是每个服务器都部署一个而且只部署一个。</li>
+<li>一个监控服务器的程序，势必需要另一个程序去监控这个程序，为了形成闭环，那么最近需要通过环境去监控上一个程序。</li>
+</ol>
+<p>因此采用的是在kubernetes上部署，通过DaemonSet的形式，做到第一点。然后基于kubernetes可以做到程序挂了自动拉起的高可用形式，解决第二点。</p>
+<h3 id="容器化引来的新问题"><a href="#容器化引来的新问题" class="headerlink" title="容器化引来的新问题"></a>容器化引来的新问题</h3><ol>
+<li>如何获取容器外，宿主机的文件</li>
+<li>如果获取宿主机的ip</li>
+</ol>
+<p>针对第一点，通过将宿主机的文件挂载到容器内部即可,如下配置可以将宿主机的文件映射到在容器内的/log/messages</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">volumeMounts:</span><br><span class="line">           - mountPath: /log/messages</span><br><span class="line">             subPath: messages</span><br><span class="line">             name: logmessage</span><br><span class="line">       volumes:</span><br><span class="line">       - hostPath:</span><br><span class="line">           path: /var/log/</span><br><span class="line">         name: logmessage</span><br></pre></td></tr></table></figure>
+<p>如何将文件的路径传递进去呢，采用command指令</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">command: [&quot;java&quot;]</span><br><span class="line">args: [&quot;-cp&quot;,&quot;fileCollect-1.0-SNAPSHOT.jar&quot;,&quot;study.TailLog&quot;,&quot;/log/messages&quot;]</span><br></pre></td></tr></table></figure>
+<p>第二点，目前没有办法拿到宿主机的ip（有谁知道的求告知），可以通过获取容器的名称然后去找对应服务器。如何在java程序中获取呢。这里要用到kubernetes的环境变量。</p>
+<p>每个容器都自带了这个一个系统变量HOSTNAME。java中获取方式如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Map&lt;String, String&gt; map = System.getenv();</span><br><span class="line">       String hostName = map.get(<span class="string">"HOSTNAME"</span>);</span><br><span class="line">       System.out.println(hostName);</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://blog.csdn.net/nickDaDa/article/details/89357667" target="_blank" rel="noopener">https://blog.csdn.net/nickDaDa/article/details/89357667</a></p>
+<p><a href="https://kubernetes.io/zh/docs/tasks/inject-data-application/define-environment-variable-container/" target="_blank" rel="noopener">https://kubernetes.io/zh/docs/tasks/inject-data-application/define-environment-variable-container/</a></p>
+<p><a href="https://www.cnblogs.com/hd-zg/p/5930636.html" target="_blank" rel="noopener">https://www.cnblogs.com/hd-zg/p/5930636.html</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/01/01/Flink-Window的5个使用小技巧/" rel="next" title="Flink Window的5个使用小技巧">
+                <i class="fa fa-chevron-left"></i> Flink Window的5个使用小技巧
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/01/22/grafana安装教程/" rel="prev" title="grafana安装教程">
+                grafana安装教程 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#怎么判断服务器是否有问题"><span class="nav-number">2.</span> <span class="nav-text">怎么判断服务器是否有问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#采集文件"><span class="nav-number">3.</span> <span class="nav-text">采集文件</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#如何部署以及该程序的可用性"><span class="nav-number">4.</span> <span class="nav-text">如何部署以及该程序的可用性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#容器化引来的新问题"><span class="nav-number">5.</span> <span class="nav-text">容器化引来的新问题</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">6.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="停服扩容 停止服务 新建2*n个新库，并做好高可用 进行数据迁移，把数据从n个库里select出来，insert到2*n个库里；（耗时最长） 修改微服务的数据库路由配置，模n变为模2*n； 微服务重启，连接新库重新对外提供服务；  平滑扩容前提每台db都有一个salve，作为高可用也好，扩容也好    db ip映射 取模     db1 ip0 0   db1 salve 无    db2 ip">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分库分表的数据库如何进行数据迁移">
+<meta property="og:url" content="http://yoursite.com/2019/05/18/分库分表的数据库如何进行数据迁移/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="停服扩容 停止服务 新建2*n个新库，并做好高可用 进行数据迁移，把数据从n个库里select出来，insert到2*n个库里；（耗时最长） 修改微服务的数据库路由配置，模n变为模2*n； 微服务重启，连接新库重新对外提供服务；  平滑扩容前提每台db都有一个salve，作为高可用也好，扩容也好    db ip映射 取模     db1 ip0 0   db1 salve 无    db2 ip">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-06-11T16:01:02.975Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="分库分表的数据库如何进行数据迁移">
+<meta name="twitter:description" content="停服扩容 停止服务 新建2*n个新库，并做好高可用 进行数据迁移，把数据从n个库里select出来，insert到2*n个库里；（耗时最长） 修改微服务的数据库路由配置，模n变为模2*n； 微服务重启，连接新库重新对外提供服务；  平滑扩容前提每台db都有一个salve，作为高可用也好，扩容也好    db ip映射 取模     db1 ip0 0   db1 salve 无    db2 ip">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/05/18/分库分表的数据库如何进行数据迁移/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>分库分表的数据库如何进行数据迁移 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/05/18/分库分表的数据库如何进行数据迁移/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">分库分表的数据库如何进行数据迁移
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-05-18 10:03:46" itemprop="dateCreated datePublished" datetime="2019-05-18T10:03:46+08:00">2019-05-18</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2019-06-12 00:01:02" itemprop="dateModified" datetime="2019-06-12T00:01:02+08:00">2019-06-12</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/大数据/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h4 id="停服扩容"><a href="#停服扩容" class="headerlink" title="停服扩容"></a>停服扩容</h4><ol>
+<li>停止服务</li>
+<li>新建2*n个新库，并做好高可用</li>
+<li>进行数据迁移，把数据从n个库里select出来，insert到2*n个库里；（耗时最长）</li>
+<li>修改微服务的数据库路由配置，模n变为模2*n；</li>
+<li>微服务重启，连接新库重新对外提供服务；</li>
+</ol>
+<h4 id="平滑扩容"><a href="#平滑扩容" class="headerlink" title="平滑扩容"></a>平滑扩容</h4><h5 id="前提"><a href="#前提" class="headerlink" title="前提"></a>前提</h5><p>每台db都有一个salve，作为高可用也好，扩容也好</p>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>db1 salve</td>
+<td>无</td>
+<td></td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>db2 salve</td>
+<td>无</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h5 id="步骤一：修改配置。"><a href="#步骤一：修改配置。" class="headerlink" title="步骤一：修改配置。"></a>步骤一：修改配置。</h5><ul>
+<li>数据库实例所在的机器做双虚ip：   </li>
+<li><ul>
+<li>原%2=0的库是虚ip0，现增加一个虚ip00</li>
+</ul>
+</li>
+<li><ul>
+<li>原%2=1的库是虚ip1，现增加一个虚ip11</li>
+</ul>
+</li>
+<li>修改服务的配置，将2个库的数据库配置，改为4个库的数据库配置，修改的时候要注意旧库与新库的映射关系：</li>
+<li><ul>
+<li>%2=0的库，会变为%4=0与%4=2</li>
+</ul>
+</li>
+<li><ul>
+<li>%2=1的部分，会变为%4=1与%4=3</li>
+</ul>
+</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0，ip00</td>
+<td>0</td>
+</tr>
+<tr>
+<td>db1 salve</td>
+<td>ip0，ip00</td>
+<td></td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip1，ip11</td>
+<td>1</td>
+</tr>
+<tr>
+<td>db2 salve</td>
+<td>ip1，ip11</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h5 id="步骤二：reload配置，实例扩容"><a href="#步骤二：reload配置，实例扩容" class="headerlink" title="步骤二：reload配置，实例扩容"></a>步骤二：reload配置，实例扩容</h5><p>reload可能是这么几种方式：</p>
+<ul>
+<li>比较原始的，重启服务，读新的配置文件；</li>
+<li>高级一点的，配置中心给服务发信号，重读配置文件，重新初始化数据库连接池；</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0，ip00</td>
+<td>0</td>
+</tr>
+<tr>
+<td>db1 salve</td>
+<td>ip0，ip00</td>
+<td>2</td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip1，ip11</td>
+<td>1</td>
+</tr>
+<tr>
+<td>db2 salve</td>
+<td>ip1，ip11</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<h5 id="步骤三：收尾工作，数据收缩"><a href="#步骤三：收尾工作，数据收缩" class="headerlink" title="步骤三：收尾工作，数据收缩"></a>步骤三：收尾工作，数据收缩</h5><ul>
+<li>把双虚ip修改回单虚ip；</li>
+<li>解除旧的双主同步，让成对库的数据不再同步增加；</li>
+<li>增加新的双主同步，保证高可用；</li>
+<li>删除掉冗余数据，例如：ip0里%4=2的数据全部删除，只为%4=0的数据提供服务</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>db</th>
+<th>ip映射</th>
+<th>取模</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>db1</td>
+<td>ip0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>new db1 salve</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>db2</td>
+<td>ip00</td>
+<td>2</td>
+</tr>
+<tr>
+<td>new db2 salve</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>db3</td>
+<td>ip1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>new db3 salve</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>db4</td>
+<td>ip11</td>
+<td>3</td>
+</tr>
+<tr>
+<td>new db4 salve</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h5 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h5><p><a href="https://mp.weixin.qq.com/s?__biz=MjM5ODYxMDA5OQ==&amp;mid=2651962231&amp;idx=1&amp;sn=1b51d042c243f0b3ce0b748ddbcff865&amp;chksm=bd2d0eab8a5a87bdcbe7dd08fb4c969ad76fa0ea00b2c78645db8561fd2a78d813d7b8bef2ac&amp;mpshare=1&amp;scene=1&amp;srcid=&amp;key=d9a46d47128ca0584390daedbbb1c39077582436967d7e2189f09b10441423d60e73732ec92855b3f85f6cb547616c14be51b004a0da4c46163e1cf8d0ead0630120007ed885a7a4d0cc383294ea8e15&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+10&amp;version=62060739&amp;lang=zh_CN&amp;pass_ticket=8%2BAcIGVZ5r%2B3LMkUMz0mfS12OgN7SW%2B%2B1eeeqRcOcIFUut%2FZk5Lj0iFnfAWSN4HV" target="_blank" rel="noopener">https://mp.weixin.qq.com/s?__biz=MjM5ODYxMDA5OQ==&amp;mid=2651962231&amp;idx=1&amp;sn=1b51d042c243f0b3ce0b748ddbcff865&amp;chksm=bd2d0eab8a5a87bdcbe7dd08fb4c969ad76fa0ea00b2c78645db8561fd2a78d813d7b8bef2ac&amp;mpshare=1&amp;scene=1&amp;srcid=&amp;key=d9a46d47128ca0584390daedbbb1c39077582436967d7e2189f09b10441423d60e73732ec92855b3f85f6cb547616c14be51b004a0da4c46163e1cf8d0ead0630120007ed885a7a4d0cc383294ea8e15&amp;ascene=1&amp;uin=MjU3NDYyMjA0Mw%3D%3D&amp;devicetype=Windows+10&amp;version=62060739&amp;lang=zh_CN&amp;pass_ticket=8%2BAcIGVZ5r%2B3LMkUMz0mfS12OgN7SW%2B%2B1eeeqRcOcIFUut%2FZk5Lj0iFnfAWSN4HV</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/05/18/缓存介绍/" rel="next" title="缓存介绍">
+                <i class="fa fa-chevron-left"></i> 缓存介绍
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/05/18/向上转型和向下转型/" rel="prev" title="向上转型和向下转型">
+                向上转型和向下转型 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-4"><a class="nav-link" href="#停服扩容"><span class="nav-number">1.</span> <span class="nav-text">停服扩容</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#平滑扩容"><span class="nav-number">2.</span> <span class="nav-text">平滑扩容</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#前提"><span class="nav-number">2.1.</span> <span class="nav-text">前提</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#步骤一：修改配置。"><span class="nav-number">2.2.</span> <span class="nav-text">步骤一：修改配置。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#步骤二：reload配置，实例扩容"><span class="nav-number">2.3.</span> <span class="nav-text">步骤二：reload配置，实例扩容</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#步骤三：收尾工作，数据收缩"><span class="nav-number">2.4.</span> <span class="nav-text">步骤三：收尾工作，数据收缩</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#Reference"><span class="nav-number">2.5.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

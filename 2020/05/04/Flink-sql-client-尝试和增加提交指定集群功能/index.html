@@ -1,0 +1,870 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="笔者想要做一个实时计算平台，通过sql来减少开发，如果直接用jar包开发，是可以做精细化管理，但是开发速度就会受到限制。 目前有两种方式，一种是做成一个jar包，sql放入配置文件中，但是这样就没办法很好用上社区的功能，限制太大。另一个是使用flink-sql-client。 集群构建依赖12345flink-connector-kafka_2.11-1.10.0.jarflink-connect">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink sql client 尝试和增加提交指定集群功能">
+<meta property="og:url" content="http://yoursite.com/2020/05/04/Flink-sql-client-尝试和增加提交指定集群功能/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="笔者想要做一个实时计算平台，通过sql来减少开发，如果直接用jar包开发，是可以做精细化管理，但是开发速度就会受到限制。 目前有两种方式，一种是做成一个jar包，sql放入配置文件中，但是这样就没办法很好用上社区的功能，限制太大。另一个是使用flink-sql-client。 集群构建依赖12345flink-connector-kafka_2.11-1.10.0.jarflink-connect">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-05-04T10:23:20.591Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink sql client 尝试和增加提交指定集群功能">
+<meta name="twitter:description" content="笔者想要做一个实时计算平台，通过sql来减少开发，如果直接用jar包开发，是可以做精细化管理，但是开发速度就会受到限制。 目前有两种方式，一种是做成一个jar包，sql放入配置文件中，但是这样就没办法很好用上社区的功能，限制太大。另一个是使用flink-sql-client。 集群构建依赖12345flink-connector-kafka_2.11-1.10.0.jarflink-connect">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/05/04/Flink-sql-client-尝试和增加提交指定集群功能/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink sql client 尝试和增加提交指定集群功能 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/05/04/Flink-sql-client-尝试和增加提交指定集群功能/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink sql client 尝试和增加提交指定集群功能
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-05-04 18:19:12 / 修改时间：18:23:20" itemprop="dateCreated datePublished" datetime="2020-05-04T18:19:12+08:00">2020-05-04</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>笔者想要做一个实时计算平台，通过sql来减少开发，如果直接用jar包开发，是可以做精细化管理，但是开发速度就会受到限制。</p>
+<p>目前有两种方式，一种是做成一个jar包，sql放入配置文件中，但是这样就没办法很好用上社区的功能，限制太大。另一个是使用flink-sql-client。</p>
+<h3 id="集群构建依赖"><a href="#集群构建依赖" class="headerlink" title="集群构建依赖"></a>集群构建依赖</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">flink-connector-kafka_2.11-1.10.0.jar</span><br><span class="line">flink-connector-kafka-base_2.11-1.10.0.jar</span><br><span class="line">flink-csv-1.10.0.jar(需要json改json)</span><br><span class="line">kafka-clients-2.2.0.jar</span><br><span class="line">flink-sql-connector-kafka_2.11-1.10.0.jar</span><br></pre></td></tr></table></figure>
+<h3 id="尝试"><a href="#尝试" class="headerlink" title="尝试"></a>尝试</h3><p>修改配置conf/flink-conf.yaml</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">jobmanager.rpc.address: flink-jobmanager.flink.svc.cluster.local</span><br><span class="line"></span><br><span class="line"># The RPC port where the JobManager is reachable.</span><br><span class="line"></span><br><span class="line">jobmanager.rpc.port: 6123</span><br></pre></td></tr></table></figure>
+<p>配置上对应集群的address和端口6123.</p>
+<p>或者修改源码，将集群目标改为可配置。见后面的内容。（由于笔者的集群是flink on kubernetes，社区目前对flink on kubernetes 的native需要在1.11才会有比较好的功能。flink的sql gate way暂时也没有开发，得等社区）</p>
+<p>配置对应的yaml文件</p>
+<p>sql-client-defaults.yaml</p>
+<figure class="highlight yaml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">################################################################################</span></span><br><span class="line"><span class="comment">#  Licensed to the Apache Software Foundation (ASF) under one</span></span><br><span class="line"><span class="comment">#  or more contributor license agreements.  See the NOTICE file</span></span><br><span class="line"><span class="comment">#  distributed with this work for additional information</span></span><br><span class="line"><span class="comment">#  regarding copyright ownership.  The ASF licenses this file</span></span><br><span class="line"><span class="comment">#  to you under the Apache License, Version 2.0 (the</span></span><br><span class="line"><span class="comment">#  "License"); you may not use this file except in compliance</span></span><br><span class="line"><span class="comment">#  with the License.  You may obtain a copy of the License at</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#      http://www.apache.org/licenses/LICENSE-2.0</span></span><br><span class="line"><span class="comment">#</span></span><br><span class="line"><span class="comment">#  Unless required by applicable law or agreed to in writing, software</span></span><br><span class="line"><span class="comment">#  distributed under the License is distributed on an "AS IS" BASIS,</span></span><br><span class="line"><span class="comment">#  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span></span><br><span class="line"><span class="comment">#  See the License for the specific language governing permissions and</span></span><br><span class="line"><span class="comment"># limitations under the License.</span></span><br><span class="line"><span class="comment">################################################################################</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># This file defines the default environment for Flink's SQL Client.</span></span><br><span class="line"><span class="comment"># Defaults might be overwritten by a session specific environment.</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># See the Table API &amp; SQL documentation for details about supported properties.</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># Tables</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Define tables here such as sources, sinks, views, or temporal tables.</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#tables: [] # empty list</span></span><br><span class="line"><span class="comment"># A typical table source definition looks like:</span></span><br><span class="line"><span class="comment"># - name: ...</span></span><br><span class="line"><span class="comment">#   type: source-table</span></span><br><span class="line"><span class="comment">#   connector: ...</span></span><br><span class="line"><span class="comment">#   format: ...</span></span><br><span class="line"><span class="comment">#   schema: ...</span></span><br><span class="line"><span class="string">tables</span> <span class="string">:</span></span><br><span class="line"><span class="attr">  - name:</span> <span class="string">MyTableSource</span></span><br><span class="line"><span class="attr">    type:</span> <span class="string">"source"</span></span><br><span class="line"><span class="attr">    update-mode:</span> <span class="string">append</span></span><br><span class="line"><span class="attr">    format:</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">csv</span></span><br><span class="line"><span class="attr">    schema:</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">"index"</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">"INT"</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">"procTime"</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">"TIMESTAMP"</span></span><br><span class="line"><span class="attr">      proctime:</span> <span class="literal">true</span></span><br><span class="line"><span class="attr">    connector:</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">kafka</span></span><br><span class="line"><span class="attr">      version:</span> <span class="string">"universal"</span></span><br><span class="line"><span class="attr">      topic:</span> <span class="string">test</span></span><br><span class="line"><span class="attr">      startup-mode:</span> <span class="string">earliest-offset</span></span><br><span class="line"><span class="attr">      properties:</span></span><br><span class="line">        <span class="string">bootstrap.servers:</span> <span class="attr">kafka-host:51600</span></span><br><span class="line">        <span class="string">zookeeper.connect:</span> <span class="attr">zk-host:7072/chroot/kafka</span></span><br><span class="line"><span class="attr">  - name:</span> <span class="string">TableSink</span></span><br><span class="line"><span class="attr">    type:</span> <span class="string">sink-table</span></span><br><span class="line"><span class="attr">    update-mode:</span> <span class="string">append</span></span><br><span class="line"><span class="attr">    format:</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">csv</span></span><br><span class="line"><span class="attr">    schema:</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">"index"</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">"INT"</span></span><br><span class="line"><span class="attr">    - name:</span> <span class="string">"procTime"</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">"TIMESTAMP"</span></span><br><span class="line"><span class="attr">    connector:</span></span><br><span class="line"><span class="attr">      type:</span> <span class="string">kafka</span></span><br><span class="line"><span class="attr">      version:</span> <span class="string">"universal"</span></span><br><span class="line"><span class="attr">      topic:</span> <span class="string">test1</span></span><br><span class="line"><span class="attr">      sink-partitioner:</span> <span class="string">"round-robin"</span></span><br><span class="line"><span class="attr">      properties:</span></span><br><span class="line">        <span class="string">bootstrap.servers:</span> <span class="attr">kafka-host:51600</span></span><br><span class="line">        <span class="string">zookeeper.connect:</span> <span class="attr">zk-host:7072/chroot/kafka</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># A typical view definition looks like:</span></span><br><span class="line"><span class="comment"># - name: ...</span></span><br><span class="line"><span class="comment">#   type: view</span></span><br><span class="line"><span class="comment">#   query: "SELECT ..."</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># A typical temporal table definition looks like:</span></span><br><span class="line"><span class="comment"># - name: ...</span></span><br><span class="line"><span class="comment">#   type: temporal-table</span></span><br><span class="line"><span class="comment">#   history-table: ...</span></span><br><span class="line"><span class="comment">#   time-attribute: ...</span></span><br><span class="line"><span class="comment">#   primary-key: ...</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># User-defined functions</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Define scalar, aggregate, or table functions here.</span></span><br><span class="line"></span><br><span class="line"><span class="attr">functions:</span> <span class="string">[]</span> <span class="comment"># empty list</span></span><br><span class="line"><span class="comment"># A typical function definition looks like:</span></span><br><span class="line"><span class="comment"># - name: ...</span></span><br><span class="line"><span class="comment">#   from: class</span></span><br><span class="line"><span class="comment">#   class: ...</span></span><br><span class="line"><span class="comment">#   constructor: ...</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># Catalogs</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Define catalogs here.</span></span><br><span class="line"></span><br><span class="line"><span class="attr">catalogs:</span> <span class="string">[]</span> <span class="comment"># empty list</span></span><br><span class="line"><span class="comment"># A typical catalog definition looks like:</span></span><br><span class="line"><span class="comment">#  - name: myhive</span></span><br><span class="line"><span class="comment">#    type: hive</span></span><br><span class="line"><span class="comment">#    hive-conf-dir: /opt/hive_conf/</span></span><br><span class="line"><span class="comment">#    default-database: ...</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># Modules</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Define modules here.</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#modules: # note the following modules will be of the order they are specified</span></span><br><span class="line"><span class="comment">#  - name: core</span></span><br><span class="line"><span class="comment">#    type: core</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># Execution properties</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Properties that change the fundamental execution behavior of a table program.</span></span><br><span class="line"></span><br><span class="line"><span class="attr">execution:</span></span><br><span class="line">  <span class="comment"># select the implementation responsible for planning table programs</span></span><br><span class="line">  <span class="comment"># possible values are 'blink' (used by default) or 'old'</span></span><br><span class="line"><span class="attr">  planner:</span> <span class="string">blink</span></span><br><span class="line">  <span class="comment"># 'batch' or 'streaming' execution</span></span><br><span class="line"><span class="attr">  type:</span> <span class="string">streaming</span></span><br><span class="line">  <span class="comment"># allow 'event-time' or only 'processing-time' in sources</span></span><br><span class="line"><span class="attr">  time-characteristic:</span> <span class="string">event-time</span></span><br><span class="line">  <span class="comment"># interval in ms for emitting periodic watermarks</span></span><br><span class="line"><span class="attr">  periodic-watermarks-interval:</span> <span class="number">200</span></span><br><span class="line">  <span class="comment"># 'changelog' or 'table' presentation of results</span></span><br><span class="line"><span class="attr">  result-mode:</span> <span class="string">table</span></span><br><span class="line">  <span class="comment"># maximum number of maintained rows in 'table' presentation of results</span></span><br><span class="line"><span class="attr">  max-table-result-rows:</span> <span class="number">1000000</span></span><br><span class="line">  <span class="comment"># parallelism of the program</span></span><br><span class="line"><span class="attr">  parallelism:</span> <span class="number">1</span></span><br><span class="line">  <span class="comment"># maximum parallelism</span></span><br><span class="line"><span class="attr">  max-parallelism:</span> <span class="number">128</span></span><br><span class="line">  <span class="comment"># minimum idle state retention in ms</span></span><br><span class="line"><span class="attr">  min-idle-state-retention:</span> <span class="number">0</span></span><br><span class="line">  <span class="comment"># maximum idle state retention in ms</span></span><br><span class="line"><span class="attr">  max-idle-state-retention:</span> <span class="number">0</span></span><br><span class="line">  <span class="comment"># current catalog ('default_catalog' by default)</span></span><br><span class="line"><span class="attr">  current-catalog:</span> <span class="string">default_catalog</span></span><br><span class="line">  <span class="comment"># current database of the current catalog (default database of the catalog by default)</span></span><br><span class="line"><span class="attr">  current-database:</span> <span class="string">default_database</span></span><br><span class="line">  <span class="comment"># controls how table programs are restarted in case of a failures</span></span><br><span class="line"><span class="attr">  restart-strategy:</span></span><br><span class="line">    <span class="comment"># strategy type</span></span><br><span class="line">    <span class="comment"># possible values are "fixed-delay", "failure-rate", "none", or "fallback" (default)</span></span><br><span class="line"><span class="attr">    type:</span> <span class="string">fallback</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># Configuration options</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Configuration options for adjusting and tuning table programs.</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># A full list of options and their default values can be found</span></span><br><span class="line"><span class="comment"># on the dedicated "Configuration" web page.</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># A configuration can look like:</span></span><br><span class="line"><span class="comment"># configuration:</span></span><br><span class="line"><span class="comment">#   table.exec.spill-compression.enabled: true</span></span><br><span class="line"><span class="comment">#   table.exec.spill-compression.block-size: 128kb</span></span><br><span class="line"><span class="comment">#   table.optimizer.join-reorder-enabled: true</span></span><br><span class="line"></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"><span class="comment"># Deployment properties</span></span><br><span class="line"><span class="comment">#==============================================================================</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Properties that describe the cluster to which table programs are submitted to.</span></span><br><span class="line"></span><br><span class="line"><span class="attr">deployment:</span></span><br><span class="line">  <span class="comment"># general cluster communication timeout in ms</span></span><br><span class="line"><span class="attr">  response-timeout:</span> <span class="number">5000</span></span><br><span class="line">  <span class="comment"># (optional) address from cluster to gateway</span></span><br><span class="line"><span class="attr">  gateway-address:</span> <span class="string">""</span></span><br><span class="line">  <span class="comment"># (optional) port from cluster to gateway</span></span><br><span class="line"><span class="attr">  gateway-port:</span> <span class="number">0</span></span><br></pre></td></tr></table></figure>
+<h3 id="运行sql-client"><a href="#运行sql-client" class="headerlink" title="运行sql-client"></a>运行sql-client</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bin/sql-client.sh embedded -d sql-client-defaults.yaml</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">Flink SQL&gt; show tables;</span><br><span class="line">MyTableSource</span><br><span class="line">TableSink</span><br></pre></td></tr></table></figure>
+<p>就可以通过各种sql运行了。</p>
+<h3 id="flink-sql-大状态的清理"><a href="#flink-sql-大状态的清理" class="headerlink" title="flink sql 大状态的清理"></a>flink sql 大状态的清理</h3><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">min-idle-state-retention</span><br><span class="line">max-idle-state-retention</span><br></pre></td></tr></table></figure>
+<p>这里需要注意一点，默认情况下 StreamQueryConfig 的设置并不是全局的。因此当设置了清理周期以后，需要在 StreamTableEnvironment 类调用 toAppendStream 或 toRetractStream 将 Table 转为 DataStream 时，显式传入这个 QueryConfig 对象作为参数，才可以令该功能生效。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">DataStream&lt;Row&gt; stream = tableEnv.toAppendStream(result, Row.class, qConfig);</span><br></pre></td></tr></table></figure>
+<h3 id="直接提交sql，不等待提示"><a href="#直接提交sql，不等待提示" class="headerlink" title="直接提交sql，不等待提示"></a>直接提交sql，不等待提示</h3><p>在CLI会话中设置的属性(例如使用set命令)具有最高的优先级:<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">CLI commands &gt; session environment file &gt; defaults environment file</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">./bin/sql-client.sh embedded -m 10.99.212.160:8081 -e /usr/local/flink/flink-1.10.0-sql/sql-client-defaults.yaml -u &quot;insert into TableSink select * from MyTableSource;&quot;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">[root@sq-hdp-master-1 flink-1.10.0-sql]# ./bin/sql-client.sh embedded -m 10.104.155.82:8081 -e /usr/local/flink/flink-1.10.0-sql/sql-client-defaults.yaml -u &quot;insert into TableSink select * from MyTableSource;&quot;</span><br><span class="line">No default environment specified.</span><br><span class="line">Searching for &apos;/usr/local/flink/flink-1.10.0-sql/conf/sql-client-defaults.yaml&apos;...found.</span><br><span class="line">Reading default environment from: file:/usr/local/flink/flink-1.10.0-sql/conf/sql-client-defaults.yaml</span><br><span class="line">Reading session environment from: file:/usr/local/flink/flink-1.10.0-sql/sql-client-defaults.yaml</span><br><span class="line"></span><br><span class="line">[INFO] Executing the following statement:</span><br><span class="line">insert into TableSink select * from MyTableSource;</span><br><span class="line">[INFO] Submitting SQL update statement to the cluster...</span><br><span class="line">[INFO] Table update statement has been successfully submitted to the cluster:</span><br><span class="line">Job ID: 420bbc382d32f473539eaa9703f3667e</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">Shutting down the session...</span><br><span class="line">done.</span><br></pre></td></tr></table></figure>
+<h3 id="修改flink-sql-client达到可以提交到远程集群"><a href="#修改flink-sql-client达到可以提交到远程集群" class="headerlink" title="修改flink-sql-client达到可以提交到远程集群"></a>修改flink-sql-client达到可以提交到远程集群</h3><p>CliOptionsParser.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> CliOptions <span class="title">parseEmbeddedModeClient</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">try</span> &#123;</span><br><span class="line">		DefaultParser parser = <span class="keyword">new</span> DefaultParser();</span><br><span class="line">		CommandLine line = parser.parse(EMBEDDED_MODE_CLIENT_OPTIONS, args, <span class="keyword">true</span>);</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> CliOptions(</span><br><span class="line">			line.hasOption(CliOptionsParser.OPTION_HELP.getOpt()),</span><br><span class="line">			checkSessionId(line),</span><br><span class="line">			checkUrl(line, CliOptionsParser.OPTION_ENVIRONMENT),</span><br><span class="line">			checkUrl(line, CliOptionsParser.OPTION_DEFAULTS),</span><br><span class="line">			checkUrls(line, CliOptionsParser.OPTION_JAR),</span><br><span class="line">			checkUrls(line, CliOptionsParser.OPTION_LIBRARY),</span><br><span class="line">			line.getOptionValue(CliOptionsParser.OPTION_UPDATE.getOpt()),</span><br><span class="line">			<span class="comment">// 新增jobManager和port的读取</span></span><br><span class="line">			line.getOptionValue(CliOptionsParser.OPTION_JOBMANAGER_AND_PORT.getOpt())</span><br><span class="line">		);</span><br><span class="line">	&#125; <span class="keyword">catch</span> (ParseException e) &#123;</span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> SqlClientException(e.getMessage());</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>CliOptions.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">private</span> String jobmanagerAndPort; <span class="comment">// 新增属性</span></span><br><span class="line"></span><br><span class="line">补充对应的构造函数和get set方法。</span><br></pre></td></tr></table></figure>
+<p>SqlClient.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">start</span><span class="params">()</span> </span>&#123;</span><br><span class="line"></span><br><span class="line">.....</span><br><span class="line"></span><br><span class="line">            <span class="comment">// 修改executor的构造方法</span></span><br><span class="line">            <span class="keyword">final</span> Executor executor;</span><br><span class="line">			<span class="keyword">if</span> (StringUtils.isBlank(<span class="keyword">this</span>.options.getJobmanagerAndPort())) &#123;</span><br><span class="line">				executor = <span class="keyword">new</span> LocalExecutor(<span class="keyword">this</span>.options.getDefaults(), jars, libDirs);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				executor = <span class="keyword">new</span> LocalExecutor(<span class="keyword">this</span>.options.getDefaults(), jars, libDirs, <span class="keyword">this</span>.options.getJobmanagerAndPort());</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">....</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>LocalExecutor.java</p>
+<p>window调试需要在系统变量增加FLINK_CONF_DIR，重启电脑。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line">新增构造函数</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">LocalExecutor</span><span class="params">(URL defaultEnv, List&lt;URL&gt; jars, List&lt;URL&gt; libraries, String jobmanagerAndPort)</span> </span>&#123;</span><br><span class="line">		<span class="comment">// discover configuration</span></span><br><span class="line">		<span class="keyword">final</span> String flinkConfigDir;</span><br><span class="line">		<span class="keyword">try</span> &#123;</span><br><span class="line">			<span class="comment">// find the configuration directory</span></span><br><span class="line">			flinkConfigDir = CliFrontend.getConfigurationDirectoryFromEnv();</span><br><span class="line"></span><br><span class="line">			<span class="comment">// load the global configuration</span></span><br><span class="line">			<span class="keyword">this</span>.flinkConfig = GlobalConfiguration.loadConfiguration(flinkConfigDir);</span><br><span class="line">			InetSocketAddress address = NetUtils.parseHostPortAddress(jobmanagerAndPort);</span><br><span class="line">			<span class="comment">// 主要是在配置文件覆盖jobManager 参数</span></span><br><span class="line">			<span class="keyword">this</span>.flinkConfig.setString(JobManagerOptions.ADDRESS, address.getHostString());</span><br><span class="line">			<span class="keyword">this</span>.flinkConfig.setInteger(JobManagerOptions.PORT, address.getPort());</span><br><span class="line">			<span class="comment">// initialize default file system</span></span><br><span class="line">			FileSystem.initialize(flinkConfig, PluginUtils.createPluginManagerFromRootFolder(flinkConfig));</span><br><span class="line"></span><br><span class="line">			<span class="comment">// load command lines for deployment</span></span><br><span class="line">			<span class="keyword">this</span>.commandLines = CliFrontend.loadCustomCommandLines(flinkConfig, flinkConfigDir);</span><br><span class="line">			<span class="keyword">this</span>.commandLineOptions = collectCommandLineOptions(commandLines);</span><br><span class="line">		&#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> SqlClientException(<span class="string">"Could not load Flink configuration."</span>, e);</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// try to find a default environment</span></span><br><span class="line">		<span class="keyword">if</span> (defaultEnv == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">final</span> String defaultFilePath = flinkConfigDir + <span class="string">"/"</span> + DEFAULT_ENV_FILE;</span><br><span class="line">			System.out.println(<span class="string">"No default environment specified."</span>);</span><br><span class="line">			System.out.print(<span class="string">"Searching for '"</span> + defaultFilePath + <span class="string">"'..."</span>);</span><br><span class="line">			<span class="keyword">final</span> File file = <span class="keyword">new</span> File(defaultFilePath);</span><br><span class="line">			<span class="keyword">if</span> (file.exists()) &#123;</span><br><span class="line">				System.out.println(<span class="string">"found."</span>);</span><br><span class="line">				<span class="keyword">try</span> &#123;</span><br><span class="line">					defaultEnv = Path.fromLocalFile(file).toUri().toURL();</span><br><span class="line">				&#125; <span class="keyword">catch</span> (MalformedURLException e) &#123;</span><br><span class="line">					<span class="keyword">throw</span> <span class="keyword">new</span> SqlClientException(e);</span><br><span class="line">				&#125;</span><br><span class="line">				LOG.info(<span class="string">"Using default environment file: &#123;&#125;"</span>, defaultEnv);</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				System.out.println(<span class="string">"not found."</span>);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="comment">// inform user</span></span><br><span class="line">		<span class="keyword">if</span> (defaultEnv != <span class="keyword">null</span>) &#123;</span><br><span class="line">			System.out.println(<span class="string">"Reading default environment from: "</span> + defaultEnv);</span><br><span class="line">			<span class="keyword">try</span> &#123;</span><br><span class="line">				defaultEnvironment = Environment.parse(defaultEnv);</span><br><span class="line">			&#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> SqlClientException(<span class="string">"Could not read default environment file at: "</span> + defaultEnv, e);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">			defaultEnvironment = <span class="keyword">new</span> Environment();</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">this</span>.contextMap = <span class="keyword">new</span> ConcurrentHashMap&lt;&gt;();</span><br><span class="line"></span><br><span class="line">		<span class="comment">// discover dependencies</span></span><br><span class="line">		dependencies = discoverDependencies(jars, libraries);</span><br><span class="line"></span><br><span class="line">		<span class="comment">// prepare result store</span></span><br><span class="line">		resultStore = <span class="keyword">new</span> ResultStore(flinkConfig);</span><br><span class="line"></span><br><span class="line">		clusterClientServiceLoader = <span class="keyword">new</span> DefaultClusterClientServiceLoader();</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>然后打包flink-sql-client_2.11-1.10-SNAPSHOT.jar，替换opt下的该文件。搞定！<br>就可以通过-m提交作业。</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://cloud.tencent.com/developer/article/1452854" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1452854</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/04/26/clickhouse指标上报prometheus对接grafana/" rel="next" title="clickhouse指标上报prometheus对接grafana">
+                <i class="fa fa-chevron-left"></i> clickhouse指标上报prometheus对接grafana
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/05/09/Kubernetes-日志采集-EFK/" rel="prev" title="Kubernetes 日志采集 EFK">
+                Kubernetes 日志采集 EFK <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#集群构建依赖"><span class="nav-number">1.</span> <span class="nav-text">集群构建依赖</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#尝试"><span class="nav-number">2.</span> <span class="nav-text">尝试</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#运行sql-client"><span class="nav-number">3.</span> <span class="nav-text">运行sql-client</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#flink-sql-大状态的清理"><span class="nav-number">4.</span> <span class="nav-text">flink sql 大状态的清理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#直接提交sql，不等待提示"><span class="nav-number">5.</span> <span class="nav-text">直接提交sql，不等待提示</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#修改flink-sql-client达到可以提交到远程集群"><span class="nav-number">6.</span> <span class="nav-text">修改flink-sql-client达到可以提交到远程集群</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

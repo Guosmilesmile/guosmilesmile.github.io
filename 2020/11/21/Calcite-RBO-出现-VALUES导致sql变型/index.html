@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景在使用calcite的时候，会遇到莫名奇妙的时候，sql在经过RBO优化后整个sql变形了，出现了如下内容 1FROM (VALUES  (NULL, NULL, NULL, NULL, NULL, NULL)) AS `t` ( `DATE_CD`, `IDX_VAL`, `IDX_VALUE`, `test`, `IDX_ID`) 原因明确出现该场景的主要原因是sql出现了false的过滤">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Calcite RBO 出现 VALUES导致sql变型">
+<meta property="og:url" content="http://yoursite.com/2020/11/21/Calcite-RBO-出现-VALUES导致sql变型/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景在使用calcite的时候，会遇到莫名奇妙的时候，sql在经过RBO优化后整个sql变形了，出现了如下内容 1FROM (VALUES  (NULL, NULL, NULL, NULL, NULL, NULL)) AS `t` ( `DATE_CD`, `IDX_VAL`, `IDX_VALUE`, `test`, `IDX_ID`) 原因明确出现该场景的主要原因是sql出现了false的过滤">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2020-11-28T05:10:20.523Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Calcite RBO 出现 VALUES导致sql变型">
+<meta name="twitter:description" content="背景在使用calcite的时候，会遇到莫名奇妙的时候，sql在经过RBO优化后整个sql变形了，出现了如下内容 1FROM (VALUES  (NULL, NULL, NULL, NULL, NULL, NULL)) AS `t` ( `DATE_CD`, `IDX_VAL`, `IDX_VALUE`, `test`, `IDX_ID`) 原因明确出现该场景的主要原因是sql出现了false的过滤">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/11/21/Calcite-RBO-出现-VALUES导致sql变型/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Calcite RBO 出现 VALUES导致sql变型 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/11/21/Calcite-RBO-出现-VALUES导致sql变型/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Calcite RBO 出现 VALUES导致sql变型
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-11-21 16:22:21" itemprop="dateCreated datePublished" datetime="2020-11-21T16:22:21+08:00">2020-11-21</time>
+            
+
+            
+              
+
+              
+                
+                <span class="post-meta-divider">|</span>
+                
+
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">更新于</span>
+                
+                <time title="修改时间：2020-11-28 13:10:20" itemprop="dateModified" datetime="2020-11-28T13:10:20+08:00">2020-11-28</time>
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Calcite/" itemprop="url" rel="index"><span itemprop="name">Calcite</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>在使用calcite的时候，会遇到莫名奇妙的时候，sql在经过RBO优化后整个sql变形了，出现了如下内容</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">FROM (<span class="keyword">VALUES</span>  (<span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>, <span class="literal">NULL</span>)) <span class="keyword">AS</span> <span class="string">`t`</span> ( <span class="string">`DATE_CD`</span>, <span class="string">`IDX_VAL`</span>, <span class="string">`IDX_VALUE`</span>, <span class="string">`test`</span>, <span class="string">`IDX_ID`</span>)</span><br></pre></td></tr></table></figure>
+<h2 id="原因"><a href="#原因" class="headerlink" title="原因"></a>原因</h2><p>明确出现该场景的主要原因是sql出现了false的过滤条件，经过优化的时候calcite将该场景转为VALUES</p>
+<h2 id="案发现场"><a href="#案发现场" class="headerlink" title="案发现场"></a>案发现场</h2><h3 id="sql"><a href="#sql" class="headerlink" title="sql"></a>sql</h3><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">select</span> DATE_CD <span class="keyword">from</span> tempTable <span class="keyword">where</span> IDX_ID =<span class="string">'10'</span> <span class="keyword">and</span> IDX_ID =<span class="string">'20'</span></span><br></pre></td></tr></table></figure>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> DATE_CD <span class="keyword">from</span> tempTable <span class="keyword">where</span> <span class="number">1</span>=<span class="number">2</span></span><br></pre></td></tr></table></figure>
+<h2 id="场景一"><a href="#场景一" class="headerlink" title="场景一"></a>场景一</h2><p>在RBO中使用CoreRules.FILTER_REDUCE_EXPRESSIONS</p>
+<p>直接看源码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMatch</span><span class="params">(RelOptRuleCall call)</span> </span>&#123;</span><br><span class="line">     <span class="keyword">final</span> Filter filter = call.rel(<span class="number">0</span>);</span><br><span class="line">     <span class="keyword">final</span> List&lt;RexNode&gt; expList =</span><br><span class="line">         Lists.newArrayList(filter.getCondition());</span><br><span class="line">     RexNode newConditionExp;</span><br><span class="line">     <span class="keyword">boolean</span> reduced;</span><br><span class="line">     <span class="keyword">final</span> RelMetadataQuery mq = call.getMetadataQuery();</span><br><span class="line">     <span class="keyword">final</span> RelOptPredicateList predicates =</span><br><span class="line">         mq.getPulledUpPredicates(filter.getInput());</span><br><span class="line">     <span class="keyword">if</span> (reduceExpressions(filter, expList, predicates, <span class="keyword">true</span>,</span><br><span class="line">         matchNullability)) &#123;</span><br><span class="line">       <span class="keyword">assert</span> expList.size() == <span class="number">1</span>;</span><br><span class="line">       newConditionExp = expList.get(<span class="number">0</span>);</span><br><span class="line">       reduced = <span class="keyword">true</span>;</span><br><span class="line">     &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">       <span class="comment">// No reduction, but let's still test the original</span></span><br><span class="line">       <span class="comment">// predicate to see if it was already a constant,</span></span><br><span class="line">       <span class="comment">// in which case we don't need any runtime decision</span></span><br><span class="line">       <span class="comment">// about filtering.</span></span><br><span class="line">       newConditionExp = filter.getCondition();</span><br><span class="line">       reduced = <span class="keyword">false</span>;</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     <span class="comment">// Even if no reduction, let's still test the original</span></span><br><span class="line">     <span class="comment">// predicate to see if it was already a constant,</span></span><br><span class="line">     <span class="comment">// in which case we don't need any runtime decision</span></span><br><span class="line">     <span class="comment">// about filtering.</span></span><br><span class="line">     <span class="keyword">if</span> (newConditionExp.isAlwaysTrue()) &#123;</span><br><span class="line">       call.transformTo(</span><br><span class="line">           filter.getInput());</span><br><span class="line">     &#125; <span class="keyword">else</span> <span class="keyword">if</span> (newConditionExp <span class="keyword">instanceof</span> RexLiteral</span><br><span class="line">         || RexUtil.isNullLiteral(newConditionExp, <span class="keyword">true</span>)) &#123;</span><br><span class="line">       call.transformTo(createEmptyRelOrEquivalent(call, filter));</span><br><span class="line">     &#125; <span class="keyword">else</span> <span class="keyword">if</span> (reduced) &#123;</span><br><span class="line">       call.transformTo(call.builder()</span><br><span class="line">           .push(filter.getInput())</span><br><span class="line">           .filter(newConditionExp).build());</span><br><span class="line">     &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">       <span class="keyword">if</span> (newConditionExp <span class="keyword">instanceof</span> RexCall) &#123;</span><br><span class="line">         <span class="keyword">boolean</span> reverse = newConditionExp.getKind() == SqlKind.NOT;</span><br><span class="line">         <span class="keyword">if</span> (reverse) &#123;</span><br><span class="line">           newConditionExp = ((RexCall) newConditionExp).getOperands().get(<span class="number">0</span>);</span><br><span class="line">         &#125;</span><br><span class="line">         reduceNotNullableFilter(call, filter, newConditionExp, reverse);</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span>;</span><br><span class="line">     &#125;</span><br><span class="line"></span><br><span class="line">     <span class="comment">// New plan is absolutely better than old plan.</span></span><br><span class="line">     call.getPlanner().prune(filter);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>分析下具体的内容</p>
+<p>这段代码会将获取到的所有condition经过下面的方法进行reduce，赋值给newConditionExp</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">reduceExpressions(filter, expList, predicates, true,</span><br><span class="line">          matchNullability)</span><br></pre></td></tr></table></figure>
+<p>如果newConditionExp一直是true，就会直接prune这个filter，将input暴露出去<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">call.transformTo(</span><br><span class="line">           filter.getInput());</span><br></pre></td></tr></table></figure></p>
+<p>如果有reduce就会将新的filter替换旧的filter</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">call.transformTo(call.builder()</span><br><span class="line">          .push(filter.getInput())</span><br><span class="line">          .filter(newConditionExp).build());</span><br></pre></td></tr></table></figure>
+<p>如果reduce后是只剩下一个数值或者null或者false，就会调用<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">call.transformTo(createEmptyRelOrEquivalent(call, filter));</span><br></pre></td></tr></table></figure></p>
+<p>createEmptyRelOrEquivalent方法的内容很简单,就是构建上面的values</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     * For static schema systems, a filter that is always false or null can be</span></span><br><span class="line"><span class="comment">     * replaced by a values operator that produces no rows, as the schema</span></span><br><span class="line"><span class="comment">     * information can just be taken from the input Rel. In dynamic schema</span></span><br><span class="line"><span class="comment">     * environments, the filter might have an unknown input type, in these cases</span></span><br><span class="line"><span class="comment">     * they must define a system specific alternative to a Values operator, such</span></span><br><span class="line"><span class="comment">     * as inserting a limit 0 instead of a filter on top of the original input.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;The default implementation of this method is to call</span></span><br><span class="line"><span class="comment">     * &#123;<span class="doctag">@link</span> RelBuilder#empty&#125;, which for the static schema will be optimized</span></span><br><span class="line"><span class="comment">     * to an empty</span></span><br><span class="line"><span class="comment">     * &#123;<span class="doctag">@link</span> org.apache.calcite.rel.core.Values&#125;.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> input rel to replace, assumes caller has already determined</span></span><br><span class="line"><span class="comment">     *              equivalence to Values operation for 0 records or a</span></span><br><span class="line"><span class="comment">     *              false filter.</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> equivalent but less expensive replacement rel</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">protected</span> RelNode <span class="title">createEmptyRelOrEquivalent</span><span class="params">(RelOptRuleCall call, Filter input)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> call.builder().push(input).empty().build();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="解决方法"><a href="#解决方法" class="headerlink" title="解决方法"></a>解决方法</h3><p>重写一个rule，将出现false就调用createEmptyRelOrEquivalent的地方去掉</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span> <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onMatch</span><span class="params">(RelOptRuleCall call)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">final</span> Filter filter = call.rel(<span class="number">0</span>);</span><br><span class="line">       <span class="keyword">final</span> List&lt;RexNode&gt; expList =</span><br><span class="line">               Lists.newArrayList(filter.getCondition());</span><br><span class="line">       RexNode newConditionExp;</span><br><span class="line">       <span class="keyword">boolean</span> reduced;</span><br><span class="line">       <span class="keyword">final</span> RelMetadataQuery mq = call.getMetadataQuery();</span><br><span class="line">       <span class="keyword">final</span> RelOptPredicateList predicates =</span><br><span class="line">               mq.getPulledUpPredicates(filter.getInput());</span><br><span class="line">       <span class="keyword">if</span> (reduceExpressions(filter, expList, predicates, <span class="keyword">true</span>,</span><br><span class="line">               matchNullability)) &#123;</span><br><span class="line">           <span class="keyword">assert</span> expList.size() == <span class="number">1</span>;</span><br><span class="line">           newConditionExp = expList.get(<span class="number">0</span>);</span><br><span class="line">           reduced = <span class="keyword">true</span>;</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">           <span class="comment">// No reduction, but let's still test the original</span></span><br><span class="line">           <span class="comment">// predicate to see if it was already a constant,</span></span><br><span class="line">           <span class="comment">// in which case we don't need any runtime decision</span></span><br><span class="line">           <span class="comment">// about filtering.</span></span><br><span class="line">           newConditionExp = filter.getCondition();</span><br><span class="line">           reduced = <span class="keyword">false</span>;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       <span class="comment">// Even if no reduction, let's still test the original</span></span><br><span class="line">       <span class="comment">// predicate to see if it was already a constant,</span></span><br><span class="line">       <span class="comment">// in which case we don't need any runtime decision</span></span><br><span class="line">       <span class="comment">// about filtering.</span></span><br><span class="line">       <span class="keyword">if</span> (newConditionExp.isAlwaysTrue()) &#123;</span><br><span class="line">           call.transformTo(</span><br><span class="line">                   filter.getInput());</span><br><span class="line">       &#125; <span class="keyword">else</span> <span class="keyword">if</span> (reduced) &#123;</span><br><span class="line">           RelNode build = call.builder()</span><br><span class="line">                   .push(filter.getInput())</span><br><span class="line">                   .filter(newConditionExp).build();</span><br><span class="line">           call.transformTo(build);</span><br><span class="line">       &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">           <span class="keyword">if</span> (newConditionExp <span class="keyword">instanceof</span> RexCall) &#123;</span><br><span class="line">               <span class="keyword">boolean</span> reverse = newConditionExp.getKind() == SqlKind.NOT;</span><br><span class="line">               <span class="keyword">if</span> (reverse) &#123;</span><br><span class="line">                   newConditionExp = ((RexCall) newConditionExp).getOperands().get(<span class="number">0</span>);</span><br><span class="line">               &#125;</span><br><span class="line">               reduceNotNullableFilter(call, filter, newConditionExp, reverse);</span><br><span class="line">           &#125;</span><br><span class="line">           <span class="keyword">return</span>;</span><br><span class="line">       &#125;</span><br><span class="line"></span><br><span class="line">       <span class="comment">// New plan is absolutely better than old plan.</span></span><br><span class="line">       call.getPlanner().prune(filter);</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>返回的sql会变成</p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">`DATE_CD`</span></span><br><span class="line"><span class="keyword">FROM</span> <span class="string">`tempTable`</span></span><br><span class="line"><span class="keyword">WHERE</span> <span class="literal">FALSE</span></span><br></pre></td></tr></table></figure>
+<h2 id="场景二"><a href="#场景二" class="headerlink" title="场景二"></a>场景二</h2><p>自定义Rule中使用RelBuilder.filter方法</p>
+<p>有时候我们会自己使用RelBuilder来构建sql，进行RBO。一旦我们filter塞进去两个对立的条件，就会出现empty的调用。</p>
+<p>RelBuilder源码如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">    * Creates a &#123;<span class="doctag">@link</span> Filter&#125; of a list of correlation variables</span></span><br><span class="line"><span class="comment">    * and a list of predicates.</span></span><br><span class="line"><span class="comment">    *</span></span><br><span class="line"><span class="comment">    * &lt;p&gt;The predicates are combined using AND,</span></span><br><span class="line"><span class="comment">    * and optimized in a similar way to the &#123;<span class="doctag">@link</span> #and&#125; method.</span></span><br><span class="line"><span class="comment">    * If the result is TRUE no filter is created.</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">   <span class="function"><span class="keyword">public</span> RelBuilder <span class="title">filter</span><span class="params">(Iterable&lt;CorrelationId&gt; variablesSet,</span></span></span><br><span class="line"><span class="function"><span class="params">                            Iterable&lt;? extends RexNode&gt; predicates)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">final</span> RexNode simplifiedPredicates =</span><br><span class="line">               simplifier.simplifyFilterPredicates(predicates);</span><br><span class="line"></span><br><span class="line">       <span class="keyword">if</span> (simplifiedPredicates == <span class="keyword">null</span>) &#123;</span><br><span class="line">           <span class="keyword">return</span> empty();</span><br><span class="line">       &#125;</span><br><span class="line">      </span><br><span class="line">       <span class="keyword">if</span> (!simplifiedPredicates.isAlwaysTrue()) &#123;</span><br><span class="line">           <span class="keyword">final</span> Frame frame = stack.pop();</span><br><span class="line">           <span class="keyword">final</span> RelNode filter =</span><br><span class="line">                   struct.filterFactory.createFilter(frame.rel,</span><br><span class="line">                           simplifiedPredicates, ImmutableSet.copyOf(variablesSet));</span><br><span class="line">           stack.push(<span class="keyword">new</span> Frame(filter, frame.fields));</span><br><span class="line">       &#125;</span><br><span class="line">       <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+<p>进一步看下 simplifier.simplifyFilterPredicates.</p>
+<p>Rimplifier<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> RexNode <span class="title">simplifyFilterPredicates</span><span class="params">(Iterable&lt;? extends RexNode&gt; predicates)</span> </span>&#123;</span><br><span class="line">   <span class="keyword">final</span> RexNode simplifiedAnds =</span><br><span class="line">       withPredicateElimination(Bug.CALCITE_2401_FIXED)</span><br><span class="line">           .simplifyUnknownAsFalse(</span><br><span class="line">               RexUtil.composeConjunction(rexBuilder, predicates));</span><br><span class="line">   <span class="keyword">if</span> (simplifiedAnds.isAlwaysFalse()) &#123;</span><br><span class="line">     <span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">   &#125;</span><br><span class="line"></span><br><span class="line">   <span class="comment">// Remove cast of BOOLEAN NOT NULL to BOOLEAN or vice versa. Filter accepts</span></span><br><span class="line">   <span class="comment">// nullable and not-nullable conditions, but a CAST might get in the way of</span></span><br><span class="line">   <span class="comment">// other rewrites.</span></span><br><span class="line">   <span class="keyword">return</span> removeNullabilityCast(simplifiedAnds);</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure></p>
+<p>进行条件的合并是在这个方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">RexUtil.composeConjunction(rexBuilder, predicates)</span><br></pre></td></tr></table></figure>
+<p>从Rimplifier.simplifyand 可以看出，从composeConjunction得到false的结果会直接返回null，返回的null会触发RelBuilder调用empty.</p>
+<h3 id="解决方法-1"><a href="#解决方法-1" class="headerlink" title="解决方法"></a>解决方法</h3><p>重写RelBuilder，直接调用RexUtil.composeConjunction(cluster.getRexBuilder(), predicates)即可。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">   * Creates a &#123;<span class="doctag">@link</span> Filter&#125; of a list of correlation variables</span></span><br><span class="line"><span class="comment">   * and a list of predicates.</span></span><br><span class="line"><span class="comment">   *</span></span><br><span class="line"><span class="comment">   * &lt;p&gt;The predicates are combined using AND,</span></span><br><span class="line"><span class="comment">   * and optimized in a similar way to the &#123;<span class="doctag">@link</span> #and&#125; method.</span></span><br><span class="line"><span class="comment">   * If the result is TRUE no filter is created.</span></span><br><span class="line"><span class="comment">   */</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> RelBuilder <span class="title">filter</span><span class="params">(Iterable&lt;CorrelationId&gt; variablesSet,</span></span></span><br><span class="line"><span class="function"><span class="params">                           Iterable&lt;? extends RexNode&gt; predicates)</span> </span>&#123;</span><br><span class="line">      RexNode simplifiedPredicates =</span><br><span class="line">              simplifier.simplifyFilterPredicates(predicates);</span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (simplifiedPredicates == <span class="keyword">null</span>) &#123;</span><br><span class="line">           simplifiedPredicates = RexUtil.composeConjunction(cluster.getRexBuilder(), predicates);</span><br><span class="line">          <span class="comment">//return empty();</span></span><br><span class="line">      &#125;</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">      <span class="keyword">if</span> (!simplifiedPredicates.isAlwaysTrue()) &#123;</span><br><span class="line">          <span class="keyword">final</span> Frame frame = stack.pop();</span><br><span class="line">          <span class="keyword">final</span> RelNode filter =</span><br><span class="line">                  struct.filterFactory.createFilter(frame.rel,</span><br><span class="line">                          simplifiedPredicates, ImmutableSet.copyOf(variablesSet));</span><br><span class="line">          stack.push(<span class="keyword">new</span> Frame(filter, frame.fields));</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/10/31/SqlNode-toString源码解析以及SqlOrderBy无法根据方言自适应的bug/" rel="next" title="SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug">
+                <i class="fa fa-chevron-left"></i> SqlNode toString源码解析以及SqlOrderBy无法根据方言自适应的bug
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/05/02/Flink-实战采坑记之-Kryo-序列化/" rel="prev" title="Flink 实战采坑记之 Kryo 序列化">
+                Flink 实战采坑记之 Kryo 序列化 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#原因"><span class="nav-number">2.</span> <span class="nav-text">原因</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#案发现场"><span class="nav-number">3.</span> <span class="nav-text">案发现场</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#sql"><span class="nav-number">3.1.</span> <span class="nav-text">sql</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#场景一"><span class="nav-number">4.</span> <span class="nav-text">场景一</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#解决方法"><span class="nav-number">4.1.</span> <span class="nav-text">解决方法</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#场景二"><span class="nav-number">5.</span> <span class="nav-text">场景二</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#解决方法-1"><span class="nav-number">5.1.</span> <span class="nav-text">解决方法</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="MergeTree一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个">
+<meta property="og:type" content="article">
+<meta property="og:title" content="clickhouse MergeTree族原理和使用场景">
+<meta property="og:url" content="http://yoursite.com/2019/03/18/clickhouse-mergeTree/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="MergeTree一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2019-03-18T15:11:46.078Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="clickhouse MergeTree族原理和使用场景">
+<meta name="twitter:description" content="MergeTree一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2019/03/18/clickhouse-mergeTree/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>clickhouse MergeTree族原理和使用场景 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2019/03/18/clickhouse-mergeTree/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">clickhouse MergeTree族原理和使用场景
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2019-03-18 22:26:19 / 修改时间：23:11:46" itemprop="dateCreated datePublished" datetime="2019-03-18T22:26:19+08:00">2019-03-18</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/clickhouse/" itemprop="url" rel="index"><span itemprop="name">clickhouse</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h3 id="MergeTree"><a href="#MergeTree" class="headerlink" title="MergeTree"></a>MergeTree</h3><p>一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个大的排好序的part。</p>
+<p>换句话说，整个这个合并排序的过程是在数据插入表的时候进行的。这个merge会导致这个表总是由少量的排序好的part构成，而且这个merge本身并没有做特别多的工作。<br> 在插入数据的过程中，属于不同的month的数据会被分割成不同的part，这些归属于不同的month的part是永远不会merge到一起的。新版本支持按天分表，partition by 一个指定的Date字段。<br> 向 MergeTree 表中插入数据时，引擎会首先对新数据执行递增排序而保存索引块；其后，数据索引块之间又会进一步合并，以减少总体索引块数量。 因此，合并过程本身并无过多排序工作。<br> 索引块合并时设有体积上限，以避免索引块合并产生庞大的新索引块</p>
+<p>对于每一个part，会生成一个索引文件。这个索引文件存储了表里面每一个索引块里数据的主键的value值，换句话说，这是个对有序数据的小型索引。</p>
+<p>  对列来说，在每一个索引块里的数据也写入了标记，从而让数据可以在明确的数值范围内被查找到。</p>
+<p>一个mergetree类型的表必须有一个包含date类型的列（类型：Date），这个表是由很多个part构成。每一个part按照主键进行了排序，除此之外，每一个part含有一个最小日期和最大日期。当插入数据的时候，会创建一个新的sort part，同时会在后台周期性的进行merge的过程，当merge的时候，很多个part会被选中，通常是最小的一些part，然后merge成为一个大的排好序的part。换句话说，整个这个合并排序的过程是在数据插入表的时候进行的。这个merge会导致这个表总是由少量的排序好的part构成，而且这个merge本身并没有做特别多的工作。 索引块合并时设有体积上限，以避免索引块合并产生庞大的新索引块</p>
+<p>在插入数据的过程中，属于不同的month的数据会被分割成不同的part，这些归属于不同的month的part是永远不会merge到一起的。新版本支持按天分表，partition by 一个指定的Date字段。 向 MergeTree 表中插入数据时，引擎会首先对新数据执行递增排序而保存索引块；其后，数据索引块之间又会进一步合并，以减少总体索引块数量。对于每一个part，会生成一个索引文件。这个索引文件存储了表里面每一个索引块里数据的主键的value值，换句话说，这是个对有序数据的小型索引。因此，合并过程本身并无过多排序工作。</p>
+<h3 id="建表语句"><a href="#建表语句" class="headerlink" title="建表语句"></a>建表语句</h3><p>新版本支持按天分partition，建群的搭建方式一般是使用local表和分布式表组成，分布式表不存储数据，本地表存储数据。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> mydb.mytable_cluster (  host <span class="keyword">String</span>,  <span class="keyword">count</span> Int64 statistic_time UInt64,  create_time UInt64,  stat_day <span class="built_in">Date</span>) <span class="keyword">ENGINE</span> = <span class="keyword">Distributed</span>(clickhouse_cluster, <span class="string">'mydb'</span>, <span class="string">'mytable_cluster_local'</span>, <span class="keyword">rand</span>())</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> mydb.mytable_cluster_local ( host <span class="keyword">String</span>,  <span class="keyword">count</span> Int64 statistic_time UInt64,  create_time UInt64,  stat_day <span class="built_in">Date</span>) <span class="keyword">ENGINE</span> = MergeTree <span class="keyword">PARTITION</span> <span class="keyword">BY</span> stat_day <span class="keyword">ORDER</span> <span class="keyword">BY</span> (statistic_time, host) <span class="keyword">SETTINGS</span> index_granularity = <span class="number">8192</span></span><br></pre></td></tr></table></figure>
+<h3 id="底层文件存储"><a href="#底层文件存储" class="headerlink" title="底层文件存储"></a>底层文件存储</h3><p>column_name.mrk：每个列都有一个mrk文件<br>column_name.bin：每个列都有一个bin文件，里边存储了压缩后的真实数据<br>primary.idx：主键文件，存储了主键值</p>
+<p>主键自身是”稀疏的”。它不定位到每个行 ，但是仅是一些数据范围。 对于每个N-th行， 一个单独的primary.idx 文件有主键的值, N 被称为 index_granularity(通常情况下, N = 8192). 每8192⾏行行，抽取一行数据形成稀疏索引.每一部分按照主键顺序存储数据 (数据通过主键 tuple 来排序). 所有的表的列都在各自的column.bin文件中保存.mrk是针对每个列的，对每个列来说，都有一个mrk，记录的这个列的偏移量。</p>
+<p>例如有如下数据，主键为x和y</p>
+<table>
+<thead>
+<tr>
+<th>x</th>
+<th>y</th>
+<th>z</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>a</td>
+<td>1</td>
+</tr>
+<tr>
+<td>A</td>
+<td>a</td>
+<td>2 </td>
+</tr>
+<tr>
+<td>A</td>
+<td>c</td>
+<td>1</td>
+</tr>
+<tr>
+<td>B</td>
+<td>c</td>
+<td>1</td>
+</tr>
+<tr>
+<td>B</td>
+<td>c</td>
+<td>2</td>
+</tr>
+<tr>
+<td>C</td>
+<td>a</td>
+<td>3 </td>
+</tr>
+<tr>
+<td>C</td>
+<td>a</td>
+<td>1 </td>
+</tr>
+</tbody>
+</table>
+<p>假设index_granularity为2，先将数据分为多个block</p>
+<table>
+<thead>
+<tr>
+<th>x</th>
+<th>y</th>
+<th>block-id</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>a</td>
+<td>1</td>
+</tr>
+<tr>
+<td>A</td>
+<td>a</td>
+<td>1</td>
+</tr>
+<tr>
+<td>A</td>
+<td>c</td>
+<td>2</td>
+</tr>
+<tr>
+<td>B</td>
+<td>c</td>
+<td>2</td>
+</tr>
+<tr>
+<td>B</td>
+<td>b</td>
+<td>3</td>
+</tr>
+<tr>
+<td>C</td>
+<td>a</td>
+<td>3</td>
+</tr>
+<tr>
+<td>C</td>
+<td>a</td>
+<td>4  </td>
+</tr>
+</tbody>
+</table>
+<p>primary.idx内容展示的是主键和block的关系</p>
+<table>
+<thead>
+<tr>
+<th>主键</th>
+<th>block</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>(A,a)</td>
+<td>1</td>
+</tr>
+<tr>
+<td>(A,c)</td>
+<td>2</td>
+</tr>
+<tr>
+<td>(B,b)</td>
+<td>3</td>
+</tr>
+<tr>
+<td>(C,a)</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>x.bin 和 y.bin存储对应的各个列的数据，x.mrk存储如下</p>
+<table>
+<thead>
+<tr>
+<th>block-id</th>
+<th>offset</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>1-3</td>
+</tr>
+<tr>
+<td>2</td>
+<td>4-9</td>
+</tr>
+<tr>
+<td>3</td>
+<td>10-30</td>
+</tr>
+</tbody>
+</table>
+<h3 id="查询过程"><a href="#查询过程" class="headerlink" title="查询过程"></a>查询过程</h3><p>1、查询条件<br>2、通过查询条件的主键，可以根据primary.idx得出数据落在哪些block<br>3、根据block id 到各自的 mrk上寻找对应的offset<br>4、根据offset去bin中获取对应的数据，加载到内存中向量化操作，过滤</p>
+<h4 id="Attention"><a href="#Attention" class="headerlink" title="Attention"></a>Attention</h4><ul>
+<li>务必加上partition的条件去查询</li>
+<li>稀疏索引会读取很多不必要的数据：读取主键的每一个部分，会多读取index_granularity * 2的数据。这对于稀疏索引来说很正常，也没有必要减少index_granularity的值.ClickHouse的设计，致力于高效的处理海量数据，这就是为什么一些多余的读取并不会有损性能。</li>
+</ul>
+<h3 id="SummingMergeTree引擎测试"><a href="#SummingMergeTree引擎测试" class="headerlink" title="SummingMergeTree引擎测试"></a>SummingMergeTree引擎测试</h3><ul>
+<li>该引擎会把索引以为的所有number型字段（包含int和double）自动进行聚合</li>
+<li>该引擎在分布式情况下并不是完全聚合，而是每台机器有一条同纬度的数据。SummingMergeTree是按part纬度来聚合，数据刚导入clickhouse可能会产生多个part，但是clickhouse会定期把part merge，从而实现一台机器只有一条同纬度的数据。</li>
+<li>还未测试该引擎对导入性能有多大影响</li>
+<li>如果将字段设为索引，则不会继续聚合，对于非设为索引的字段，如果是int类型会进行聚合，非int类型，会随机选取一个字段进行覆盖。（不正规测试，第一次进行merge的时候，会取第一条的字段，后续的merge都以第一次的为主）</li>
+</ul>
+<h5 id="使用场景"><a href="#使用场景" class="headerlink" title="使用场景"></a>使用场景</h5><p>在数据分析的时候，无法将数据完全聚合的时候可以考虑使用，例如使用jstorm分析数据，由于jstorm是无状态分析，暂留内存压力过大，或者数据延迟太大。可以考虑在不完全聚合的条件下使用该引擎，数据库进行聚合，但是查询还是得用group by！</p>
+<h3 id="建表语句-1"><a href="#建表语句-1" class="headerlink" title="建表语句"></a>建表语句</h3><p>新版本支持按天分partition，建群的搭建方式一般是使用local表和分布式表组成，分布式表不存储数据，本地表存储数据。<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> mydb.mytable_cluster (  host <span class="keyword">String</span>,  <span class="keyword">count</span> Int64 statistic_time UInt64,  create_time UInt64,  stat_day <span class="built_in">Date</span>) <span class="keyword">ENGINE</span> = <span class="keyword">Distributed</span>(clickhouse_cluster, <span class="string">'mydb'</span>, <span class="string">'mytable_cluster_local'</span>, <span class="keyword">rand</span>())</span><br></pre></td></tr></table></figure></p>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> mydb.mytable_cluster_local ( host <span class="keyword">String</span>,  <span class="keyword">count</span> Int64 statistic_time UInt64,  create_time UInt64,  stat_day <span class="built_in">Date</span>) <span class="keyword">ENGINE</span> = SummingMergeTree <span class="keyword">PARTITION</span> <span class="keyword">BY</span> stat_day <span class="keyword">ORDER</span> <span class="keyword">BY</span> (statistic_time, host) <span class="keyword">SETTINGS</span> index_granularity = <span class="number">8192</span></span><br></pre></td></tr></table></figure>
+<p>如上可以实现相同statistic_time，相同host，count累加的场景，由于create_time不是索引，也会被累加，如果出现别的String不在索引内，会被随机覆盖。</p>
+<h3 id="ReplacingMergeTree"><a href="#ReplacingMergeTree" class="headerlink" title="ReplacingMergeTree"></a>ReplacingMergeTree</h3><ul>
+<li>该引擎会把相同索引的数据进行替换，但仅限单台机器。如果使用分布式表，就要确保相同索引的数据入到同一台机器，否则每台机器可能会有一条相同索引的数据。</li>
+<li>该索引只有在merge的时候才会执行替换，因为merge是不定时的，如果没有merge的情况下，会出现多条数据的情况。因此必要的话，可以进行手动进行merge。手动merge命令：optimize table db.table;</li>
+<li>该索引的建表语句如果没有用某个字段标定版本，该字段可以是int、double、date类型，数据库就一定会把后入库的覆盖新入库(如果有区分版本的字段，则会留下数值大的那条记录)。</li>
+</ul>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2019/03/17/Flink-UDF/" rel="next" title="Flink-UDF">
+                <i class="fa fa-chevron-left"></i> Flink-UDF
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2019/03/19/kafka-zero-copy/" rel="prev" title="zero copy">
+                zero copy <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#MergeTree"><span class="nav-number">1.</span> <span class="nav-text">MergeTree</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#建表语句"><span class="nav-number">2.</span> <span class="nav-text">建表语句</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#底层文件存储"><span class="nav-number">3.</span> <span class="nav-text">底层文件存储</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查询过程"><span class="nav-number">4.</span> <span class="nav-text">查询过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Attention"><span class="nav-number">4.1.</span> <span class="nav-text">Attention</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#SummingMergeTree引擎测试"><span class="nav-number">5.</span> <span class="nav-text">SummingMergeTree引擎测试</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#使用场景"><span class="nav-number">5.0.1.</span> <span class="nav-text">使用场景</span></a></li></ol></li></ol><li class="nav-item nav-level-3"><a class="nav-link" href="#建表语句-1"><span class="nav-number">6.</span> <span class="nav-text">建表语句</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ReplacingMergeTree"><span class="nav-number">7.</span> <span class="nav-text">ReplacingMergeTree</span></a></li></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

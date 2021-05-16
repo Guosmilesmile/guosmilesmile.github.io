@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="前言从Flink 1.6版本开始，社区为状态引入了TTL（time-to-live，生存时间）机制，支持Keyed State的自动过期，有效解决了状态数据在无干预情况下无限增长导致OOM的问题。 12345678StateTtlConfig ttlConfig = StateTtlConfig    .newBuilder(Time.seconds(1))    .setUpdateType(S">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink源码解析-TTL">
+<meta property="og:url" content="http://yoursite.com/2020/06/17/Flink源码解析-TTL/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="前言从Flink 1.6版本开始，社区为状态引入了TTL（time-to-live，生存时间）机制，支持Keyed State的自动过期，有效解决了状态数据在无干预情况下无限增长导致OOM的问题。 12345678StateTtlConfig ttlConfig = StateTtlConfig    .newBuilder(Time.seconds(1))    .setUpdateType(S">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/4EAD8AC8B9A443B8B39E88FD43616BB7?method=download&shareKey=811a37a33b8a1e7c751cb597214b5916">
+<meta property="og:updated_time" content="2020-06-17T12:12:22.777Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink源码解析-TTL">
+<meta name="twitter:description" content="前言从Flink 1.6版本开始，社区为状态引入了TTL（time-to-live，生存时间）机制，支持Keyed State的自动过期，有效解决了状态数据在无干预情况下无限增长导致OOM的问题。 12345678StateTtlConfig ttlConfig = StateTtlConfig    .newBuilder(Time.seconds(1))    .setUpdateType(S">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/4EAD8AC8B9A443B8B39E88FD43616BB7?method=download&shareKey=811a37a33b8a1e7c751cb597214b5916">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2020/06/17/Flink源码解析-TTL/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink源码解析-TTL | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2020/06/17/Flink源码解析-TTL/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink源码解析-TTL
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2020-06-17 19:54:37 / 修改时间：20:12:22" itemprop="dateCreated datePublished" datetime="2020-06-17T19:54:37+08:00">2020-06-17</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>从Flink 1.6版本开始，社区为状态引入了TTL（time-to-live，生存时间）机制，支持Keyed State的自动过期，有效解决了状态数据在无干预情况下无限增长导致OOM的问题。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">StateTtlConfig ttlConfig = StateTtlConfig</span><br><span class="line">    .newBuilder(Time.seconds(<span class="number">1</span>))</span><br><span class="line">    .setUpdateType(StateTtlConfig.UpdateType.OnCreateAndWrite)</span><br><span class="line">    .setStateVisibility(StateTtlConfig.StateVisibility.NeverReturnExpired)</span><br><span class="line">    .build();</span><br><span class="line">    </span><br><span class="line">ValueStateDescriptor&lt;String&gt; stateDescriptor = <span class="keyword">new</span> ValueStateDescriptor&lt;&gt;(<span class="string">"text state"</span>, String.class);</span><br><span class="line">stateDescriptor.enableTimeToLive(ttlConfig);</span><br></pre></td></tr></table></figure>
+<p>那么State TTL的背后又隐藏着什么样的思路呢？下面就从设置类StateTtlConfig入手开始研究</p>
+<h3 id="State"><a href="#State" class="headerlink" title="State"></a>State</h3><p>Keyed State和Operator State<br>Flink中包含两种基础的状态：Keyed State和Operator State。</p>
+<h4 id="Keyed-State"><a href="#Keyed-State" class="headerlink" title="Keyed State"></a>Keyed State</h4><p>顾名思义，就是基于KeyedStream上的状态。这个状态是跟特定的key绑定的，对KeyedStream流上的每一个key，可能都对应一个state。</p>
+<h4 id="Operator-State"><a href="#Operator-State" class="headerlink" title="Operator State"></a>Operator State</h4><p>与Keyed State不同，Operator State跟一个特定operator的一个并发实例绑定，整个operator只对应一个state。相比较而言，在一个operator上，可能会有很多个key，从而对应多个keyed state。</p>
+<p>举例来说，Flink中的Kafka Connector，就使用了operator state。它会在每个connector实例中，保存该实例中消费topic的所有(partition, offset)映射。</p>
+<h3 id="StateTtlConfig"><a href="#StateTtlConfig" class="headerlink" title="StateTtlConfig"></a>StateTtlConfig</h3><p>该类中有5个成员属性，它们就是用户需要指定的全部参数了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> UpdateType updateType;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> StateVisibility stateVisibility;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> TtlTimeCharacteristic ttlTimeCharacteristic;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> Time ttl;</span><br><span class="line"><span class="keyword">private</span> <span class="keyword">final</span> CleanupStrategies cleanupStrategies;</span><br></pre></td></tr></table></figure>
+<p>其中，ttl参数表示用户设定的状态生存时间。而UpdateType、StateVisibility和TtlTimeCharacteristic都是枚举，分别代表状态时间戳的更新方式、过期状态数据的可见性，以及对应的时间特征。它们的含义在注释中已经解释得很清楚了。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * This option value configures when to update last access timestamp which prolongs state TTL.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> UpdateType &#123;</span><br><span class="line">   <span class="comment">/** TTL is disabled. State does not expire. */</span></span><br><span class="line">   Disabled,</span><br><span class="line">   <span class="comment">/** Last access timestamp is initialised when state is created and updated on every write operation. */</span></span><br><span class="line">    <span class="comment">// 以创建和写数据的时间为最新更新时间</span></span><br><span class="line">   OnCreateAndWrite,</span><br><span class="line">   <span class="comment">/** The same as &lt;code&gt;OnCreateAndWrite&lt;/code&gt; but also updated on read. */</span></span><br><span class="line">    <span class="comment">// 读和写都会作为最新的时间</span></span><br><span class="line">   OnReadAndWrite</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * This option configures whether expired user value can be returned or not.</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">enum</span> StateVisibility &#123;</span><br><span class="line">	<span class="comment">/** Return expired user value if it is not cleaned up yet. */</span></span><br><span class="line">       <span class="comment">// 如果还没清理，返回过期数据</span></span><br><span class="line">	ReturnExpiredIfNotCleanedUp,</span><br><span class="line">	<span class="comment">/** Never return expired user value. */</span></span><br><span class="line">       <span class="comment">// 不返回过期的数据</span></span><br><span class="line">	NeverReturnExpired</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>CleanupStrategies内部类则用来规定过期状态的特殊清理策略，用户在构造StateTtlConfig时，可以通过调用以下方法之一指定。</p>
+<ul>
+<li>cleanupFullSnapshot<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">strategies.put(CleanupStrategies.Strategies.FULL_STATE_SCAN_SNAPSHOT, EMPTY_STRATEGY);</span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<p>当对状态做全量快照时清理过期数据，对开启了增量检查点（incremental checkpoint）的RocksDB状态后端无效，对应源码中的EmptyCleanupStrategy。</p>
+<p>为什么叫做“空的”清理策略呢？因为该选项只能保证状态持久化时不包含过期数据，但TaskManager本地的过期状态则不作任何处理，所以无法从根本上解决OOM的问题，需要定期重启作业。</p>
+<ul>
+<li>cleanupIncrementally(int cleanupSize, boolean runCleanupForEveryRecord)</li>
+</ul>
+<p>增量清理过期数据，默认在每次访问状态时进行清理，将runCleanupForEveryRecord设为true可以附加在每次写入/删除时清理。cleanupSize指定每次触发清理时检查的状态条数。<br>仅对基于堆的状态后端有效，对应源码中的IncrementalCleanupStrategy。</p>
+<ul>
+<li>cleanupInRocksdbCompactFilter(long queryTimeAfterNumEntries)</li>
+</ul>
+<p>当RocksDB做compaction操作时，通过Flink定制的过滤器（FlinkCompactionFilter）过滤掉过期状态数据。参数queryTimeAfterNumEntries用于指定在写入多少条状态数据后，通过状态时间戳来判断是否过期。当RocksDB做compaction操作时，通过Flink定制的过滤器（FlinkCompactionFilter）过滤掉过期状态数据。参数queryTimeAfterNumEntries用于指定在写入多少条状态数据后，通过状态时间戳来判断是否过期。</p>
+<p>该策略仅对RocksDB状态后端有效，对应源码中的RocksdbCompactFilterCleanupStrategy。CompactionFilter是RocksDB原生提供的机制。</p>
+<p>如果不调用上述方法，则采用默认的后台清理策略，下文有讲。</p>
+<h3 id="TtlStateFactory、TtlStateContext"><a href="#TtlStateFactory、TtlStateContext" class="headerlink" title="TtlStateFactory、TtlStateContext"></a>TtlStateFactory、TtlStateContext</h3><p>在所有Keyed State状态后端的抽象基类AbstractKeyedStateBackend中，创建并记录一个状态实例的方法如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">	 * <span class="doctag">@see</span> KeyedStateBackend</span></span><br><span class="line"><span class="comment">	 */</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>)</span><br><span class="line">	<span class="keyword">public</span> &lt;N, S extends State, V&gt; <span class="function">S <span class="title">getOrCreateKeyedState</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">			<span class="keyword">final</span> TypeSerializer&lt;N&gt; namespaceSerializer,</span></span></span><br><span class="line"><span class="function"><span class="params">			StateDescriptor&lt;S, V&gt; stateDescriptor)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		checkNotNull(namespaceSerializer, <span class="string">"Namespace serializer"</span>);</span><br><span class="line">		checkNotNull(keySerializer, <span class="string">"State key serializer has not been configured in the config. "</span> +</span><br><span class="line">				<span class="string">"This operation cannot use partitioned state."</span>);</span><br><span class="line"></span><br><span class="line">		InternalKvState&lt;K, ?, ?&gt; kvState = keyValueStatesByName.get(stateDescriptor.getName());</span><br><span class="line">		<span class="keyword">if</span> (kvState == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">if</span> (!stateDescriptor.isSerializerInitialized()) &#123;</span><br><span class="line">				stateDescriptor.initializeSerializerUnlessSet(executionConfig);</span><br><span class="line">			&#125;</span><br><span class="line">			kvState = TtlStateFactory.createStateAndWrapWithTtlIfEnabled(</span><br><span class="line">				namespaceSerializer, stateDescriptor, <span class="keyword">this</span>, ttlTimeProvider);</span><br><span class="line">			keyValueStatesByName.put(stateDescriptor.getName(), kvState);</span><br><span class="line">			publishQueryableStateIfEnabled(stateDescriptor, kvState);</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> (S) kvState;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>可见是调用了TtlStateFactory.createStateAndWrapWithTtlIfEnabled()方法来真正创建。顾名思义，TtlStateFactory是产生TTL状态的工厂类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> &lt;K, N, SV, TTLSV, S extends State, IS extends S&gt; <span class="function">IS <span class="title">createStateAndWrapWithTtlIfEnabled</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		TypeSerializer&lt;N&gt; namespaceSerializer,</span></span></span><br><span class="line"><span class="function"><span class="params">		StateDescriptor&lt;S, SV&gt; stateDesc,</span></span></span><br><span class="line"><span class="function"><span class="params">		KeyedStateBackend&lt;K&gt; stateBackend,</span></span></span><br><span class="line"><span class="function"><span class="params">		TtlTimeProvider timeProvider)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		Preconditions.checkNotNull(namespaceSerializer);</span><br><span class="line">		Preconditions.checkNotNull(stateDesc);</span><br><span class="line">		Preconditions.checkNotNull(stateBackend);</span><br><span class="line">		Preconditions.checkNotNull(timeProvider);</span><br><span class="line">		<span class="keyword">return</span>  stateDesc.getTtlConfig().isEnabled() ?</span><br><span class="line">			<span class="keyword">new</span> TtlStateFactory&lt;K, N, SV, TTLSV, S, IS&gt;(</span><br><span class="line">				namespaceSerializer, stateDesc, stateBackend, timeProvider)</span><br><span class="line">				.createState() :</span><br><span class="line">			stateBackend.createInternalState(namespaceSerializer, stateDesc);</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>由上可知，如果我们为状态描述符StateDescriptor加入了TTL，那么就会调用TtlStateFactory.createState()方法创建一个带有TTL的状态实例；否则，就调用StateBackend.createInternalState()创建一个普通的状态实例。</p>
+<p>TtlStateFactory.createState()的代码如下。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> IS <span class="title">createState</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">	SupplierWithException&lt;IS, Exception&gt; stateFactory = stateFactories.get(stateDesc.getClass());</span><br><span class="line">	<span class="keyword">if</span> (stateFactory == <span class="keyword">null</span>) &#123;</span><br><span class="line">		String message = String.format(<span class="string">"State %s is not supported by %s"</span>,</span><br><span class="line">			stateDesc.getClass(), TtlStateFactory.class);</span><br><span class="line">		<span class="keyword">throw</span> <span class="keyword">new</span> FlinkRuntimeException(message);</span><br><span class="line">	&#125;</span><br><span class="line">	IS state = stateFactory.get();</span><br><span class="line">	<span class="keyword">if</span> (incrementalCleanup != <span class="keyword">null</span>) &#123;</span><br><span class="line">		incrementalCleanup.setTtlState((AbstractTtlState&lt;K, N, ?, TTLSV, ?&gt;) state);</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> state;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>stateFactories是一个Map结构，维护了各种状态描述符与对应产生该种状态对象的工厂方法映射。所有的工厂方法都被包装成了Supplier（Java 8提供的函数式接口），所以在上述createState()方法中，可以通过Supplier.get()方法来实际执行createTtl*State()工厂方法，并获得新的状态实例。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">Map&lt;Class&lt;? extends StateDescriptor&gt;, SupplierWithException&lt;IS, Exception&gt;&gt; stateFactories;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> Map&lt;Class&lt;? extends StateDescriptor&gt;, SupplierWithException&lt;IS, Exception&gt;&gt; createStateFactories() &#123;</span><br><span class="line">		<span class="keyword">return</span> Stream.of(</span><br><span class="line">			Tuple2.of(ValueStateDescriptor.class, (SupplierWithException&lt;IS, Exception&gt;) <span class="keyword">this</span>::createValueState),</span><br><span class="line">			Tuple2.of(ListStateDescriptor.class, (SupplierWithException&lt;IS, Exception&gt;) <span class="keyword">this</span>::createListState),</span><br><span class="line">			Tuple2.of(MapStateDescriptor.class, (SupplierWithException&lt;IS, Exception&gt;) <span class="keyword">this</span>::createMapState),</span><br><span class="line">			Tuple2.of(ReducingStateDescriptor.class, (SupplierWithException&lt;IS, Exception&gt;) <span class="keyword">this</span>::createReducingState),</span><br><span class="line">			Tuple2.of(AggregatingStateDescriptor.class, (SupplierWithException&lt;IS, Exception&gt;) <span class="keyword">this</span>::createAggregatingState),</span><br><span class="line">			Tuple2.of(FoldingStateDescriptor.class, (SupplierWithException&lt;IS, Exception&gt;) <span class="keyword">this</span>::createFoldingState)</span><br><span class="line">		).collect(Collectors.toMap(t -&gt; t.f0, t -&gt; t.f1));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> IS <span class="title">createValueState</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		ValueStateDescriptor&lt;TtlValue&lt;SV&gt;&gt; ttlDescriptor = <span class="keyword">new</span> ValueStateDescriptor&lt;&gt;(</span><br><span class="line">			stateDesc.getName(), <span class="keyword">new</span> TtlSerializer&lt;&gt;(LongSerializer.INSTANCE, stateDesc.getSerializer()));</span><br><span class="line">		<span class="keyword">return</span> (IS) <span class="keyword">new</span> TtlValueState&lt;&gt;(createTtlStateContext(ttlDescriptor));</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>带有TTL的状态类名其实就是普通状态类名加上Ttl前缀，只是没有公开给用户而已。并且在生成Ttl*State时，还会通过createTtlStateContext()方法生成TTL状态的上下文。来看下TtlStateFactory.createTtlStateContext方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> &lt;OIS extends State, TTLS extends State, V, TTLV&gt; TtlStateContext&lt;OIS, V&gt;</span><br><span class="line">		createTtlStateContext(StateDescriptor&lt;TTLS, TTLV&gt; ttlDescriptor) <span class="keyword">throws</span> Exception &#123;</span><br><span class="line"></span><br><span class="line">		ttlDescriptor.enableTimeToLive(stateDesc.getTtlConfig()); <span class="comment">// also used by RocksDB backend for TTL compaction filter config</span></span><br><span class="line">		OIS originalState = (OIS) stateBackend.createInternalState(</span><br><span class="line">			namespaceSerializer, ttlDescriptor, getSnapshotTransformFactory());</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> TtlStateContext&lt;&gt;(</span><br><span class="line">			originalState, ttlConfig, timeProvider, (TypeSerializer&lt;V&gt;) stateDesc.getSerializer(),</span><br><span class="line">			registerTtlIncrementalCleanupCallback((InternalKvState&lt;?, ?, ?&gt;) originalState));</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<p>TtlStateContext的本质是对以下几个实例做了封装。</p>
+<ul>
+<li><p>T original    原始State（通过StateBackend.createInternalState()方法创建）及其序列化器（通过StateDescriptor.getSerializer()方法取得）, 对应不同状态后台的map，如果是rocksdb状态后台，得到的是RocksDBMapState；</p>
+</li>
+<li><p>StateTtlConfig，前文已经讲过；</p>
+</li>
+<li><p>TtlTimeProvider，用来提供判断状态过期标准的时间戳。当前只是简单地代理了System.currentTimeMillis()，没有任何其他代码；</p>
+</li>
+<li><p>一个Runnable类型的回调方法，通过registerTtlIncrementalCleanupCallback()方法产生，用于状态数据的增量清理，后面会看到它的用途。</p>
+</li>
+</ul>
+<p>接下来就具体看看TTL状态是如何实现的。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/4EAD8AC8B9A443B8B39E88FD43616BB7?method=download&amp;shareKey=811a37a33b8a1e7c751cb597214b5916" alt></p>
+<p>所有Ttl*State都是AbstractTtlState的子类，而AbstractTtlState又是装饰器AbstractTtlDecorator的子类。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">AbstractTtlDecorator</span>&lt;<span class="title">T</span>&gt; </span>&#123;</span><br><span class="line">	<span class="comment">/** Wrapped original state handler. */</span></span><br><span class="line">	<span class="keyword">final</span> T original;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">final</span> StateTtlConfig config;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">final</span> TtlTimeProvider timeProvider;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** Whether to renew expiration timestamp on state read access. */</span></span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">boolean</span> updateTsOnRead;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** Whether to renew expiration timestamp on state read access. */</span></span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">boolean</span> returnExpired;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/** State value time to live in milliseconds. */</span></span><br><span class="line">	<span class="keyword">final</span> <span class="keyword">long</span> ttl;</span><br><span class="line"></span><br><span class="line">	AbstractTtlDecorator(</span><br><span class="line">		T original,</span><br><span class="line">		StateTtlConfig config,</span><br><span class="line">		TtlTimeProvider timeProvider) &#123;</span><br><span class="line">		Preconditions.checkNotNull(original);</span><br><span class="line">		Preconditions.checkNotNull(config);</span><br><span class="line">		Preconditions.checkNotNull(timeProvider);</span><br><span class="line">		<span class="keyword">this</span>.original = original;</span><br><span class="line">		<span class="keyword">this</span>.config = config;</span><br><span class="line">		<span class="keyword">this</span>.timeProvider = timeProvider;</span><br><span class="line">		<span class="keyword">this</span>.updateTsOnRead = config.getUpdateType() == StateTtlConfig.UpdateType.OnReadAndWrite;</span><br><span class="line">		<span class="keyword">this</span>.returnExpired = config.getStateVisibility() == StateTtlConfig.StateVisibility.ReturnExpiredIfNotCleanedUp;</span><br><span class="line">		<span class="keyword">this</span>.ttl = config.getTtl().toMilliseconds();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	&lt;V&gt; <span class="function">V <span class="title">getUnexpired</span><span class="params">(TtlValue&lt;V&gt; ttlValue)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> ttlValue == <span class="keyword">null</span> || (expired(ttlValue) &amp;&amp; !returnExpired) ? <span class="keyword">null</span> : ttlValue.getUserValue();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	&lt;V&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">expired</span><span class="params">(TtlValue&lt;V&gt; ttlValue)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> TtlUtils.expired(ttlValue, ttl, timeProvider);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	&lt;V&gt; <span class="function">TtlValue&lt;V&gt; <span class="title">wrapWithTs</span><span class="params">(V value)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> TtlUtils.wrapWithTs(value, timeProvider.currentTimestamp());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	&lt;V&gt; <span class="function">TtlValue&lt;V&gt; <span class="title">rewrapWithNewTs</span><span class="params">(TtlValue&lt;V&gt; ttlValue)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> wrapWithTs(ttlValue.getUserValue());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	&lt;SE extends Throwable, CE extends Throwable, CLE extends Throwable, V&gt; <span class="function">V <span class="title">getWithTtlCheckAndUpdate</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		SupplierWithException&lt;TtlValue&lt;V&gt;, SE&gt; getter,</span></span></span><br><span class="line"><span class="function"><span class="params">		ThrowingConsumer&lt;TtlValue&lt;V&gt;, CE&gt; updater,</span></span></span><br><span class="line"><span class="function"><span class="params">		ThrowingRunnable&lt;CLE&gt; stateClear)</span> <span class="keyword">throws</span> SE, CE, CLE </span>&#123;</span><br><span class="line">		TtlValue&lt;V&gt; ttlValue = getWrappedWithTtlCheckAndUpdate(getter, updater, stateClear);</span><br><span class="line">		<span class="keyword">return</span> ttlValue == <span class="keyword">null</span> ? <span class="keyword">null</span> : ttlValue.getUserValue();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	&lt;SE extends Throwable, CE extends Throwable, CLE extends Throwable, V&gt; <span class="function">TtlValue&lt;V&gt; <span class="title">getWrappedWithTtlCheckAndUpdate</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		SupplierWithException&lt;TtlValue&lt;V&gt;, SE&gt; getter,</span></span></span><br><span class="line"><span class="function"><span class="params">		ThrowingConsumer&lt;TtlValue&lt;V&gt;, CE&gt; updater,</span></span></span><br><span class="line"><span class="function"><span class="params">		ThrowingRunnable&lt;CLE&gt; stateClear)</span> <span class="keyword">throws</span> SE, CE, CLE </span>&#123;</span><br><span class="line">		TtlValue&lt;V&gt; ttlValue = getter.get();</span><br><span class="line">		<span class="keyword">if</span> (ttlValue == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (expired(ttlValue)) &#123;</span><br><span class="line">			stateClear.run();</span><br><span class="line">			<span class="keyword">if</span> (!returnExpired) &#123;</span><br><span class="line">				<span class="keyword">return</span> <span class="keyword">null</span>;</span><br><span class="line">			&#125;</span><br><span class="line">		&#125; <span class="keyword">else</span> <span class="keyword">if</span> (updateTsOnRead) &#123;</span><br><span class="line">			updater.accept(rewrapWithNewTs(ttlValue));</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> ttlValue;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>它的成员属性比较容易理解，例如，updateTsOnRead表示在读取状态值时也更新时间戳（即UpdateType.OnReadAndWrite），returnExpired表示即使状态过期，在被真正删除之前也返回它的值（即StateVisibility.ReturnExpiredIfNotCleanedUp）。</p>
+<p>状态值与TTL的包装（成为TtlValue）以及过期检测都由工具类TtlUtils来负责</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TtlUtils</span> </span>&#123;</span><br><span class="line">	<span class="keyword">static</span> &lt;V&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">expired</span><span class="params">(@Nullable TtlValue&lt;V&gt; ttlValue, <span class="keyword">long</span> ttl, TtlTimeProvider timeProvider)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> expired(ttlValue, ttl, timeProvider.currentTimestamp());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">static</span> &lt;V&gt; <span class="function"><span class="keyword">boolean</span> <span class="title">expired</span><span class="params">(@Nullable TtlValue&lt;V&gt; ttlValue, <span class="keyword">long</span> ttl, <span class="keyword">long</span> currentTimestamp)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> ttlValue != <span class="keyword">null</span> &amp;&amp; expired(ttlValue.getLastAccessTimestamp(), ttl, currentTimestamp);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">expired</span><span class="params">(<span class="keyword">long</span> ts, <span class="keyword">long</span> ttl, TtlTimeProvider timeProvider)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> expired(ts, ttl, timeProvider.currentTimestamp());</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">boolean</span> <span class="title">expired</span><span class="params">(<span class="keyword">long</span> ts, <span class="keyword">long</span> ttl, <span class="keyword">long</span> currentTimestamp)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> getExpirationTimestamp(ts, ttl) &lt;= currentTimestamp;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">long</span> <span class="title">getExpirationTimestamp</span><span class="params">(<span class="keyword">long</span> ts, <span class="keyword">long</span> ttl)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">long</span> ttlWithoutOverflow = ts &gt; <span class="number">0</span> ? Math.min(Long.MAX_VALUE - ts, ttl) : ttl;</span><br><span class="line">		<span class="keyword">return</span> ts + ttlWithoutOverflow;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">static</span> &lt;V&gt; <span class="function">TtlValue&lt;V&gt; <span class="title">wrapWithTs</span><span class="params">(V value, <span class="keyword">long</span> ts)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> <span class="keyword">new</span> TtlValue&lt;&gt;(value, ts);</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>TtlValue的属性只有两个：状态值和时间戳</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">TtlValue</span>&lt;<span class="title">T</span>&gt; <span class="keyword">implements</span> <span class="title">Serializable</span> </span>&#123;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">long</span> serialVersionUID = <span class="number">5221129704201125020L</span>;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> T userValue;</span><br><span class="line">	<span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">long</span> lastAccessTimestamp;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="title">TtlValue</span><span class="params">(@Nullable T userValue, <span class="keyword">long</span> lastAccessTimestamp)</span> </span>&#123;</span><br><span class="line">		<span class="keyword">this</span>.userValue = userValue;</span><br><span class="line">		<span class="keyword">this</span>.lastAccessTimestamp = lastAccessTimestamp;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> T <span class="title">getUserValue</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> userValue;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">long</span> <span class="title">getLastAccessTimestamp</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> lastAccessTimestamp;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>AbstractTtlDecorator核心方法是获取状态值的getWrappedWithTtlCheckAndUpdate()，它接受三个参数：</p>
+<ul>
+<li>getter：一个可抛出异常的Supplier，用于获取状态值；</li>
+<li>updater：一个可抛出异常的Consumer，用于更新状态的时间戳；</li>
+<li>stateClear：一个可抛出异常的Runnable，用于异步删除过期状态。</li>
+</ul>
+<p>可见，在默认情况下的后台清理策略是：<strong>只有状态值被读取时，才会做过期检测，并异步清除过期的状态</strong>。这种<strong>惰性清理</strong>的机制会导致<strong>那些实际已经过期但从未被再次访问过的状态无法被删除</strong>，需要特别注意。官方文档中也已有提示：</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">By default, expired values are explicitly removed on read, such as ValueState#value, and periodically garbage collected in the background if supported by the configured state backend.</span><br></pre></td></tr></table></figure>
+<p>不过到了1.10版本，这个已经有了解决方法，在官网也有提到</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">heap state backend relies on incremental cleanup and RocksDB backend uses compaction filter for background cleanup.</span><br><span class="line"></span><br><span class="line">RocksDB compaction filter will query current timestamp, used to check expiration, from Flink every time after processing certain number of state  entries.</span><br></pre></td></tr></table></figure>
+<p>每次处理一定数量的 StateEntry 之后，会获取当前的 timestamp 然后在 RocksDB 的 compaction<br>时对所有的 StateEntry 进行 filter,过期的状态 Key就过滤删除掉。</p>
+<p>当确认到状态过期时，会调用stateClear的逻辑进行删除；如果需要在读取时顺便更新状态的时间戳，会调用updater的逻辑重新包装一个TtlValue。</p>
+<p>AbstractTtlState的代码</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">final</span> Runnable accessCallback;</span><br><span class="line"> </span><br><span class="line">&lt;SE extends Throwable, CE extends Throwable, T&gt; <span class="function">T <span class="title">getWithTtlCheckAndUpdate</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">    SupplierWithException&lt;TtlValue&lt;T&gt;, SE&gt; getter,</span></span></span><br><span class="line"><span class="function"><span class="params">    ThrowingConsumer&lt;TtlValue&lt;T&gt;, CE&gt; updater)</span> <span class="keyword">throws</span> SE, CE </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> getWithTtlCheckAndUpdate(getter, updater, original::clear);</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clear</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    original.clear();</span><br><span class="line">    accessCallback.run();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>其中，accessCallback就是TtlStateContext中注册的增量清理回调。</p>
+<p>下面以TtlMapState为例，看看具体的TTL状态如何利用上文所述的这些实现。</p>
+<h4 id="TtlMapState"><a href="#TtlMapState" class="headerlink" title="TtlMapState"></a>TtlMapState</h4><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">TtlMapState</span>&lt;<span class="title">K</span>, <span class="title">N</span>, <span class="title">UK</span>, <span class="title">UV</span>&gt;</span></span><br><span class="line"><span class="class">	<span class="keyword">extends</span> <span class="title">AbstractTtlState</span>&lt;<span class="title">K</span>, <span class="title">N</span>, <span class="title">Map</span>&lt;<span class="title">UK</span>, <span class="title">UV</span>&gt;, <span class="title">Map</span>&lt;<span class="title">UK</span>, <span class="title">TtlValue</span>&lt;<span class="title">UV</span>&gt;&gt;, <span class="title">InternalMapState</span>&lt;<span class="title">K</span>, <span class="title">N</span>, <span class="title">UK</span>, <span class="title">TtlValue</span>&lt;<span class="title">UV</span>&gt;&gt;&gt;</span></span><br><span class="line"><span class="class">	<span class="keyword">implements</span> <span class="title">InternalMapState</span>&lt;<span class="title">K</span>, <span class="title">N</span>, <span class="title">UK</span>, <span class="title">UV</span>&gt; </span>&#123;</span><br><span class="line">	TtlMapState(TtlStateContext&lt;InternalMapState&lt;K, N, UK, TtlValue&lt;UV&gt;&gt;, Map&lt;UK, UV&gt;&gt; ttlStateContext) &#123;</span><br><span class="line">		<span class="keyword">super</span>(ttlStateContext);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> UV <span class="title">get</span><span class="params">(UK key)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		TtlValue&lt;UV&gt; ttlValue = getWrapped(key);</span><br><span class="line">		<span class="keyword">return</span> ttlValue == <span class="keyword">null</span> ? <span class="keyword">null</span> : ttlValue.getUserValue();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="function"><span class="keyword">private</span> TtlValue&lt;UV&gt; <span class="title">getWrapped</span><span class="params">(UK key)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		accessCallback.run();</span><br><span class="line">		<span class="keyword">return</span> getWrappedWithTtlCheckAndUpdate(</span><br><span class="line">			() -&gt; original.get(key), v -&gt; original.put(key, v), () -&gt; original.remove(key));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">put</span><span class="params">(UK key, UV value)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		accessCallback.run();</span><br><span class="line">		original.put(key, wrapWithTs(value));</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">putAll</span><span class="params">(Map&lt;UK, UV&gt; map)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		accessCallback.run();</span><br><span class="line">		<span class="keyword">if</span> (map == <span class="keyword">null</span>) &#123;</span><br><span class="line">			<span class="keyword">return</span>;</span><br><span class="line">		&#125;</span><br><span class="line">		Map&lt;UK, TtlValue&lt;UV&gt;&gt; ttlMap = <span class="keyword">new</span> HashMap&lt;&gt;(map.size());</span><br><span class="line">		<span class="keyword">long</span> currentTimestamp = timeProvider.currentTimestamp();</span><br><span class="line">		<span class="keyword">for</span> (Map.Entry&lt;UK, UV&gt; entry : map.entrySet()) &#123;</span><br><span class="line">			UK key = entry.getKey();</span><br><span class="line">			ttlMap.put(key, TtlUtils.wrapWithTs(entry.getValue(), currentTimestamp));</span><br><span class="line">		&#125;</span><br><span class="line">		original.putAll(ttlMap);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">remove</span><span class="params">(UK key)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		accessCallback.run();</span><br><span class="line">		original.remove(key);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">contains</span><span class="params">(UK key)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		TtlValue&lt;UV&gt; ttlValue = getWrapped(key);</span><br><span class="line">		<span class="keyword">return</span> ttlValue != <span class="keyword">null</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> Iterable&lt;Map.Entry&lt;UK, UV&gt;&gt; entries() <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		<span class="keyword">return</span> entries(e -&gt; e);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> &lt;R&gt; <span class="function">Iterable&lt;R&gt; <span class="title">entries</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">		Function&lt;Map.Entry&lt;UK, UV&gt;, R&gt; resultMapper)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		accessCallback.run();</span><br><span class="line">		Iterable&lt;Map.Entry&lt;UK, TtlValue&lt;UV&gt;&gt;&gt; withTs = original.entries();</span><br><span class="line">		<span class="keyword">return</span> () -&gt; <span class="keyword">new</span> EntriesIterator&lt;&gt;(withTs == <span class="keyword">null</span> ? Collections.emptyList() : withTs, resultMapper);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Iterable&lt;UK&gt; <span class="title">keys</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> entries(Map.Entry::getKey);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> Iterable&lt;UV&gt; <span class="title">values</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		<span class="keyword">return</span> entries(Map.Entry::getValue);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> Iterator&lt;Map.Entry&lt;UK, UV&gt;&gt; iterator() <span class="keyword">throws</span> Exception &#123;</span><br><span class="line">		<span class="keyword">return</span> entries().iterator();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">isEmpty</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">		accessCallback.run();</span><br><span class="line">		<span class="keyword">return</span> original.isEmpty();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Nullable</span></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="keyword">public</span> Map&lt;UK, TtlValue&lt;UV&gt;&gt; getUnexpiredOrNull(<span class="meta">@Nonnull</span> Map&lt;UK, TtlValue&lt;UV&gt;&gt; ttlValue) &#123;</span><br><span class="line">		Map&lt;UK, TtlValue&lt;UV&gt;&gt; unexpired = <span class="keyword">new</span> HashMap&lt;&gt;();</span><br><span class="line">		TypeSerializer&lt;TtlValue&lt;UV&gt;&gt; valueSerializer =</span><br><span class="line">			((MapSerializer&lt;UK, TtlValue&lt;UV&gt;&gt;) original.getValueSerializer()).getValueSerializer();</span><br><span class="line">		<span class="keyword">for</span> (Map.Entry&lt;UK, TtlValue&lt;UV&gt;&gt; e : ttlValue.entrySet()) &#123;</span><br><span class="line">			<span class="keyword">if</span> (!expired(e.getValue())) &#123;</span><br><span class="line">				<span class="comment">// we have to do the defensive copy to update the value</span></span><br><span class="line">				unexpired.put(e.getKey(), valueSerializer.copy(e.getValue()));</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line">		<span class="keyword">return</span> ttlValue.size() == unexpired.size() ? ttlValue : unexpired;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="meta">@Override</span></span><br><span class="line">	<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">clear</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		original.clear();</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">EntriesIterator</span>&lt;<span class="title">R</span>&gt; <span class="keyword">implements</span> <span class="title">Iterator</span>&lt;<span class="title">R</span>&gt; </span>&#123;</span><br><span class="line">		<span class="keyword">private</span> <span class="keyword">final</span> Iterator&lt;Map.Entry&lt;UK, TtlValue&lt;UV&gt;&gt;&gt; originalIterator;</span><br><span class="line">		<span class="keyword">private</span> <span class="keyword">final</span> Function&lt;Map.Entry&lt;UK, UV&gt;, R&gt; resultMapper;</span><br><span class="line">		<span class="keyword">private</span> Map.Entry&lt;UK, UV&gt; nextUnexpired = <span class="keyword">null</span>;</span><br><span class="line">		<span class="keyword">private</span> <span class="keyword">boolean</span> rightAfterNextIsCalled = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line">		<span class="function"><span class="keyword">private</span> <span class="title">EntriesIterator</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">			@Nonnull Iterable&lt;Map.Entry&lt;UK, TtlValue&lt;UV&gt;&gt;&gt; withTs,</span></span></span><br><span class="line"><span class="function"><span class="params">			@Nonnull Function&lt;Map.Entry&lt;UK, UV&gt;, R&gt; resultMapper)</span> </span>&#123;</span><br><span class="line">			<span class="keyword">this</span>.originalIterator = withTs.iterator();</span><br><span class="line">			<span class="keyword">this</span>.resultMapper = resultMapper;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="meta">@Override</span></span><br><span class="line">		<span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">hasNext</span><span class="params">()</span> </span>&#123;</span><br><span class="line">			rightAfterNextIsCalled = <span class="keyword">false</span>;</span><br><span class="line">			<span class="keyword">while</span> (nextUnexpired == <span class="keyword">null</span> &amp;&amp; originalIterator.hasNext()) &#123;</span><br><span class="line">				nextUnexpired = getUnexpiredAndUpdateOrCleanup(originalIterator.next());</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">return</span> nextUnexpired != <span class="keyword">null</span>;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="meta">@Override</span></span><br><span class="line">		<span class="function"><span class="keyword">public</span> R <span class="title">next</span><span class="params">()</span> </span>&#123;</span><br><span class="line">			<span class="keyword">if</span> (hasNext()) &#123;</span><br><span class="line">				rightAfterNextIsCalled = <span class="keyword">true</span>;</span><br><span class="line">				R result = resultMapper.apply(nextUnexpired);</span><br><span class="line">				nextUnexpired = <span class="keyword">null</span>;</span><br><span class="line">				<span class="keyword">return</span> result;</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">throw</span> <span class="keyword">new</span> NoSuchElementException();</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="meta">@Override</span></span><br><span class="line">		<span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">remove</span><span class="params">()</span> </span>&#123;</span><br><span class="line">			<span class="keyword">if</span> (rightAfterNextIsCalled) &#123;</span><br><span class="line">				originalIterator.remove();</span><br><span class="line">			&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException(<span class="string">"next() has not been called or hasNext() has been called afterwards,"</span> +</span><br><span class="line">					<span class="string">" remove() is supported only right after calling next()"</span>);</span><br><span class="line">			&#125;</span><br><span class="line">		&#125;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">private</span> Map.<span class="function">Entry&lt;UK, UV&gt; <span class="title">getUnexpiredAndUpdateOrCleanup</span><span class="params">(Map.Entry&lt;UK, TtlValue&lt;UV&gt;&gt; e)</span> </span>&#123;</span><br><span class="line">			TtlValue&lt;UV&gt; unexpiredValue;</span><br><span class="line">			<span class="keyword">try</span> &#123;</span><br><span class="line">				unexpiredValue = getWrappedWithTtlCheckAndUpdate(</span><br><span class="line">					e::getValue,</span><br><span class="line">					v -&gt; original.put(e.getKey(), v),</span><br><span class="line">					originalIterator::remove);</span><br><span class="line">			&#125; <span class="keyword">catch</span> (Exception ex) &#123;</span><br><span class="line">				<span class="keyword">throw</span> <span class="keyword">new</span> FlinkRuntimeException(ex);</span><br><span class="line">			&#125;</span><br><span class="line">			<span class="keyword">return</span> unexpiredValue == <span class="keyword">null</span> ? <span class="keyword">null</span> : <span class="keyword">new</span> AbstractMap.SimpleEntry&lt;&gt;(e.getKey(), unexpiredValue.getUserValue());</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>可见，TtlMapState的增删改查操作都是在原MapState上进行，只是加上了TTL相关的逻辑，这也是装饰器模式的特点。例如，TtlMapState.get()方法调用了上述AbstractTtlDecorator.getWrappedWithTtlCheckAndUpdate()方法，传入的获取（getter）、插入（updater）和删除（stateClear）的逻辑就是原MapState的get()、put()和remove()方法。而TtlMapState.put()只是在调用原MapState的put()方法之前，将状态包装为TtlValue而已。</p>
+<h4 id="增量清理策略"><a href="#增量清理策略" class="headerlink" title="增量清理策略"></a>增量清理策略</h4><p>另外需要注意，所有增删改查操作之前都需要执行accessCallback.run()方法。如果启用了增量清理策略，该Runnable会通过在状态数据上维护一个全局迭代器向前清理过期数据。如果未启用增量清理策略，accessCallback为空。前文提到过的TtlStateFactory.registerTtlIncrementalCleanupCallback()方法如下</p>
+<p>TtlStateFactory.registerTtlIncrementalCleanupCallback</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">private</span> Runnable <span class="title">registerTtlIncrementalCleanupCallback</span><span class="params">(InternalKvState&lt;?, ?, ?&gt; originalState)</span> </span>&#123;</span><br><span class="line">	StateTtlConfig.IncrementalCleanupStrategy config =</span><br><span class="line">		ttlConfig.getCleanupStrategies().getIncrementalCleanupStrategy();</span><br><span class="line">	<span class="keyword">boolean</span> cleanupConfigured = config != <span class="keyword">null</span> &amp;&amp; incrementalCleanup != <span class="keyword">null</span>;</span><br><span class="line">	<span class="keyword">boolean</span> isCleanupActive = cleanupConfigured &amp;&amp;</span><br><span class="line">		isStateIteratorSupported(originalState, incrementalCleanup.getCleanupSize());</span><br><span class="line">	Runnable callback = isCleanupActive ? incrementalCleanup::stateAccessed : () -&gt; &#123; &#125;;</span><br><span class="line">	<span class="keyword">if</span> (isCleanupActive &amp;&amp; config.runCleanupForEveryRecord()) &#123;</span><br><span class="line">		stateBackend.registerKeySelectionListener(stub -&gt; callback.run());</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> callback;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>实际清理的代码则位于TtlIncrementalCleanup类中，stateIterator就是状态数据的迭代器。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">runCleanup</span><span class="params">()</span> </span>&#123;</span><br><span class="line">		<span class="keyword">int</span> entryNum = <span class="number">0</span>;</span><br><span class="line">		Collection&lt;StateEntry&lt;K, N, S&gt;&gt; nextEntries;</span><br><span class="line">		<span class="keyword">while</span> (</span><br><span class="line">			entryNum &lt; cleanupSize &amp;&amp;</span><br><span class="line">			stateIterator.hasNext() &amp;&amp;</span><br><span class="line">			!(nextEntries = stateIterator.nextEntries()).isEmpty()) &#123;</span><br><span class="line"></span><br><span class="line">			<span class="keyword">for</span> (StateEntry&lt;K, N, S&gt; state : nextEntries) &#123;</span><br><span class="line">				S cleanState = ttlState.getUnexpiredOrNull(state.getState());</span><br><span class="line">				<span class="keyword">if</span> (cleanState == <span class="keyword">null</span>) &#123;</span><br><span class="line">					stateIterator.remove(state);</span><br><span class="line">				&#125; <span class="keyword">else</span> <span class="keyword">if</span> (cleanState != state.getState()) &#123;</span><br><span class="line">					stateIterator.update(state, cleanState);</span><br><span class="line">				&#125;</span><br><span class="line">			&#125;</span><br><span class="line"></span><br><span class="line">			entryNum += nextEntries.size();</span><br><span class="line">		&#125;</span><br><span class="line">	&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://blog.csdn.net/nazeniwaresakini/article/details/106094778" target="_blank" rel="noopener">https://blog.csdn.net/nazeniwaresakini/article/details/106094778</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2020/06/15/Flink-去重/" rel="next" title="Flink 去重">
+                <i class="fa fa-chevron-left"></i> Flink 去重
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2020/06/17/Flink-对象的不正确释放（反面教材/" rel="prev" title="Flink 对象的不正确释放和内存泄露（反面教材">
+                Flink 对象的不正确释放和内存泄露（反面教材 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">134</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前言"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#State"><span class="nav-number">1.1.</span> <span class="nav-text">State</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#Keyed-State"><span class="nav-number">1.1.1.</span> <span class="nav-text">Keyed State</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#Operator-State"><span class="nav-number">1.1.2.</span> <span class="nav-text">Operator State</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#StateTtlConfig"><span class="nav-number">1.2.</span> <span class="nav-text">StateTtlConfig</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TtlStateFactory、TtlStateContext"><span class="nav-number">1.3.</span> <span class="nav-text">TtlStateFactory、TtlStateContext</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#TtlMapState"><span class="nav-number">1.3.1.</span> <span class="nav-text">TtlMapState</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#增量清理策略"><span class="nav-number">1.3.2.</span> <span class="nav-text">增量清理策略</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">1.4.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
