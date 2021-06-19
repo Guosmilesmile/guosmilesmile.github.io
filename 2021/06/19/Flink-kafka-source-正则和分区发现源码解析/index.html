@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="前置使用方法 https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/kafka/ 总结先上总结，kafka的分区发现基本还是基于另起线程，在另外的线程内，通过kafka的client的基础功能，获取集群所有的topic，与正则进行匹配（居然是框架的功能不是kafka的功能">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink kafka source 正则和分区发现源码解析">
+<meta property="og:url" content="http://yoursite.com/2021/06/19/Flink-kafka-source-正则和分区发现源码解析/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="前置使用方法 https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/kafka/ 总结先上总结，kafka的分区发现基本还是基于另起线程，在另外的线程内，通过kafka的client的基础功能，获取集群所有的topic，与正则进行匹配（居然是框架的功能不是kafka的功能">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-06-19T09:15:29.885Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink kafka source 正则和分区发现源码解析">
+<meta name="twitter:description" content="前置使用方法 https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/kafka/ 总结先上总结，kafka的分区发现基本还是基于另起线程，在另外的线程内，通过kafka的client的基础功能，获取集群所有的topic，与正则进行匹配（居然是框架的功能不是kafka的功能">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2021/06/19/Flink-kafka-source-正则和分区发现源码解析/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink kafka source 正则和分区发现源码解析 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/06/19/Flink-kafka-source-正则和分区发现源码解析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink kafka source 正则和分区发现源码解析
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-06-19 17:15:02 / 修改时间：17:15:29" itemprop="dateCreated datePublished" datetime="2021-06-19T17:15:02+08:00">2021-06-19</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="前置"><a href="#前置" class="headerlink" title="前置"></a>前置</h2><p>使用方法</p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/kafka/" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/kafka/</a></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>先上总结，kafka的分区发现基本还是基于另起线程，在另外的线程内，通过kafka的client的基础功能，获取集群所有的topic，与正则进行匹配（居然是框架的功能不是kafka的功能）过滤出符合的topic，通过kafka client获取所有的partition。</p>
+<p>flink会保存已经发现过的partition，将新发现的partition和topic名字的hascode还有子任务的id进行一个计算，保证任务可以均衡的分布在每个子任务（等于partition是自我认领的方式）</p>
+<h2 id="源码解析"><a href="#源码解析" class="headerlink" title="源码解析"></a>源码解析</h2><p>FlinkKafkaConsumerBase.java</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">if</span> (discoveryIntervalMillis == PARTITION_DISCOVERY_DISABLED) &#123;</span><br><span class="line">    kafkaFetcher.runFetchLoop();</span><br><span class="line">&#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    runWithPartitionDiscovery();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>如果这个discoverIntervalMillis设置为Long.MIN_VALUE就走kafkaFetcher.runFetchLoop();的方法。<br>如果设置了这个值，并且不是最小值，那么就会走runWithPartitionDiscovery方法。</p>
+<p>discoverIntervalMillis是一个设置了的必须大于等于0或者等于Long.min_value。</p>
+<p>如果启用了，最终会调用createAndStartDiscoveryLoop()方法，启动一个单独的线程，负责以discoveryIntervalMillis为周期发现新的topic/partition，并传递给KafkaFetcher。</p>
+<p>核心代码在FlinkKafkaConsumerBase的createAndStartDiscoveryLoop</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">createAndStartDiscoveryLoop</span><span class="params">(AtomicReference&lt;Exception&gt; discoveryLoopErrorRef)</span> </span>&#123;</span><br><span class="line">        discoveryLoopThread =</span><br><span class="line">                <span class="keyword">new</span> Thread(</span><br><span class="line">                        () -&gt; &#123;</span><br><span class="line">                            <span class="keyword">try</span> &#123;</span><br><span class="line">                                <span class="comment">// --------------------- partition discovery loop</span></span><br><span class="line">                                <span class="comment">// ---------------------</span></span><br><span class="line"></span><br><span class="line">                                <span class="comment">// throughout the loop, we always eagerly check if we are still</span></span><br><span class="line">                                <span class="comment">// running before</span></span><br><span class="line">                                <span class="comment">// performing the next operation, so that we can escape the loop as</span></span><br><span class="line">                                <span class="comment">// soon as possible</span></span><br><span class="line"></span><br><span class="line">                                <span class="keyword">while</span> (running) &#123;</span><br><span class="line">                                    <span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">                                        LOG.debug(</span><br><span class="line">                                                <span class="string">"Consumer subtask &#123;&#125; is trying to discover new partitions ..."</span>,</span><br><span class="line">                                                getRuntimeContext().getIndexOfThisSubtask());</span><br><span class="line">                                    &#125;</span><br><span class="line"></span><br><span class="line">                                    <span class="keyword">final</span> List&lt;KafkaTopicPartition&gt; discoveredPartitions;</span><br><span class="line">                                    <span class="keyword">try</span> &#123;</span><br><span class="line">                                        discoveredPartitions =</span><br><span class="line">                                                partitionDiscoverer.discoverPartitions();</span><br><span class="line">                                    &#125; <span class="keyword">catch</span> (AbstractPartitionDiscoverer.WakeupException</span><br><span class="line">                                            | AbstractPartitionDiscoverer.ClosedException e) &#123;</span><br><span class="line">                                        <span class="comment">// the partition discoverer may have been closed or woken up</span></span><br><span class="line">                                        <span class="comment">// before or during the discovery;</span></span><br><span class="line">                                        <span class="comment">// this would only happen if the consumer was canceled;</span></span><br><span class="line">                                        <span class="comment">// simply escape the loop</span></span><br><span class="line">                                        <span class="keyword">break</span>;</span><br><span class="line">                                    &#125;</span><br><span class="line"></span><br><span class="line">                                    <span class="comment">// no need to add the discovered partitions if we were closed</span></span><br><span class="line">                                    <span class="comment">// during the meantime</span></span><br><span class="line">                                    <span class="keyword">if</span> (running &amp;&amp; !discoveredPartitions.isEmpty()) &#123;</span><br><span class="line">                                        kafkaFetcher.addDiscoveredPartitions(discoveredPartitions);</span><br><span class="line">                                    &#125;</span><br><span class="line"></span><br><span class="line">                                    <span class="comment">// do not waste any time sleeping if we're not running anymore</span></span><br><span class="line">                                    <span class="keyword">if</span> (running &amp;&amp; discoveryIntervalMillis != <span class="number">0</span>) &#123;</span><br><span class="line">                                        <span class="keyword">try</span> &#123;</span><br><span class="line">                                            Thread.sleep(discoveryIntervalMillis);</span><br><span class="line">                                        &#125; <span class="keyword">catch</span> (InterruptedException iex) &#123;</span><br><span class="line">                                            <span class="comment">// may be interrupted if the consumer was canceled</span></span><br><span class="line">                                            <span class="comment">// midway; simply escape the loop</span></span><br><span class="line">                                            <span class="keyword">break</span>;</span><br><span class="line">                                        &#125;</span><br><span class="line">                                    &#125;</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">                                discoveryLoopErrorRef.set(e);</span><br><span class="line">                            &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">                                <span class="comment">// calling cancel will also let the fetcher loop escape</span></span><br><span class="line">                                <span class="comment">// (if not running, cancel() was already called)</span></span><br><span class="line">                                <span class="keyword">if</span> (running) &#123;</span><br><span class="line">                                    cancel();</span><br><span class="line">                                &#125;</span><br><span class="line">                            &#125;</span><br><span class="line">                        &#125;,</span><br><span class="line">                        <span class="string">"Kafka Partition Discovery for "</span></span><br><span class="line">                                + getRuntimeContext().getTaskNameWithSubtasks());</span><br><span class="line"></span><br><span class="line">        discoveryLoopThread.start();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>关键代码在这边：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">try</span> &#123;</span><br><span class="line">        discoveredPartitions =</span><br><span class="line">                partitionDiscoverer.discoverPartitions();</span><br><span class="line">    &#125; <span class="keyword">catch</span> (AbstractPartitionDiscoverer.WakeupException</span><br><span class="line">            | AbstractPartitionDiscoverer.ClosedException e) &#123;</span><br><span class="line">        <span class="comment">// the partition discoverer may have been closed or woken up</span></span><br><span class="line">        <span class="comment">// before or during the discovery;</span></span><br><span class="line">        <span class="comment">// this would only happen if the consumer was canceled;</span></span><br><span class="line">        <span class="comment">// simply escape the loop</span></span><br><span class="line">        <span class="keyword">break</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// no need to add the discovered partitions if we were closed</span></span><br><span class="line">    <span class="comment">// during the meantime</span></span><br><span class="line">    <span class="keyword">if</span> (running &amp;&amp; !discoveredPartitions.isEmpty()) &#123;</span><br><span class="line">        kafkaFetcher.addDiscoveredPartitions(discoveredPartitions);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>先关注下AbstractPartitionDiscoverer.discoverPartitions，<br>主要做了下面这几件事</p>
+<ol>
+<li>会根据传入的是单个固定的topic还是由正则表达式指定的多个topics获取所有的可能的partition。</li>
+<li>排除旧的partition和不需要这个subtask需要订阅的partition</li>
+</ol>
+<p>如果是固定topic调用getAllPartitionsForTopics(topicsDescriptor.getFixedTopics());</p>
+<p>如果是基于正则，需要先获取这个集群上的所有的topic，进行正则的匹配（原来这个功能是在框架进行的，不是kafka的功能）。然后调用和固定topic一样的函数getAllPartitionsForTopics</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">List&lt;String&gt; matchedTopics = getAllTopics();</span><br><span class="line"></span><br><span class="line"><span class="comment">// retain topics that match the pattern</span></span><br><span class="line">Iterator&lt;String&gt; iter = matchedTopics.iterator();</span><br><span class="line"><span class="keyword">while</span> (iter.hasNext()) &#123;</span><br><span class="line"><span class="keyword">if</span> (!topicsDescriptor.isMatchingTopic(iter.next())) &#123;</span><br><span class="line">             iter.remove();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">if</span> (matchedTopics.size() != <span class="number">0</span>) &#123;</span><br><span class="line">    <span class="comment">// get partitions only for matched topics</span></span><br><span class="line">    newDiscoveredPartitions = getAllPartitionsForTopics(matchedTopics);</span><br><span class="line"> &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">    newDiscoveredPartitions = <span class="keyword">null</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>KafkaPartitionDiscoverer.getAllPartitionsForTopics主要是用于发现kafka对应topic的partition。这个函数主要是使用kafka自带的client获取这个topic所有的partition</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">final</span> List&lt;PartitionInfo&gt; kafkaPartitions = kafkaConsumer.partitionsFor(topic);</span><br></pre></td></tr></table></figure>
+<p>获取所有的topic也是一样调用kafka client自带的方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">kafkaConsumer.listTopics()</span><br></pre></td></tr></table></figure>
+<p>回归主线，看第二步，如何排除无关的partition。关键是AbstractPartitionDiscoverer.setAndCheckDiscoveredPartition.</p>
+<p>AbstractPartitionDiscoverer这个类中有一个变量discoveredPartitions存储已经被发现过的partition.非该存储中的均为新发现的partition。</p>
+<p>如何判断这个partition是否是这个subtask需要消费的。通过getRuntimeContext().getIndexOfThisSubtask()获取该任务的index，通过getRuntimeContext().getNumberOfParallelSubtasks()获取总任务的并行度。调用assign进行判断。</p>
+<p>assign方法进行了比较多的考虑，产生的单个主题的分区分布具有以下特点</p>
+<ol>
+<li>均匀地分布在子任务中</li>
+<li>通过使用分区ID作为起始索引的偏移量</li>
+</ol>
+<p>topicA 可能是从subtask 10 ，11 ， 12 … 开始分布<br>topicB 可能是从subtask 2 ，3 ，4 …  开始分布</p>
+<p>为了错开，进行讲topic名字的hashCode作为计算分部的一部分。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Sets a partition as discovered. Partitions are considered as new if its partition id is</span></span><br><span class="line"><span class="comment">     * larger than all partition ids previously seen for the topic it belongs to. Therefore, for a</span></span><br><span class="line"><span class="comment">     * set of discovered partitions, the order that this method is invoked with each partition is</span></span><br><span class="line"><span class="comment">     * important.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;If the partition is indeed newly discovered, this method also returns whether the new</span></span><br><span class="line"><span class="comment">     * partition should be subscribed by this subtask.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> partition the partition to set and check</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> &#123;<span class="doctag">@code</span> true&#125;, if the partition wasn't seen before and should be subscribed by this</span></span><br><span class="line"><span class="comment">     *     subtask; &#123;<span class="doctag">@code</span> false&#125; otherwise</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">setAndCheckDiscoveredPartition</span><span class="params">(KafkaTopicPartition partition)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (isUndiscoveredPartition(partition)) &#123;</span><br><span class="line">            discoveredPartitions.add(partition);</span><br><span class="line"></span><br><span class="line">            <span class="keyword">return</span> KafkaTopicPartitionAssigner.assign(partition, numParallelSubtasks)</span><br><span class="line">                    == indexOfThisSubtask;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;</span><br><span class="line">    &#125;</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Returns the index of the target subtask that a specific Kafka partition should be assigned</span></span><br><span class="line"><span class="comment">     * to.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;The resulting distribution of partitions of a single topic has the following contract:</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * &lt;ul&gt;</span></span><br><span class="line"><span class="comment">     *   &lt;li&gt;1. Uniformly distributed across subtasks</span></span><br><span class="line"><span class="comment">     *   &lt;li&gt;2. Partitions are round-robin distributed (strictly clockwise w.r.t. ascending subtask</span></span><br><span class="line"><span class="comment">     *       indices) by using the partition id as the offset from a starting index (i.e., the index</span></span><br><span class="line"><span class="comment">     *       of the subtask which partition 0 of the topic will be assigned to, determined using the</span></span><br><span class="line"><span class="comment">     *       topic name).</span></span><br><span class="line"><span class="comment">     * &lt;/ul&gt;</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * &lt;p&gt;The above contract is crucial and cannot be broken. Consumer subtasks rely on this</span></span><br><span class="line"><span class="comment">     * contract to locally filter out partitions that it should not subscribe to, guaranteeing that</span></span><br><span class="line"><span class="comment">     * all partitions of a single topic will always be assigned to some subtask in a uniformly</span></span><br><span class="line"><span class="comment">     * distributed manner.</span></span><br><span class="line"><span class="comment">     *</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> partition the Kafka partition</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@param</span> numParallelSubtasks total number of parallel subtasks</span></span><br><span class="line"><span class="comment">     * <span class="doctag">@return</span> index of the target subtask that the Kafka partition should be assigned to.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> <span class="title">assign</span><span class="params">(KafkaTopicPartition partition, <span class="keyword">int</span> numParallelSubtasks)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">int</span> startIndex =</span><br><span class="line">                ((partition.getTopic().hashCode() * <span class="number">31</span>) &amp; <span class="number">0x7FFFFFFF</span>) % numParallelSubtasks;</span><br><span class="line"></span><br><span class="line">        <span class="comment">// here, the assumption is that the id of Kafka partitions are always ascending</span></span><br><span class="line">        <span class="comment">// starting from 0, and therefore can be used directly as the offset clockwise from the</span></span><br><span class="line">        <span class="comment">// start index</span></span><br><span class="line">        <span class="keyword">return</span> (startIndex + partition.getPartition()) % numParallelSubtasks;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://cloud.tencent.com/developer/article/1677272" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1677272</a><br><a href="https://www.cnblogs.com/Springmoon-venn/p/12023350.html" target="_blank" rel="noopener">https://www.cnblogs.com/Springmoon-venn/p/12023350.html</a><br><a href="https://juejin.cn/post/6844903972835344391" target="_blank" rel="noopener">https://juejin.cn/post/6844903972835344391</a>    </p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/06/09/FlinkKafkaSink、两阶段提交协议和Semantic三种类型源码解析/" rel="next" title="FlinkKafkaSink、两阶段提交协议和Semantic三种类型源码解析">
+                <i class="fa fa-chevron-left"></i> FlinkKafkaSink、两阶段提交协议和Semantic三种类型源码解析
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">136</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#前置"><span class="nav-number">1.</span> <span class="nav-text">前置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">2.</span> <span class="nav-text">总结</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#源码解析"><span class="nav-number">3.</span> <span class="nav-text">源码解析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">3.1.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
