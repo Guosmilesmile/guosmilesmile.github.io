@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2021/06/19/flink-%E6%B6%88%E8%B4%B9-kafka-%E6%B6%88%E8%B4%B9%E7%BB%84-offset-%E6%8F%90%E4%BA%A4%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</loc>
+    
+    <lastmod>2021-06-19T09:18:49.267Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2021/06/19/Flink-kafka-source-%E6%AD%A3%E5%88%99%E5%92%8C%E5%88%86%E5%8C%BA%E5%8F%91%E7%8E%B0%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/</loc>
     
     <lastmod>2021-06-19T09:15:29.885Z</lastmod>

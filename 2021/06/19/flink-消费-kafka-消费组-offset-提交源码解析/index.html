@@ -100,16 +100,16 @@
 
   <meta name="description" content="flink 消费 kafka 数据，提交消费组 offset 有三种类型  开启 checkpoint ：在 checkpoint 完成后提交 开启 checkpoint，禁用 checkpoint 提交： 不提交消费组 offset 不开启 checkpoint：依赖kafka client 的自动提交  一个简单的 flink 程序： 读取kafka topic 数据，写到另一个 topic">
 <meta property="og:type" content="article">
-<meta property="og:title" content="flink 消费 kafka 消费组 offset 提交">
-<meta property="og:url" content="http://yoursite.com/2021/05/16/flink-消费-kafka-消费组-offset-提交/index.html">
+<meta property="og:title" content="flink 消费 kafka 消费组 offset 提交源码解析">
+<meta property="og:url" content="http://yoursite.com/2021/06/19/flink-消费-kafka-消费组-offset-提交源码解析/index.html">
 <meta property="og:site_name" content="Pray">
 <meta property="og:description" content="flink 消费 kafka 数据，提交消费组 offset 有三种类型  开启 checkpoint ：在 checkpoint 完成后提交 开启 checkpoint，禁用 checkpoint 提交： 不提交消费组 offset 不开启 checkpoint：依赖kafka client 的自动提交  一个简单的 flink 程序： 读取kafka topic 数据，写到另一个 topic">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/08E43DE1C182414AADD39CE68E31ABE8?method=download&shareKey=3f2d716974f9a7c688985ab5ec61fbbe">
 <meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/2C48356580BF4DB9A229DBABD5B369B7?method=download&shareKey=93c37ab3eacdfd2dfa4673e58f272387">
-<meta property="og:updated_time" content="2021-05-16T03:39:48.680Z">
+<meta property="og:updated_time" content="2021-06-19T09:18:49.267Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="flink 消费 kafka 消费组 offset 提交">
+<meta name="twitter:title" content="flink 消费 kafka 消费组 offset 提交源码解析">
 <meta name="twitter:description" content="flink 消费 kafka 数据，提交消费组 offset 有三种类型  开启 checkpoint ：在 checkpoint 完成后提交 开启 checkpoint，禁用 checkpoint 提交： 不提交消费组 offset 不开启 checkpoint：依赖kafka client 的自动提交  一个简单的 flink 程序： 读取kafka topic 数据，写到另一个 topic">
 <meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/08E43DE1C182414AADD39CE68E31ABE8?method=download&shareKey=3f2d716974f9a7c688985ab5ec61fbbe">
 
@@ -118,7 +118,7 @@
 
 
 
-  <link rel="canonical" href="http://yoursite.com/2021/05/16/flink-消费-kafka-消费组-offset-提交/">
+  <link rel="canonical" href="http://yoursite.com/2021/06/19/flink-消费-kafka-消费组-offset-提交源码解析/">
 
 
 
@@ -128,7 +128,7 @@
   };
 </script>
 
-  <title>flink 消费 kafka 消费组 offset 提交 | Pray</title>
+  <title>flink 消费 kafka 消费组 offset 提交源码解析 | Pray</title>
   
 
 
@@ -314,7 +314,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/05/16/flink-消费-kafka-消费组-offset-提交/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/06/19/flink-消费-kafka-消费组-offset-提交源码解析/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="笑笑">
@@ -331,7 +331,7 @@
 
         
         
-          <h1 class="post-title" itemprop="name headline">flink 消费 kafka 消费组 offset 提交
+          <h1 class="post-title" itemprop="name headline">flink 消费 kafka 消费组 offset 提交源码解析
 
               
             
@@ -357,7 +357,7 @@
                 
               
 
-              <time title="创建时间：2021-05-16 11:37:10 / 修改时间：11:39:48" itemprop="dateCreated datePublished" datetime="2021-05-16T11:37:10+08:00">2021-05-16</time>
+              <time title="创建时间：2021-06-19 17:17:42 / 修改时间：17:18:49" itemprop="dateCreated datePublished" datetime="2021-06-19T17:17:42+08:00">2021-06-19</time>
             
 
             
@@ -483,8 +483,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2021/05/15/关于Flink消费kafka开启checkpoint却没有配置重启策略的思考/" rel="next" title="关于Flink消费kafka开启checkpoint却没有配置重启策略的思考">
-                <i class="fa fa-chevron-left"></i> 关于Flink消费kafka开启checkpoint却没有配置重启策略的思考
+              <a href="/2021/06/19/Flink-kafka-source-正则和分区发现源码解析/" rel="next" title="Flink kafka source 正则和分区发现源码解析">
+                <i class="fa fa-chevron-left"></i> Flink kafka source 正则和分区发现源码解析
               </a>
             
           </div>
@@ -492,10 +492,6 @@
           <span class="post-nav-divider"></span>
 
           <div class="post-nav-prev post-nav-item">
-            
-              <a href="/2021/05/16/FlinkKafkaConsumer同groupId消费问题深入分析/" rel="prev" title="FlinkKafkaConsumer同groupId消费问题深入分析">
-                FlinkKafkaConsumer同groupId消费问题深入分析 <i class="fa fa-chevron-right"></i>
-              </a>
             
           </div>
         </div>
