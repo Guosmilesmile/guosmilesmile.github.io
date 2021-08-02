@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2021/08/02/flink-sql-count%E8%B8%A9%E5%9D%91/</loc>
+    
+    <lastmod>2021-08-02T14:41:47.661Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2021/07/20/Kafka%E5%8E%8B%E7%BC%A9%E7%9A%84%E6%80%9D%E8%80%83%E5%92%8C%E6%80%A7%E8%83%BD%E5%AF%B9%E6%AF%94/</loc>
     
     <lastmod>2021-07-19T16:35:57.053Z</lastmod>
