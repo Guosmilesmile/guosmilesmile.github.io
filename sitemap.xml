@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://yoursite.com/2021/08/07/Flink-Kafka-Sink-%E5%9F%8B%E5%9D%91%E5%8E%86%E7%A8%8B/</loc>
+    
+    <lastmod>2021-08-07T04:33:16.366Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://yoursite.com/2021/08/02/flink-sql-count%E8%B8%A9%E5%9D%91/</loc>
     
     <lastmod>2021-08-02T14:41:47.661Z</lastmod>
