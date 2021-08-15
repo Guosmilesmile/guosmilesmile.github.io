@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景关于StreamFileSink的使用，直接见官网吧，更全 https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/ 123456789101112public static StreamingFileSink&amp;lt;OneLogEnti">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Flink StreamingFileSink源码分析">
+<meta property="og:url" content="http://yoursite.com/2021/08/15/Flink-StreamingFileSink源码分析/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景关于StreamFileSink的使用，直接见官网吧，更全 https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/ 123456789101112public static StreamingFileSink&amp;lt;OneLogEnti">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:updated_time" content="2021-08-15T13:11:11.618Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Flink StreamingFileSink源码分析">
+<meta name="twitter:description" content="背景关于StreamFileSink的使用，直接见官网吧，更全 https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/ 123456789101112public static StreamingFileSink&amp;lt;OneLogEnti">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2021/08/15/Flink-StreamingFileSink源码分析/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>Flink StreamingFileSink源码分析 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/15/Flink-StreamingFileSink源码分析/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">Flink StreamingFileSink源码分析
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-08-15 21:10:56 / 修改时间：21:11:11" itemprop="dateCreated datePublished" datetime="2021-08-15T21:10:56+08:00">2021-08-15</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>关于StreamFileSink的使用，直接见官网吧，更全</p>
+<p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/</a></p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> StreamingFileSink&lt;OneLogEntity&gt; <span class="title">init</span><span class="params">(String outputPath)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> StreamingFileSink</span><br><span class="line">                .forRowFormat(<span class="keyword">new</span> Path(outputPath), <span class="keyword">new</span> SimpleStringEncoder&lt;OneLogEntity&gt;(<span class="string">"UTF-8"</span>))</span><br><span class="line">                .withBucketAssigner(<span class="keyword">new</span> HostDateTimeBucketAssigner())</span><br><span class="line">                .withRollingPolicy(</span><br><span class="line">                        DefaultRollingPolicy.builder()</span><br><span class="line">                                .withRolloverInterval(TimeUnit.MINUTES.toMillis(<span class="number">5</span>)) <span class="comment">// 它至少包含5分钟的数据</span></span><br><span class="line">                                .withInactivityInterval(TimeUnit.MINUTES.toMillis(<span class="number">1</span>)) <span class="comment">// 最近1分钟没有收到新的记录</span></span><br><span class="line">                                .withMaxPartSize(<span class="number">1024</span> * <span class="number">1024</span> * <span class="number">1024</span>) <span class="comment">// 文件大小达到 1GB（写入最后一条记录后）</span></span><br><span class="line">                                .build())</span><br><span class="line">                .build();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>or</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> StreamingFileSink&lt;OneLogEntity&gt; <span class="title">init</span><span class="params">(String outputPath)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> StreamingFileSink</span><br><span class="line">                .forRowFormat(<span class="keyword">new</span> Path(outputPath), <span class="keyword">new</span> SimpleStringEncoder&lt;OneLogEntity&gt;(<span class="string">"UTF-8"</span>))</span><br><span class="line">                .withBucketAssigner(<span class="keyword">new</span> HostDateTimeBucketAssigner())</span><br><span class="line">                .withRollingPolicy(OnCheckpointRollingPolicy.build())</span><br><span class="line">                .build();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>写入的文件有三种状态：in-process、in-pending、finshed，invoke方法里面正在写入的文件状态是in-process，当满足滚动策略之后将文件变为in-pending状态，执行sapshotState方法会对in-process状态文件执行commit操作，将缓存的数据刷进磁盘，并且记录其当前offset值，同时会记录in-pending文件的元数据信息，最终在notifyCheckpointComplete方法中将记录的in-pending状态文件转换为finshed的可读文件。如果中间程序出现异常则会通过initializeState完成恢复操作，将in-process文件恢复到记录的offset位置，直接恢复in-pending文件，并且将没有记录的in-pending文件删除、超过offset部分的数据删除，finshed文件无需操作。除了需要对offset、文件元数据信息保存外，还需要保存counter值，partFile命名组成的一部分，如果不保存则会造成重启后文件counter重新从0开始，会覆盖之前写入的文件</p>
+<p>今天我们来看下StreamingFileSink的一些不一样的用法和具体源码解析</p>
+<h2 id="如何自定义路径"><a href="#如何自定义路径" class="headerlink" title="如何自定义路径"></a>如何自定义路径</h2><p>根据输入数据自定义文件输出路径，StreamingFileSink中withBucketAssigner方法，只要实现getBucketId方法，返回的BucketId就是对应的路径地址，可以参考源码DateTimeBucketAssigner</p>
+<p>如果返回的是xxx/xxxx,那么也会变成多层路径</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> String <span class="title">getBucketId</span><span class="params">(OneLogEntity element, BucketAssigner.Context context)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (dateTimeFormatter == <span class="keyword">null</span>) &#123;</span><br><span class="line">            dateTimeFormatter = DateTimeFormatter.ofPattern(formatString).withZone(zoneId);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">long</span> currentProcessingTime = context.currentProcessingTime();</span><br><span class="line">        String time = dateTimeFormatter.format(Instant.ofEpochMilli(currentProcessingTime/<span class="number">1000</span> /<span class="number">300</span> * <span class="number">300</span> *<span class="number">1000</span>));</span><br><span class="line">        <span class="keyword">return</span> time+<span class="string">"/"</span>+time + <span class="string">"-"</span> + element.getHost();</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">└── 202108121105</span><br><span class="line">    └── 202108121105-host1</span><br><span class="line">    	├── part-0-0</span><br><span class="line">    	├── part-0-1</span><br><span class="line">    	├── .part-0-2-inprogress</span><br><span class="line">    </span><br><span class="line">    └── 202108121105-host2</span><br><span class="line">    	├── part-0-0</span><br><span class="line">    	├── part-0-1</span><br><span class="line">    	├── .part-0-2-inprogress</span><br></pre></td></tr></table></figure>
+<p>详情见源码</p>
+<p>Buckets</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> Path <span class="title">assembleBucketPath</span><span class="params">(BucketID bucketId)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">final</span> String child = bucketId.toString();</span><br><span class="line">    <span class="keyword">if</span> (<span class="string">""</span>.equals(child)) &#123;</span><br><span class="line">        <span class="keyword">return</span> basePath;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> Path(basePath, child);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h2 id="回滚策略"><a href="#回滚策略" class="headerlink" title="回滚策略"></a>回滚策略</h2><ul>
+<li>OnCheckpointRollingPolicy   </li>
+<li>DefaultRollingPolicy</li>
+</ul>
+<p>OnCheckpointRollingPolicy在每次checkPoint的时候就会从inprogress变成finish。DefaultRollingPolicy是根据大小，时间来判断是否可以从inprogress到finish，一个inprogress中会有多个checkpoint数据</p>
+<p>接口RollingPolicy有三个方法</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">shouldRollOnCheckpoint</span><br><span class="line">shouldRollOnEvent</span><br><span class="line">shouldRollOnProcessingTime</span><br></pre></td></tr></table></figure>
+<p>OnCheckpointRollingPolicy很明显是shouldRollOnCheckpoint为true，其他皆为false，可以做到每个part文件都是一个checkpoint数据，做到excetly once。</p>
+<p>DefaultRollingPolicy有三个回滚策略，一个是根据每个part的大小，这个会在每次写文件和每次chk的时候判断。一个是根据文件的时间，是否大于可以回滚的时候或者时间大于上一条数据写入的时间</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">shouldRollOnCheckpoint</span><span class="params">(PartFileInfo&lt;BucketID&gt; partFileState)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> partFileState.getSize() &gt; partSize;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">shouldRollOnEvent</span><span class="params">(PartFileInfo&lt;BucketID&gt; partFileState, IN element)</span></span></span><br><span class="line"><span class="function">          <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> partFileState.getSize() &gt; partSize;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">shouldRollOnProcessingTime</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">          <span class="keyword">final</span> PartFileInfo&lt;BucketID&gt; partFileState, <span class="keyword">final</span> <span class="keyword">long</span> currentTime)</span> </span>&#123;</span><br><span class="line">      <span class="keyword">return</span> currentTime - partFileState.getCreationTime() &gt;= rolloverInterval</span><br><span class="line">              || currentTime - partFileState.getLastUpdateTime() &gt;= inactivityInterval;</span><br><span class="line">  &#125;</span><br></pre></td></tr></table></figure>
+<h2 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h2><p>行编码格式，主要返回的类是DefaultRowFormatBuilder，他的父类是RowFormatBuilder，有这么重要的参数</p>
+<ul>
+<li>long bucketCheckInterval </li>
+<li>Path basePath 文件的落地路径</li>
+<li>Encoder encoder  文件落地的编码</li>
+<li>BucketAssigner bucketAssigner bucket的策略构造</li>
+<li>RollingPolicy rollingPolicy 文件的回滚策略</li>
+<li>BucketFactory bucketFactory </li>
+<li>OutputFileConfig outputFileConfig 落地文件的名字前缀和后缀配置</li>
+</ul>
+<p>StreamingFileSink基本都会相关的操作集合到StreamingFileSinkHelper中，而其实helper的操作全部集中到了Buckets中，Buckets用于管理所有bucket，一个bucket对应一个细致的路径。</p>
+<p>首先StreamingFileSinkHelper继承了ProcessingTimeCallback，用于注册间隔bucketCheckInterval的processingTime触发任务。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> timestamp)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> <span class="keyword">long</span> currentTime = procTimeService.getCurrentProcessingTime();</span><br><span class="line">        buckets.onProcessingTime(currentTime);</span><br><span class="line">        procTimeService.registerTimer(currentTime + bucketCheckInterval, <span class="keyword">this</span>);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<p>针对数据的invoke需要调用onElement，snapshotState调用snapshotState，notifyCheckpointComplete调用commitUpToCheckpoint。</p>
+<h3 id="onElement"><a href="#onElement" class="headerlink" title="onElement"></a>onElement</h3><p>Buckets.java<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> Bucket&lt;IN, BucketID&gt; <span class="title">onElement</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> IN value,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> <span class="keyword">long</span> currentProcessingTime,</span></span></span><br><span class="line"><span class="function"><span class="params">            @Nullable <span class="keyword">final</span> Long elementTimestamp,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> <span class="keyword">long</span> currentWatermark)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="comment">// setting the values in the bucketer context</span></span><br><span class="line">        bucketerContext.update(elementTimestamp, currentWatermark, currentProcessingTime);</span><br><span class="line"></span><br><span class="line">        <span class="keyword">final</span> BucketID bucketId = bucketAssigner.getBucketId(value, bucketerContext);</span><br><span class="line">        <span class="keyword">final</span> Bucket&lt;IN, BucketID&gt; bucket = getOrCreateBucketForBucketId(bucketId);</span><br><span class="line">        bucket.write(value, currentProcessingTime);</span><br><span class="line"></span><br><span class="line">        <span class="comment">// we update the global max counter here because as buckets become inactive and</span></span><br><span class="line">        <span class="comment">// get removed from the list of active buckets, at the time when we want to create</span></span><br><span class="line">        <span class="comment">// another part file for the bucket, if we start from 0 we may overwrite previous parts.</span></span><br><span class="line"></span><br><span class="line">        <span class="keyword">this</span>.maxPartCounter = Math.max(maxPartCounter, bucket.getPartCounter());</span><br><span class="line">        <span class="keyword">return</span> bucket;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>先通过bucketAssigner获取这个数据的bucketId，通过id获取bucket，然后将数据写入bucket中，</p>
+<h3 id="onProcessingTime"><a href="#onProcessingTime" class="headerlink" title="onProcessingTime"></a>onProcessingTime</h3><p>Buckets.java<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> timestamp)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        <span class="keyword">for</span> (Bucket&lt;IN, BucketID&gt; bucket : activeBuckets.values()) &#123;</span><br><span class="line">            bucket.onProcessingTime(timestamp);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>每个bucket路径，都要触发一次onProcessingTime,调用rollingPolicy.shouldRollOnProcessingTime方法，判断每个inProgress的part是否可以roll了，如果可以roll的part，就会调用closePartFile</p>
+<p>Bucket.java<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">onProcessingTime</span><span class="params">(<span class="keyword">long</span> timestamp)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (inProgressPart != <span class="keyword">null</span></span><br><span class="line">                &amp;&amp; rollingPolicy.shouldRollOnProcessingTime(inProgressPart, timestamp)) &#123;</span><br><span class="line">            <span class="keyword">if</span> (LOG.isDebugEnabled()) &#123;</span><br><span class="line">                LOG.debug(</span><br><span class="line">                        <span class="string">"Subtask &#123;&#125; closing in-progress part file for bucket id=&#123;&#125; due to processing time rolling policy "</span></span><br><span class="line">                                + <span class="string">"(in-progress file created @ &#123;&#125;, last updated @ &#123;&#125; and current time is &#123;&#125;)."</span>,</span><br><span class="line">                        subtaskIndex,</span><br><span class="line">                        bucketId,</span><br><span class="line">                        inProgressPart.getCreationTime(),</span><br><span class="line">                        inProgressPart.getLastUpdateTime(),</span><br><span class="line">                        timestamp);</span><br><span class="line">            &#125;</span><br><span class="line">            closePartFile();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<h3 id="snapshotState"><a href="#snapshotState" class="headerlink" title="snapshotState"></a>snapshotState</h3><p>Buckets.java<br><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">snapshotState</span><span class="params">(</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> <span class="keyword">long</span> checkpointId,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> ListState&lt;<span class="keyword">byte</span>[]&gt; bucketStatesContainer,</span></span></span><br><span class="line"><span class="function"><span class="params">            <span class="keyword">final</span> ListState&lt;Long&gt; partCounterStateContainer)</span></span></span><br><span class="line"><span class="function">            <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line"></span><br><span class="line">        Preconditions.checkState(</span><br><span class="line">                bucketWriter != <span class="keyword">null</span> &amp;&amp; bucketStateSerializer != <span class="keyword">null</span>,</span><br><span class="line">                <span class="string">"sink has not been initialized"</span>);</span><br><span class="line"></span><br><span class="line">        LOG.info(</span><br><span class="line">                <span class="string">"Subtask &#123;&#125; checkpointing for checkpoint with id=&#123;&#125; (max part counter=&#123;&#125;)."</span>,</span><br><span class="line">                subtaskIndex,</span><br><span class="line">                checkpointId,</span><br><span class="line">                maxPartCounter);</span><br><span class="line"></span><br><span class="line">        bucketStatesContainer.clear();</span><br><span class="line">        partCounterStateContainer.clear();</span><br><span class="line"></span><br><span class="line">        snapshotActiveBuckets(checkpointId, bucketStatesContainer);</span><br><span class="line">        partCounterStateContainer.add(maxPartCounter);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure></p>
+<p>将当前active的bucket存入状态，和当前maxPartCounter存入状态，真是调用的是bucket.onReceptionOfCheckpoint(checkpointId)，将InProgressFileRecoverable存入状态，这个类中保存了文件的各种信息。</p>
+<p>InProgressFileRecoverable的实现OutputStreamBasedInProgressFileRecoverable，有一个成员变量ResumeRecoverable，他有两个实现，HadoopFsRecoverable和LocalRecoverable。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/** The file path for the final result file. */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> File targetFile;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** The file path of the staging file. */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> File tempFile;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/** The position to resume from. */</span></span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> <span class="keyword">long</span> offset;</span><br></pre></td></tr></table></figure>
+<p>通过上面三个变量，可以做到文件回放和回滚</p>
+<h3 id="notifyCheckpointComplete"><a href="#notifyCheckpointComplete" class="headerlink" title="notifyCheckpointComplete"></a>notifyCheckpointComplete</h3><figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">commitUpToCheckpoint</span><span class="params">(<span class="keyword">long</span> checkpointId)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        buckets.commitUpToCheckpoint(checkpointId);</span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bucket.onSuccessfulCompletionOfCheckpoint(checkpointId);</span><br></pre></td></tr></table></figure>
+<p>调用HadoopFsRecoverable和LocalRecoverable的具体实现<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">bucketWriter.recoverPendingFile(pendingFileRecoverable).commit();</span><br></pre></td></tr></table></figure></p>
+<p>把inProgrss转为finish文件</p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/" target="_blank" rel="noopener">https://ci.apache.org/projects/flink/flink-docs-release-1.13/zh/docs/connectors/datastream/streamfile_sink/</a></p>
+<p><a href="https://www.cnblogs.com/Springmoon-venn/p/11198196.html" target="_blank" rel="noopener">https://www.cnblogs.com/Springmoon-venn/p/11198196.html</a></p>
+<p><a href="https://blog.csdn.net/m0_49834705/article/details/114577330" target="_blank" rel="noopener">https://blog.csdn.net/m0_49834705/article/details/114577330</a></p>
+<p><a href="http://shzhangji.com/cnblogs/2018/12/30/real-time-exactly-once-etl-with-apache-flink/" target="_blank" rel="noopener">http://shzhangji.com/cnblogs/2018/12/30/real-time-exactly-once-etl-with-apache-flink/</a></p>
+<p><a href="https://www.programmersought.com/article/97513705665/" target="_blank" rel="noopener">https://www.programmersought.com/article/97513705665/</a></p>
+<p><a href="https://toutiao.io/posts/a19c9s9/preview" target="_blank" rel="noopener">https://toutiao.io/posts/a19c9s9/preview</a></p>
+<p><a href="https://www.cnblogs.com/Springmoon-venn/p/11198196.html" target="_blank" rel="noopener">https://www.cnblogs.com/Springmoon-venn/p/11198196.html</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/08/15/流计算中的Exactly-Once特性/" rel="next" title="流计算中的Exactly Once特性">
+                <i class="fa fa-chevron-left"></i> 流计算中的Exactly Once特性
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">142</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#如何自定义路径"><span class="nav-number">2.</span> <span class="nav-text">如何自定义路径</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#回滚策略"><span class="nav-number">3.</span> <span class="nav-text">回滚策略</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#源码分析"><span class="nav-number">4.</span> <span class="nav-text">源码分析</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#onElement"><span class="nav-number">4.1.</span> <span class="nav-text">onElement</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#onProcessingTime"><span class="nav-number">4.2.</span> <span class="nav-text">onProcessingTime</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#snapshotState"><span class="nav-number">4.3.</span> <span class="nav-text">snapshotState</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#notifyCheckpointComplete"><span class="nav-number">4.4.</span> <span class="nav-text">notifyCheckpointComplete</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">4.5.</span> <span class="nav-text">Reference</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>

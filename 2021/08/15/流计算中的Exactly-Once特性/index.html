@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+<html class="theme-next pisces use-motion" lang="zh-CN">
+<head><meta name="generator" content="Hexo 3.8.0">
+  <meta charset="UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css?v=4.6.2">
+
+<link rel="stylesheet" href="/css/main.css?v=7.0.1">
+
+
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png?v=7.0.1">
+
+
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png?v=7.0.1">
+
+
+  <link rel="mask-icon" href="/images/logo.svg?v=7.0.1" color="#222">
+
+
+
+
+
+
+
+<script id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Pisces',
+    version: '7.0.1',
+    sidebar: {"position":"left","display":"post","offset":12,"onmobile":false,"dimmer":false},
+    back2top: true,
+    back2top_sidebar: false,
+    fancybox: false,
+    fastclick: false,
+    lazyload: false,
+    tabs: true,
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+  
+
+
+
+
+  <meta name="description" content="背景流处理可以简单地描述为是对无界数据或事件的连续处理。流或事件处理应用程序可以或多或少地被描述为有向图，并且通常被描述为有向无环图（DAG）。sources读取外部数据/事件到应用程序中，而 sinks 通常会收集应用程序生成的结果。下图是流式应用程序的示例。  流处理引擎通常允许用户指定可靠性模式或处理语义，以指示它将为整个应用程序中的数据处理提供哪些保证。 处理语义最多一次（At-most-">
+<meta property="og:type" content="article">
+<meta property="og:title" content="流计算中的Exactly Once特性">
+<meta property="og:url" content="http://yoursite.com/2021/08/15/流计算中的Exactly-Once特性/index.html">
+<meta property="og:site_name" content="Pray">
+<meta property="og:description" content="背景流处理可以简单地描述为是对无界数据或事件的连续处理。流或事件处理应用程序可以或多或少地被描述为有向图，并且通常被描述为有向无环图（DAG）。sources读取外部数据/事件到应用程序中，而 sinks 通常会收集应用程序生成的结果。下图是流式应用程序的示例。  流处理引擎通常允许用户指定可靠性模式或处理语义，以指示它将为整个应用程序中的数据处理提供哪些保证。 处理语义最多一次（At-most-">
+<meta property="og:locale" content="zh-CN">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/WEB7aff0947790566eb226f32cde5f95687?method=download&shareKey=97559b5f2f84b59f1353e99d486f4ada">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/WEB4ebc056efb6ca1f5ba29461fbd878df4?method=download&shareKey=621b8768dd3390c1b2d8e0663e113aac">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/WEBe24223c3f69dad21b0ed8b7de145af81?method=download&shareKey=f5814776c30c2931a6abae226f47adaa">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/WEB60cd695b48054fddfec9faa0fcfa2f00?method=download&shareKey=5e235ba749daecd5665bde0875487aa8">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/WEBf03b4e5eddf5a218522bb193ba03c7bd?method=download&shareKey=96dd4747d6ea5e626fe3d4807575c482">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/DACDA0D36E65409599BBB080EA633019?method=download&shareKey=9adc9bb6af2b7599ff382a0408b0c26f">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/27D1AD836DC04280A2E3D7C7FACE35F9?method=download&shareKey=4ef1e56e0b3924ad270a9b45c756fa6f">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AFC5592903304F76BC9C3632FBDCCD02?method=download&shareKey=b16fc1c90a635ee142d5d2fbe1422679">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/CF040D5C0C084F4CA96BBDEDEC7642DA?method=download&shareKey=82ed7ec2664971e9522dd892c443b0ed">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/5AB07951DFFD49BCAB1894A7B8C18541?method=download&shareKey=2f7f878f15c086fb4f7d6d1a00201b73">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/AB184338C3094C9C98D897D864B1F865?method=download&shareKey=f6858815be435fd9706076899e26f39a">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/25DED52D106A49E89E0F7D2229919F6D?method=download&shareKey=6943719a8084298b1f6fd4db28326802">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/4F2FD952BD414B81A43DF0E0821BD34D?method=download&shareKey=d6df6aa9ad7390bf00dc872b8f3a6a41">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/49500B5399F342E5BA4BFA5FBB487B4C?method=download&shareKey=63b01ba174583757b860b379e9a6800b">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/F4FBF9FDB7E644CCB270891DF8AD9415?method=download&shareKey=14ef4a48b8fcfcf6dbd5a521ffbbc343">
+<meta property="og:image" content="https://note.youdao.com/yws/api/personal/file/3DF290A566CB458687E51539F0C07061?method=download&shareKey=7ba23b905d82733fdce6f5dcc6678f25">
+<meta property="og:updated_time" content="2021-08-15T13:10:40.370Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="流计算中的Exactly Once特性">
+<meta name="twitter:description" content="背景流处理可以简单地描述为是对无界数据或事件的连续处理。流或事件处理应用程序可以或多或少地被描述为有向图，并且通常被描述为有向无环图（DAG）。sources读取外部数据/事件到应用程序中，而 sinks 通常会收集应用程序生成的结果。下图是流式应用程序的示例。  流处理引擎通常允许用户指定可靠性模式或处理语义，以指示它将为整个应用程序中的数据处理提供哪些保证。 处理语义最多一次（At-most-">
+<meta name="twitter:image" content="https://note.youdao.com/yws/api/personal/file/WEB7aff0947790566eb226f32cde5f95687?method=download&shareKey=97559b5f2f84b59f1353e99d486f4ada">
+
+
+
+
+
+
+  <link rel="canonical" href="http://yoursite.com/2021/08/15/流计算中的Exactly-Once特性/">
+
+
+
+<script id="page.configurations">
+  CONFIG.page = {
+    sidebar: "",
+  };
+</script>
+
+  <title>流计算中的Exactly Once特性 | Pray</title>
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .motion-element,
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-title { opacity: initial; }
+
+  .use-motion .logo,
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-CN">
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">Pray</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+    
+      
+        <p class="site-subtitle">人肉排渣工程师,擅长排渣数据，服务器排渣</p>
+      
+    
+    
+  </div>
+
+  <div class="site-nav-toggle">
+    <button aria-label="切换导航栏">
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+
+
+<nav class="site-nav">
+  
+    <ul id="menu" class="menu">
+      
+        
+        
+        
+          
+          <li class="menu-item menu-item-home">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/" rel="section"><i class="menu-item-icon fa fa-fw fa-home"></i> <br>首页</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-categories">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/categories/" rel="section"><i class="menu-item-icon fa fa-fw fa-th"></i> <br>分类</a>
+
+  </li>
+        
+        
+        
+          
+          <li class="menu-item menu-item-archives">
+
+    
+    
+    
+      
+    
+
+    
+
+    <a href="/archives/" rel="section"><i class="menu-item-icon fa fa-fw fa-archive"></i> <br>归档</a>
+
+  </li>
+
+      
+      
+    </ul>
+  
+
+  
+
+  
+</nav>
+
+
+
+  
+
+
+
+</div>
+    </header>
+
+    
+
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+            
+
+          
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  
+
+  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
+  
+  
+  
+  <div class="post-block">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2021/08/15/流计算中的Exactly-Once特性/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="笑笑">
+      <meta itemprop="description" content>
+      <meta itemprop="image" content="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Pray">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">流计算中的Exactly Once特性
+
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+
+            
+            
+            
+
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+
+              
+                
+              
+
+              <time title="创建时间：2021-08-15 21:10:12 / 修改时间：21:10:40" itemprop="dateCreated datePublished" datetime="2021-08-15T21:10:12+08:00">2021-08-15</time>
+            
+
+            
+              
+
+              
+            
+          </span>
+
+          
+            <span class="post-category">
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing"><a href="/categories/Flink/" itemprop="url" rel="index"><span itemprop="name">Flink</span></a></span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+            
+          
+
+          
+          
+
+          
+            <span class="post-meta-divider">|</span>
+            <span class="post-meta-item-icon">
+            <i class="fa fa-eye"></i>
+             阅读次数： 
+            <span class="busuanzi-value" id="busuanzi_value_page_pv"></span>
+            </span>
+          
+
+          
+
+          
+
+        </div>
+      </header>
+    
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        <h2 id="背景"><a href="#背景" class="headerlink" title="背景"></a>背景</h2><p>流处理可以简单地描述为是对无界数据或事件的连续处理。流或事件处理应用程序可以或多或少地被描述为有向图，并且通常被描述为有向无环图（DAG）。sources读取外部数据/事件到应用程序中，而 sinks 通常会收集应用程序生成的结果。下图是流式应用程序的示例。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/WEB7aff0947790566eb226f32cde5f95687?method=download&amp;shareKey=97559b5f2f84b59f1353e99d486f4ada" alt="image"></p>
+<p>流处理引擎通常允许用户指定可靠性模式或处理语义，以指示它将为整个应用程序中的数据处理提供哪些保证。</p>
+<h2 id="处理语义"><a href="#处理语义" class="headerlink" title="处理语义"></a>处理语义</h2><h3 id="最多一次（At-most-once）"><a href="#最多一次（At-most-once）" class="headerlink" title="最多一次（At-most-once）"></a>最多一次（At-most-once）</h3><p>这本质上是一『尽力而为』的方法。保证数据或事件最多由应用程序中的所有算子处理一次。 这意味着如果数据在被流应用程序完全处理之前发生丢失，则不会进行其他重试或者重新发送。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/WEB4ebc056efb6ca1f5ba29461fbd878df4?method=download&amp;shareKey=621b8768dd3390c1b2d8e0663e113aac" alt="image"></p>
+<p>例如kafka刚消费下来，还没处理完提交到下游，作业就挂了，这个时候consumer已经提交了offset。</p>
+<h3 id="至少一次（At-least-once）"><a href="#至少一次（At-least-once）" class="headerlink" title="至少一次（At-least-once）"></a>至少一次（At-least-once）</h3><p>应用程序中的所有算子都保证数据或事件至少被处理一次。这通常意味着如果事件在流应用程序完全处理之前丢失，则将从源头重放或重新传输事件。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/WEBe24223c3f69dad21b0ed8b7de145af81?method=download&amp;shareKey=f5814776c30c2931a6abae226f47adaa" alt="image"></p>
+<h3 id="精确一次（Exactly-once）"><a href="#精确一次（Exactly-once）" class="headerlink" title="精确一次（Exactly-once）"></a>精确一次（Exactly-once）</h3><p>即使是在各种故障的情况下，流应用程序中的所有算子都保证事件只会被『精确一次』的处理。</p>
+<p>通常使用两种流行的机制来实现『精确一次』处理语义。</p>
+<ul>
+<li>分布式快照 / 状态检查点</li>
+<li>至少一次事件传递和对重复数据去重</li>
+</ul>
+<p>实现『精确一次』的分布式快照/状态检查点方法受到 Chandy-Lamport 分布式快照算法的启发。</p>
+<blockquote>
+<p>Chandy, K. Mani and Leslie Lamport.Distributed snapshots: Determining global states of distributed systems. ACMTransactions on Computer Systems (TOCS) 3.1 (1985): 63-75.</p>
+</blockquote>
+<p>通过这种机制，流应用程序中每个算子的所有状态都会定期做 checkpoint。如果是在系统中的任何地方发生失败，每个算子的所有状态都回滚到最新的全局一致 checkpoint 点。在回滚期间，将暂停所有处理。源也会重置为与最近 checkpoint 相对应的正确偏移量。整个流应用程序基本上是回到最近一次的一致状态，然后程序可以从该状态重新启动。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/WEB60cd695b48054fddfec9faa0fcfa2f00?method=download&amp;shareKey=5e235ba749daecd5665bde0875487aa8" alt="image"></p>
+<p>在上图中，流应用程序在 T1 时间处正常工作，并且做了checkpoint。然而，在时间 T2，算子未能处理输入的数据。此时，S=4 的状态值已保存到持久存储器中，而状态值 S=12 保存在算子的内存中。为了修复这种差异，在时间 T3，处理程序将状态回滚到 S=4 并“重放”流中的每个连续状态直到最近，并处理每个数据。最终结果是有些数据已被处理了多次，但这没关系，因为无论执行了多少次回滚，结果状态都是相同的。</p>
+<p>另一种实现『精确一次』的方法是：在每个算子上实现至少一次事件传递和对重复数据去重来。使用此方法的流处理引擎将重放失败事件，以便在事件进入算子中的用户定义逻辑之前，进一步尝试处理并移除每个算子的重复事件。此机制要求为每个算子维护一个事务日志，以跟踪它已处理的事件。利用这种机制的引擎有 Google 的 MillWheel[2] 和 Apache Kafka Streams。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/WEBf03b4e5eddf5a218522bb193ba03c7bd?method=download&amp;shareKey=96dd4747d6ea5e626fe3d4807575c482" alt="image"></p>
+<h3 id="Exactly-once本质"><a href="#Exactly-once本质" class="headerlink" title="Exactly-once本质"></a>Exactly-once本质</h3><p>当引擎声明『精确一次』处理语义时，它们实际上是在说，它们可以保证引擎管理的状态更新只提交一次到持久的后端存储。<strong>事件的处理可以发生多次，但是该处理的效果只在持久后端状态存储中反映一次。</strong></p>
+<p>上面描述的两种机制都使用持久的后端存储作为真实性的来源，可以保存每个算子的状态并自动向其提交更新。对于机制 1 (分布式快照 / 状态检查点)，此持久后端状态用于保存流应用程序的全局一致状态检查点(每个算子的检查点状态)。对于机制 2 (至少一次事件传递加上重复数据删除)，持久后端状态用于存储每个算子的状态以及每个算子的事务日志，该日志跟踪它已经完全处理的所有事件。</p>
+<h3 id="事务与exectly-once"><a href="#事务与exectly-once" class="headerlink" title="事务与exectly-once"></a>事务与exectly-once</h3><p>事务与exectly-once是两个容易混淆的概念，前者保证数据能够“打包”成整体处理，后者保证数据的精准投递，两者概念不同但相辅相成。</p>
+<p>支持事务，只能保证事务单元整理处理，无法解决事务单元处理多次问题；</p>
+<h3 id="两种Exactly-once的比较"><a href="#两种Exactly-once的比较" class="headerlink" title="两种Exactly-once的比较"></a>两种Exactly-once的比较</h3><p>从语义的角度来看，分布式快照和至少一次事件传递以及重复数据删除机制都提供了相同的保证。然而，由于两种机制之间的实现差异，存在显着的性能差异。</p>
+<h4 id="分布式快照-状态检查点"><a href="#分布式快照-状态检查点" class="headerlink" title="分布式快照 / 状态检查点"></a>分布式快照 / 状态检查点</h4><p>性能开销是最小，因为引擎实际上是往流应用程序中的所有算子一起发送常规事件和特殊事件，而状态检查点可以在后台异步执行。（事件和数据本质其实都是event）</p>
+<p>但是，对于大型流应用程序，故障可能会更频繁地发生，导致引擎需要暂停应用程序并回滚所有算子的状态，这反过来又会影响性能。流式应用程序越大，故障发生的可能性就越大，因此也越频繁，反过来，流式应用程序的性能受到的影响也就越大。然而，这种机制是非侵入性的，运行时需要的额外资源影响很小。</p>
+<h4 id="至少一次事件传递加重复数据删除"><a href="#至少一次事件传递加重复数据删除" class="headerlink" title="至少一次事件传递加重复数据删除"></a>至少一次事件传递加重复数据删除</h4><p>需要更多资源，尤其是存储后端。使用此机制，引擎需要能够跟踪每个算子实例已完全处理的每个元组，以执行重复数据删除，以及为每个事件执行重复数据删除本身。这意味着需要跟踪大量的数据，尤其是在流应用程序很大或者有许多应用程序在运行的情况下。执行重复数据删除的每个算子上的每个事件都会产生性能开销。但是，使用这种机制，流应用程序的性能不太可能受到应用程序大小的影响。</p>
+<h4 id="总体比较"><a href="#总体比较" class="headerlink" title="总体比较"></a>总体比较</h4><p>分布式快照 / 状态检查点的优缺点：</p>
+<p>优点：</p>
+<ul>
+<li>较小的性能和资源开销<br>缺点：</li>
+<li>对性能的影响较大</li>
+<li>拓扑越大，对性能的潜在影响越大</li>
+</ul>
+<p>至少一次事件传递以及重复数据删除机制的优缺点：</p>
+<p>优点：</p>
+<ul>
+<li>故障对性能的影响是局部的</li>
+<li>故障的影响不一定会随着拓扑的大小而增加</li>
+</ul>
+<p>缺点：</p>
+<ul>
+<li>可能需要大量的存储和基础设施来支持</li>
+<li>每个算子的每个事件的性能开销</li>
+</ul>
+<p>虽然从理论上讲，分布式快照和至少一次事件传递加重复数据删除机制之间存在差异，但两者都可以简化为至少一次处理加幂等性。对于这两种机制，当发生故障时(至少实现一次)，事件将被重放/重传，并且通过状态回滚或事件重复数据删除，算子在更新内部管理状态时本质上是幂等的。</p>
+<h2 id="端到端Exactly-Once"><a href="#端到端Exactly-Once" class="headerlink" title="端到端Exactly-Once"></a>端到端Exactly-Once</h2><p>上面的机制实现了集群内计算任务的 Exactly Once 语义，但是仍然实现不了在输入和输出两端数据不丢不重，集群的计算任务可以回放，下游没办法回放，这就要求下游等系统也得支持Exactly Once或者相对的Exactly Once（支持回滚）</p>
+<p>所以要求，上游支持回放数据，计算保证 Exactly Once，下游支持回滚。</p>
+<h2 id="Flink的一致性"><a href="#Flink的一致性" class="headerlink" title="Flink的一致性"></a>Flink的一致性</h2><h3 id="Flink的CheckPoint功能简介"><a href="#Flink的CheckPoint功能简介" class="headerlink" title="Flink的CheckPoint功能简介"></a>Flink的CheckPoint功能简介</h3><p>Flink CheckPoint 的存在就是为了解决flink任务failover掉之后，能够正常恢复任务。</p>
+<p>CheckPoint是通过给程序快照的方式使得将历史某些时刻的状态保存下来，当任务挂掉之后，默认从最近一次保存的完整快照处进行恢复任务。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/DACDA0D36E65409599BBB080EA633019?method=download&amp;shareKey=9adc9bb6af2b7599ff382a0408b0c26f" alt="image"></p>
+<h3 id="案例"><a href="#案例" class="headerlink" title="案例"></a>案例</h3><p>app的pv，flink该怎么统计呢？</p>
+<p>从Kafka读取到一条条的日志，从日志中解析出app_id，然后将统计的结果放到内存中一个Map集合，app_id做为key，对应的pv做为value，每次只需要将相应app_id 的pv值+1后put到Map中即可</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/27D1AD836DC04280A2E3D7C7FACE35F9?method=download&amp;shareKey=4ef1e56e0b3924ad270a9b45c756fa6f" alt="image"></p>
+<p>flink的Source task记录了当前消费到kafka test topic的所有partition的offset，为了方便理解CheckPoint的作用，这里先用一个partition进行讲解，假设名为 “test”的 topic只有一个partition0</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">例：（0，1000）</span><br><span class="line">表示0号partition目前消费到offset为1000的数据</span><br></pre></td></tr></table></figure>
+<p>flink的pv task记录了当前计算的各app的pv值</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">例：（app1，50000）（app2，10000）</span><br><span class="line">表示app1当前pv值为50000</span><br><span class="line">表示app2当前pv值为10000</span><br></pre></td></tr></table></figure>
+<p>每来一条数据，只需要确定相应app_id，将相应的value值+1后put到map中即可</p>
+<h4 id="checkPoint的作用"><a href="#checkPoint的作用" class="headerlink" title="checkPoint的作用"></a>checkPoint的作用</h4><p>checkPoint记录了第n次CheckPoint消费的offset信息和各app的pv值信息，记录一下发生CheckPoint当前的状态信息，并将该状态信息保存到相应的状态后端</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">chk-100</span><br><span class="line">offset：（0，1000）</span><br><span class="line">pv：（app1，50000）（app2，10000）</span><br></pre></td></tr></table></figure>
+<p>该状态信息表示第100次CheckPoint的时候， partition 0 offset消费到了1000，pv统计结果为（app1，50000）（app2，10000）</p>
+<h4 id="任务挂了如何恢复"><a href="#任务挂了如何恢复" class="headerlink" title="任务挂了如何恢复"></a>任务挂了如何恢复</h4><p>如果任务挂了flink只需要从最近一次成功的CheckPoint保存的offset（0，1000）处接着消费即可，当然pv值也要按照状态里的pv值（app1，50000）（app2，10000）进行累加。</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><p><img src="https://note.youdao.com/yws/api/personal/file/AFC5592903304F76BC9C3632FBDCCD02?method=download&amp;shareKey=b16fc1c90a635ee142d5d2fbe1422679" alt="image"></p>
+<ul>
+<li>barrier从Source Task处生成，一直流到Sink Task，期间所有的Task只要碰到barrier，就会触发自身进行快照</li>
+<li><ul>
+<li>CheckPoint barrier n-1处做的快照就是指Job从开始处理到 barrier n-1所有的状态数据</li>
+</ul>
+</li>
+<li><ul>
+<li>barrier n 处做的快照就是指从Job开始到处理到 barrier n所有的状态数据</li>
+</ul>
+</li>
+</ul>
+<h3 id="多并行度、多Operator情况下，CheckPoint过程"><a href="#多并行度、多Operator情况下，CheckPoint过程" class="headerlink" title="多并行度、多Operator情况下，CheckPoint过程"></a>多并行度、多Operator情况下，CheckPoint过程</h3><p>所有的Operator运行过程中遇到barrier后，都对自身的状态进行一次快照，保存到相应状态后端</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/CF040D5C0C084F4CA96BBDEDEC7642DA?method=download&amp;shareKey=82ed7ec2664971e9522dd892c443b0ed" alt="image"></p>
+<p>多Operator状态恢复</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/5AB07951DFFD49BCAB1894A7B8C18541?method=download&amp;shareKey=2f7f878f15c086fb4f7d6d1a00201b73" alt="image"></p>
+<p>JobManager向Source Task发送CheckPointTrigger，Source Task会在数据流中安插CheckPoint barrier</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/AB184338C3094C9C98D897D864B1F865?method=download&amp;shareKey=f6858815be435fd9706076899e26f39a" alt="image"></p>
+<p>Source Task自身做快照，并保存到状态后端，Source Task将barrier跟数据流一块往下游发送。当下游的Operator实例接收到CheckPoint barrier后，对自身做快照。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/25DED52D106A49E89E0F7D2229919F6D?method=download&amp;shareKey=6943719a8084298b1f6fd4db28326802" alt="image"><br>上述图中，有4个带状态的Operator实例，相应的状态后端就可以想象成填4个格子。整个CheckPoint 的过程可以当做Operator实例填自己格子的过程，Operator实例将自身的状态写到状态后端中相应的格子，当所有的格子填满可以简单的认为一次完整的CheckPoint做完了</p>
+<h4 id="整个CheckPoint执行过程如下"><a href="#整个CheckPoint执行过程如下" class="headerlink" title="整个CheckPoint执行过程如下"></a>整个CheckPoint执行过程如下</h4><ol>
+<li>JobManager端的 CheckPointCoordinator向所有SourceTask发送CheckPointTrigger，Source Task会在数据流中安插CheckPoint barrier</li>
+<li>当task收到所有的barrier后，向自己的下游继续传递barrier，然后自身执行快照，并将自己的状态异步写入到持久化存储中<br>增量CheckPoint只是把最新的一部分更新写入到 外部存储<br>为了下游尽快做CheckPoint，所以会先发送barrier到下游，自身再同步进行快照</li>
+</ol>
+<ul>
+<li>增量CheckPoint只是把最新的一部分更新写入到 外部存储(例如时间窗口内等所有数据汇聚完在做计算的算子，增量比全量好)</li>
+<li>为了下游尽快做CheckPoint，所以会先发送barrier到下游，自身再同步进行快照</li>
+</ul>
+<ol start="3">
+<li>当task完成备份后，会将备份数据的地址（state handle）通知给JobManager的CheckPointCoordinator</li>
+</ol>
+<ul>
+<li>如果CheckPoint的持续时长超过 了CheckPoint设定的超时时间，CheckPointCoordinator 还没有收集完所有的 State Handle，CheckPointCoordinator就会认为本次CheckPoint失败，会把这次CheckPoint产生的所有 状态数据全部删除</li>
+</ul>
+<ol start="4">
+<li>最后 CheckPoint Coordinator 会把整个 StateHandle 封装成 completed CheckPoint Meta，写入到hdfs</li>
+</ol>
+<h3 id="barrier对齐"><a href="#barrier对齐" class="headerlink" title="barrier对齐"></a>barrier对齐</h3><p><img src="https://note.youdao.com/yws/api/personal/file/4F2FD952BD414B81A43DF0E0821BD34D?method=download&amp;shareKey=d6df6aa9ad7390bf00dc872b8f3a6a41" alt="image"></p>
+<ul>
+<li>一旦Operator从输入流接收到CheckPoint barrier n，它就不能处理来自该流的任何数据记录，直到它从其他所有输入接收到barrier n为止。否则，它会混合属于快照n的记录和属于快照n + 1的记录</li>
+<li>接收到barrier n的流暂时被搁置。从这些流接收的记录不会被处理，而是放入输入缓冲区。</li>
+<li><ul>
+<li>上图中第2个图，虽然数字流对应的barrier已经到达了，但是barrier之后的1、2、3这些数据只能放到buffer中，等待字母流的barrier到达</li>
+</ul>
+</li>
+<li>一旦最后所有输入流都接收到barrier n，Operator就会把缓冲区中pending 的输出数据发出去，然后把CheckPoint barrier n接着往下游发送</li>
+<li>之后，Operator将继续处理来自所有输入流的记录，在处理来自流的记录之前先处理来自输入缓冲区的记录</li>
+</ul>
+<h5 id="什么是barrier不对齐？"><a href="#什么是barrier不对齐？" class="headerlink" title="什么是barrier不对齐？"></a>什么是barrier不对齐？</h5><p>barrier不对齐就是指当还有其他流的barrier还没到达时，为了不影响性能，也不用理会，直接处理barrier之后的数据。等到所有流的barrier的都到达后，就可以对该Operator做CheckPoint了</p>
+<p>Exactly Once时必须barrier对齐，如果barrier不对齐就变成了At Least Once</p>
+<h3 id="Flink端到端的Exactly-Once"><a href="#Flink端到端的Exactly-Once" class="headerlink" title="Flink端到端的Exactly-Once"></a>Flink端到端的Exactly-Once</h3><p>要使数据输出端提供Exactly-Once保证，它必须将所有数据通过一个事务提交给外部系统，在这种情况下，为了提供Exactly-Once保证，外部系统必须支持事务，这样才能和两阶段提交协议集成。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/49500B5399F342E5BA4BFA5FBB487B4C?method=download&amp;shareKey=63b01ba174583757b860b379e9a6800b" alt="image"></p>
+<p>当checkpoint barrier在所有operator都传递了一遍，并且触发的checkpoint回调成功完成时，预提交阶段就结束了。所有触发的状态快照都被视为该checkpoint的一部分。checkpoint是整个应用程序状态的快照，包括预先提交的外部状态。如果发生故障，我们可以回滚到上次成功完成快照的时间点。</p>
+<p>下一步是通知所有operator，checkpoint已经成功了。这是两阶段提交协议的提交阶段，JobManager为应用程序中的每个operator发出checkpoint已完成的回调。</p>
+<p>数据源和widnow operator没有外部状态，因此在提交阶段，这些operator不必执行任何操作。但是，数据输出端（Data Sink）拥有外部状态，此时应该提交外部事务。</p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/F4FBF9FDB7E644CCB270891DF8AD9415?method=download&amp;shareKey=14ef4a48b8fcfcf6dbd5a521ffbbc343" alt="image"></p>
+<p><img src="https://note.youdao.com/yws/api/personal/file/3DF290A566CB458687E51539F0C07061?method=download&amp;shareKey=7ba23b905d82733fdce6f5dcc6678f25" alt="image"></p>
+<h3 id="Reference"><a href="#Reference" class="headerlink" title="Reference"></a>Reference</h3><p><a href="https://segmentfault.com/a/1190000019353382" target="_blank" rel="noopener">https://segmentfault.com/a/1190000019353382</a></p>
+<p><a href="http://www.zdingke.com/2018/09/27/flume%E7%9A%84%E4%BA%8B%E5%8A%A1%E6%9C%BA%E5%88%B6%E5%92%8C%E5%8F%AF%E9%9D%A0%E6%80%A7/" target="_blank" rel="noopener">http://www.zdingke.com/2018/09/27/flume%E7%9A%84%E4%BA%8B%E5%8A%A1%E6%9C%BA%E5%88%B6%E5%92%8C%E5%8F%AF%E9%9D%A0%E6%80%A7/</a></p>
+<p><a href="https://www.cnblogs.com/tuowang/p/9022198.html" target="_blank" rel="noopener">https://www.cnblogs.com/tuowang/p/9022198.html</a></p>
+<p><a href="https://www.jdon.com/48558" target="_blank" rel="noopener">https://www.jdon.com/48558</a></p>
+<p><a href="https://cloud.tencent.com/developer/article/1591349" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1591349</a></p>
+<p><a href="https://cloud.tencent.com/developer/article/1438832?from=article.detail.1591349" target="_blank" rel="noopener">https://cloud.tencent.com/developer/article/1438832?from=article.detail.1591349</a></p>
+<p><a href="https://www.jianshu.com/p/8d1681f05d88" target="_blank" rel="noopener">https://www.jianshu.com/p/8d1681f05d88</a></p>
+<p><a href="https://ververica.cn/developers/flink-kafka-end-to-end-exactly-once-analysis/" target="_blank" rel="noopener">https://ververica.cn/developers/flink-kafka-end-to-end-exactly-once-analysis/</a></p>
+
+      
+    </div>
+
+    
+
+    
+    
+    
+
+    
+
+    
+      
+    
+    
+
+    
+
+    <footer class="post-footer">
+      
+
+      
+      
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/2021/08/07/Flink-Kafka-Sink-埋坑历程/" rel="next" title="Flink Kafka Sink 埋坑历程">
+                <i class="fa fa-chevron-left"></i> Flink Kafka Sink 埋坑历程
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/2021/08/15/Flink-StreamingFileSink源码分析/" rel="prev" title="Flink StreamingFileSink源码分析">
+                Flink StreamingFileSink源码分析 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </div>
+  
+  
+  
+  </article>
+
+
+  </div>
+
+
+          </div>
+          
+
+  
+
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap">
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview-wrap">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-overview">
+          <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+            
+              <img class="site-author-image" itemprop="image" src="https://note.youdao.com/yws/api/personal/file/85E1A31B078749AAA5FBFA9FF57A0FCB?method=download&shareKey=312d566957926c021bfd2bf29d0fb19c#/images/avatar.gif" alt="笑笑">
+            
+              <p class="site-author-name" itemprop="name">笑笑</p>
+              <div class="site-description motion-element" itemprop="description"></div>
+          </div>
+
+          
+            <nav class="site-state motion-element">
+              
+                <div class="site-state-item site-state-posts">
+                
+                  <a href="/archives/">
+                
+                    <span class="site-state-item-count">142</span>
+                    <span class="site-state-item-name">日志</span>
+                  </a>
+                </div>
+              
+
+              
+                
+                
+                <div class="site-state-item site-state-categories">
+                  
+                    
+                      <a href="/categories/">
+                    
+                  
+                    
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                      
+                    
+                    <span class="site-state-item-count">15</span>
+                    <span class="site-state-item-name">分类</span>
+                  </a>
+                </div>
+              
+
+              
+            </nav>
+          
+
+          
+
+          
+
+          
+
+          
+
+          
+          
+
+          
+            
+          
+          
+
+        </div>
+      </div>
+
+      
+      <!--noindex-->
+        <div class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+            
+            
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#背景"><span class="nav-number">1.</span> <span class="nav-text">背景</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#处理语义"><span class="nav-number">2.</span> <span class="nav-text">处理语义</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#最多一次（At-most-once）"><span class="nav-number">2.1.</span> <span class="nav-text">最多一次（At-most-once）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#至少一次（At-least-once）"><span class="nav-number">2.2.</span> <span class="nav-text">至少一次（At-least-once）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#精确一次（Exactly-once）"><span class="nav-number">2.3.</span> <span class="nav-text">精确一次（Exactly-once）</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Exactly-once本质"><span class="nav-number">2.4.</span> <span class="nav-text">Exactly-once本质</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#事务与exectly-once"><span class="nav-number">2.5.</span> <span class="nav-text">事务与exectly-once</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#两种Exactly-once的比较"><span class="nav-number">2.6.</span> <span class="nav-text">两种Exactly-once的比较</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#分布式快照-状态检查点"><span class="nav-number">2.6.1.</span> <span class="nav-text">分布式快照 / 状态检查点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#至少一次事件传递加重复数据删除"><span class="nav-number">2.6.2.</span> <span class="nav-text">至少一次事件传递加重复数据删除</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#总体比较"><span class="nav-number">2.6.3.</span> <span class="nav-text">总体比较</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#端到端Exactly-Once"><span class="nav-number">3.</span> <span class="nav-text">端到端Exactly-Once</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Flink的一致性"><span class="nav-number">4.</span> <span class="nav-text">Flink的一致性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Flink的CheckPoint功能简介"><span class="nav-number">4.1.</span> <span class="nav-text">Flink的CheckPoint功能简介</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#案例"><span class="nav-number">4.2.</span> <span class="nav-text">案例</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#checkPoint的作用"><span class="nav-number">4.2.1.</span> <span class="nav-text">checkPoint的作用</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#任务挂了如何恢复"><span class="nav-number">4.2.2.</span> <span class="nav-text">任务挂了如何恢复</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#原理"><span class="nav-number">4.3.</span> <span class="nav-text">原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#多并行度、多Operator情况下，CheckPoint过程"><span class="nav-number">4.4.</span> <span class="nav-text">多并行度、多Operator情况下，CheckPoint过程</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#整个CheckPoint执行过程如下"><span class="nav-number">4.4.1.</span> <span class="nav-text">整个CheckPoint执行过程如下</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#barrier对齐"><span class="nav-number">4.5.</span> <span class="nav-text">barrier对齐</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#什么是barrier不对齐？"><span class="nav-number">4.5.0.1.</span> <span class="nav-text">什么是barrier不对齐？</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Flink端到端的Exactly-Once"><span class="nav-number">4.6.</span> <span class="nav-text">Flink端到端的Exactly-Once</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Reference"><span class="nav-number">4.7.</span> <span class="nav-text">Reference</span></a></li></ol></div>
+            
+
+          </div>
+        </div>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+  
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        
+<div class="copyright">&copy; <span itemprop="copyrightYear">2021</span>
+  <span class="with-love" id="animate">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">笑笑</span>
+
+  
+
+  
+</div>
+
+  <div class="powered-by">由 <a href="https://hexo.io" class="theme-link" rel="noopener" target="_blank">Hexo</a> 强力驱动 v3.8.0</div>
+
+
+
+  <span class="post-meta-divider">|</span>
+
+
+
+  <div class="theme-info">主题 – <a href="https://theme-next.org" class="theme-link" rel="noopener" target="_blank">NexT.Pisces</a> v7.0.1</div>
+
+
+
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-user"></i>
+    </span>
+    <span class="site-uv" title="总访客量">
+      <span class="busuanzi-value" id="busuanzi_value_site_uv"></span>
+    </span>
+  
+
+  
+    <span class="post-meta-divider">|</span>
+  
+
+  
+    <span class="post-meta-item-icon">
+      <i class="fa fa-eye"></i>
+    </span>
+    <span class="site-pv" title="总访问量">
+      <span class="busuanzi-value" id="busuanzi_value_site_pv"></span>
+    </span>
+  
+</div>
+
+
+
+
+
+
+
+
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+    
+
+    
+
+    
+  </div>
+
+  
+
+<script>
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script src="/lib/jquery/index.js?v=2.1.3"></script>
+
+  
+  <script src="/lib/velocity/velocity.min.js?v=1.2.1"></script>
+
+  
+  <script src="/lib/velocity/velocity.ui.min.js?v=1.2.1"></script>
+
+
+  
+
+
+  <script src="/js/src/utils.js?v=7.0.1"></script>
+
+  <script src="/js/src/motion.js?v=7.0.1"></script>
+
+
+
+  
+  
+
+
+  <script src="/js/src/affix.js?v=7.0.1"></script>
+
+  <script src="/js/src/schemes/pisces.js?v=7.0.1"></script>
+
+
+
+  
+  <script src="/js/src/scrollspy.js?v=7.0.1"></script>
+<script src="/js/src/post-details.js?v=7.0.1"></script>
+
+
+
+  
+
+
+  <script src="/js/src/next-boot.js?v=7.0.1"></script>
+
+
+  
+
+  
+
+  
+
+  
+
+
+  
+
+
+  
+
+
+
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+</body>
+</html>
